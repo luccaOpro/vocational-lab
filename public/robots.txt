@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# ⚠️ Reemplazar con el dominio real antes de lanzar
+Sitemap: https://vocationallab.com/sitemap-index.xml
