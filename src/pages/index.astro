@@ -1,0 +1,44 @@
+---
+/*
+  HOME · index.astro
+  ---
+  Esta página arma la home importando cada sección como un componente
+  desde src/components/sections/. Para reordenar las secciones, mové
+  el orden de las etiquetas <Componente /> de abajo. Para editar el
+  contenido de una sección, abrí su archivo .astro correspondiente.
+*/
+
+import Layout from "../layouts/Layout.astro";
+
+import Nav from "../components/sections/Nav.astro";
+import Hero from "../components/sections/Hero.astro";
+import Proposito from "../components/sections/Proposito.astro";
+import Caminos from "../components/sections/Caminos.astro";
+import Diferencial from "../components/sections/Diferencial.astro";
+import Programa from "../components/sections/Programa.astro";
+import ParaQuien from "../components/sections/ParaQuien.astro";
+import Equipo from "../components/sections/Equipo.astro";
+import Contacto from "../components/sections/Contacto.astro";
+import Footer from "../components/sections/Footer.astro";
+import PopupProxima from "../components/sections/PopupProxima.astro";
+---
+
+<Layout>
+  <Nav />
+
+  <main>
+    <Hero />
+    <Proposito />
+    <Caminos />
+    <Diferencial />
+    <Programa />
+    <ParaQuien />
+    <Equipo />
+    <Contacto />
+  </main>
+
+  <Footer />
+
+  <!-- Pop-up flotante "Próxima edición — Agosto 2026" -->
+  <PopupProxima />
+</Layout>

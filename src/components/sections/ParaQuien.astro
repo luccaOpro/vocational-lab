@@ -1,0 +1,87 @@
+---
+/*
+  SECCIÓN 6 · PARA QUIÉN
+  Tres audiencias en cards horizontales. Cada una con su CTA.
+*/
+
+const audiencias = [
+  {
+    titulo: "Estás en el momento de las grandes preguntas.",
+    cuerpo:
+      "Todavía no elegiste, o elegiste y algo no termina de cerrar. En cualquiera de los dos casos: la pregunta está activa y querés responderla bien — no a las apuradas, no por descarte.",
+    cta: "Quiero anotarme",
+    ctaHref: "#contacto",
+  },
+  {
+    titulo: "Acompañás desde cerca.",
+    cuerpo:
+      "Alguien que querés está en este momento. Querés entender qué necesita — y qué rol te toca a vos en este proceso.",
+    cta: "Hablemos",
+    ctaHref: "#contacto",
+  },
+  {
+    titulo: "Trabajás con jóvenes.",
+    cuerpo:
+      "Sos docente, orientador, coordinador o parte de una institución. Vocational Lab puede llegar a tu comunidad.",
+    cta: "Escribinos",
+    ctaHref: "#contacto",
+  },
+];
+---
+
+<section id="para-quien" class="pq section">
+  <div class="container">
+    <header class="pq__head">
+      <p class="eyebrow">Para quién</p>
+      <h2>¿Esto es para vos?</h2>
+    </header>
+
+    <div class="pq__grid">
+      {audiencias.map((a) => (
+        <article class="pq__item">
+          <h3>{a.titulo}</h3>
+          <p>{a.cuerpo}</p>
+          <a href={a.ctaHref} class="pq__cta">{a.cta} →</a>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .pq__head {
+    margin-bottom: 3rem;
+  }
+
+  .pq__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  @media (max-width: 900px) {
+    .pq__grid { grid-template-columns: 1fr; }
+  }
+
+  .pq__item {
+    display: flex;
+    flex-direction: column;
+    padding: 2rem 0;
+    border-top: 1px solid var(--color-line);
+  }
+  .pq__item h3 {
+    font-size: 1.4rem;
+    margin: 0 0 0.75rem;
+    line-height: 1.25;
+  }
+  .pq__item p {
+    margin: 0 0 1.5rem;
+    color: var(--color-ink-soft);
+  }
+  .pq__cta {
+    margin-top: auto;
+    align-self: flex-start;
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+  .pq__cta:hover { color: var(--color-accent-dark); }
+</style>

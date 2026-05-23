@@ -1,0 +1,180 @@
+/* ============================================================
+   ESTILOS GLOBALES · Vocational Lab
+   ------------------------------------------------------------
+   Acá viven los "tokens" del diseño: colores, tipografías,
+   espaciados, etc. Tocando estas variables se cambia el look
+   de TODO el sitio sin tener que ir componente por componente.
+   ============================================================ */
+
+:root {
+  /* ------- Paleta de marca · Vocational Lab v1 -------
+     Cinco colores base:
+     - Azul noche   (#131B3D) → texto principal y fondos oscuros
+     - Azul profundo (#243A82) → acento secundario, autoridad
+     - Dorado       (#C9A24C) → acento dorado para detalles editoriales
+     - Coral brasa  (#D8552A) → acento primario para CTAs y énfasis
+     - Crema papel  (#F2EAD7) → fondo cálido base
+     ----------------------------------------------------- */
+
+  /* Fondos */
+  --color-bg: #F2EAD7;          /* Crema papel — base del sitio */
+  --color-surface: #E9DEC1;     /* Crema más profundo para bloques destacados */
+
+  /* Texto */
+  --color-ink: #131B3D;         /* Azul noche — texto principal y fondos oscuros */
+  --color-ink-soft: #3F4870;    /* Azul noche aclarado — texto secundario */
+  --color-ink-muted: #7B829D;   /* Azul noche muy aclarado — texto auxiliar */
+
+  /* Acentos */
+  --color-accent: #D8552A;      /* Coral brasa — CTAs, énfasis, italic */
+  --color-accent-dark: #B0421E; /* Coral más profundo para hover */
+  --color-deep: #243A82;        /* Azul profundo — acento secundario */
+  --color-gold: #C9A24C;        /* Dorado — detalles editoriales */
+
+  /* Líneas, bordes */
+  --color-line: #DDD2B4;        /* Tono crema más oscuro para divisiones suaves */
+
+  /* ------- Tipografía ------- */
+  /* Serif editorial para títulos */
+  --font-serif: "Fraunces", "Source Serif Pro", Georgia, serif;
+  /* Sans humanista para cuerpo */
+  --font-sans: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* ------- Espaciado base ------- */
+  /* Ancho máximo de la columna de contenido */
+  --container: 1120px;
+  /* Padding lateral mínimo en mobile */
+  --gutter: 1.5rem;
+  /* Espacio vertical entre secciones */
+  --section-y: clamp(4rem, 9vw, 7rem);
+
+  /* ------- Radio de bordes ------- */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+}
+
+/* ------------------------------------------------------------
+   Reset suave — bases consistentes en todos los navegadores
+   ------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img, svg { display: block; max-width: 100%; height: auto; }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* ------------------------------------------------------------
+   Tipografía base
+   ------------------------------------------------------------ */
+h1, h2, h3, h4 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+h1 { font-size: clamp(2.4rem, 5.5vw, 4rem); }
+h2 { font-size: clamp(2rem, 4vw, 3rem); }
+h3 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); }
+h4 { font-size: 1.15rem; }
+
+p { margin: 0 0 1em; }
+
+/* ------------------------------------------------------------
+   Utilidades reutilizables
+   ------------------------------------------------------------ */
+
+/* Contenedor centrado con ancho máximo */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 inherit;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* Sección con padding vertical estándar */
+.section {
+  padding-top: var(--section-y);
+  padding-bottom: var(--section-y);
+}
+
+/* Eyebrow: etiqueta pequeña arriba de los títulos de sección */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 1rem;
+}
+
+/* Botón primario (CTA principal) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.95rem 1.6rem;
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease;
+  text-align: center;
+}
+
+.btn-primary {
+  background: var(--color-accent);
+  color: #fff;
+}
+.btn-primary:hover {
+  background: var(--color-accent-dark);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-ink);
+}
+.btn-secondary:hover {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+/* Texto destacado lead (frase potente bajo el título) */
+.lead {
+  font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+  color: var(--color-ink-soft);
+  max-width: 60ch;
+}
+
+/* Separador editorial */
+.rule {
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  margin: 4rem 0;
+}

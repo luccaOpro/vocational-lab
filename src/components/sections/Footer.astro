@@ -1,0 +1,71 @@
+---
+/*
+  Pie del sitio: legal / créditos / links rápidos.
+  Mínimo por ahora; lo expandimos cuando definamos legales / política
+  de privacidad.
+*/
+
+const anio = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="footer__inner container">
+    <div class="footer__brand">
+      <span class="footer__brand-name">Vocational Lab</span>
+      <span class="footer__tag">Donde futuro y vocación se encuentran.</span>
+    </div>
+
+    <div class="footer__links">
+      <a href="mailto:hola@vocationallab.com">hola@vocationallab.com</a>
+      <a href="https://instagram.com/vocationallab" target="_blank" rel="noopener">@vocationallab</a>
+    </div>
+
+    <p class="footer__legal">© {anio} Vocational Lab. Todos los derechos reservados.</p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: var(--color-ink);
+    color: var(--color-bg);
+    padding: 3rem 0 2rem;
+    margin-top: 2rem;
+  }
+  .footer__inner {
+    display: grid;
+    gap: 1.25rem;
+  }
+  .footer__brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .footer__brand-name {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+  }
+  .footer__tag {
+    font-style: italic;
+    color: rgba(250, 247, 242, 0.6);
+    font-size: 0.95rem;
+  }
+  .footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    font-size: 0.95rem;
+  }
+  .footer__links a {
+    color: rgba(250, 247, 242, 0.85);
+    border-bottom: 1px solid transparent;
+  }
+  .footer__links a:hover {
+    border-bottom-color: var(--color-accent);
+  }
+  .footer__legal {
+    margin: 0;
+    color: rgba(250, 247, 242, 0.45);
+    font-size: 0.85rem;
+  }
+</style>

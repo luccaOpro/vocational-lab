@@ -1,0 +1,174 @@
+---
+/*
+  SECCIÓN 3 · NUESTROS CAMINOS
+  Tres caminos posibles, presentados como cards.
+  El primero (programa grupal) es el destacado / protagonista.
+*/
+
+// Definimos los caminos como un array para que sea fácil sumar/sacar
+// cards en el futuro sin tener que tocar el HTML repetido.
+const caminos = [
+  {
+    destacado: true,
+    etiqueta: "★ Protagonista",
+    titulo: "Vocational Lab",
+    subtitulo: "El programa grupal de orientación vocacional",
+    descripcion:
+      "8 encuentros online. Un proceso real de autoconocimiento, exploración y construcción de tu portfolio de posibilidades. Con pares que están en el mismo momento. Con método. Con acompañamiento individual en los momentos clave.",
+    plus: "No salís con una lista de carreras del siglo pasado. Salís conociendo quién sos, qué querés y cómo hacerlo posible en el mundo que viene.",
+    cta: "Conocé el programa",
+    ctaHref: "#programa",
+  },
+  {
+    destacado: false,
+    etiqueta: "1:1",
+    titulo: "Coaching individual",
+    subtitulo: "Para quien quiere un proceso 100% personalizado",
+    descripcion:
+      "Mismo enfoque, sin el grupo. Diseñado completamente a tu medida, a tu ritmo y desde tu situación específica.",
+    plus: null,
+    cta: "Hablemos",
+    ctaHref: "#contacto",
+  },
+  {
+    destacado: false,
+    etiqueta: "Instituciones",
+    titulo: "Para colegios y organizaciones",
+    subtitulo: "Llevamos Vocational Lab a tu institución",
+    descripcion:
+      "Talleres, programas y acompañamiento para equipos que trabajan con jóvenes en el momento de la elección — y para las familias que los acompañan.",
+    plus: null,
+    cta: "Escribinos",
+    ctaHref: "#contacto",
+  },
+];
+---
+
+<section id="caminos" class="caminos section">
+  <div class="container">
+    <header class="caminos__head">
+      <p class="eyebrow">Nuestros caminos</p>
+      <h2>Tres formas de hacer el viaje.</h2>
+    </header>
+
+    <div class="caminos__grid">
+      {caminos.map((c) => (
+        <article class:list={["camino", c.destacado && "camino--destacado"]}>
+          <span class="camino__etiqueta">{c.etiqueta}</span>
+          <h3 class="camino__titulo">{c.titulo}</h3>
+          <p class="camino__subtitulo">{c.subtitulo}</p>
+          <p class="camino__desc">{c.descripcion}</p>
+          {c.plus && <p class="camino__plus">{c.plus}</p>}
+          <a href={c.ctaHref} class="camino__cta">{c.cta} →</a>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .caminos__head {
+    max-width: 720px;
+    margin-bottom: 3rem;
+  }
+
+  .caminos__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  /* En tablets pasamos a 1 columna principal grande + 2 chicas debajo.
+     En mobile pasamos todo a una sola columna. */
+  @media (max-width: 960px) {
+    .caminos__grid { grid-template-columns: 1fr 1fr; }
+    .camino--destacado { grid-column: 1 / -1; }
+  }
+  @media (max-width: 640px) {
+    .caminos__grid { grid-template-columns: 1fr; }
+  }
+
+  .camino {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem 1.75rem;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .camino:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 40px -22px rgba(0,0,0,0.18);
+  }
+
+  /* El camino "destacado" usa los colores de marca para diferenciarse */
+  .camino--destacado {
+    background: var(--color-ink);
+    color: var(--color-bg);
+    border-color: var(--color-ink);
+  }
+  .camino--destacado :global(h3),
+  .camino--destacado .camino__plus {
+    color: var(--color-bg);
+  }
+
+  .camino__etiqueta {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-ink-soft);
+    margin-bottom: 1.25rem;
+  }
+  .camino--destacado .camino__etiqueta {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  .camino__titulo {
+    margin: 0 0 0.4rem;
+    font-size: 1.6rem;
+  }
+  .camino__subtitulo {
+    margin: 0 0 1rem;
+    font-size: 0.98rem;
+    color: var(--color-ink-muted);
+  }
+  .camino--destacado .camino__subtitulo {
+    color: rgba(250, 247, 242, 0.7);
+  }
+
+  .camino__desc {
+    margin: 0 0 1rem;
+    font-size: 0.98rem;
+    line-height: 1.55;
+  }
+
+  .camino__plus {
+    margin: 0 0 1.5rem;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.05rem;
+    line-height: 1.4;
+    color: var(--color-ink);
+  }
+
+  .camino__cta {
+    margin-top: auto;
+    font-weight: 500;
+    color: var(--color-accent);
+    align-self: flex-start;
+  }
+  .camino--destacado .camino__cta {
+    color: var(--color-bg);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+  }
+  .camino__cta:hover { color: var(--color-accent-dark); }
+</style>

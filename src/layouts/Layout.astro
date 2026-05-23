@@ -1,0 +1,58 @@
+---
+/*
+  Layout principal del sitio.
+  ---
+  Toda página del sitio se envuelve en este layout. Acá viven:
+    · el <head> con meta tags, fuentes y favicon
+    · los estilos globales (importados desde src/styles/global.css)
+    · el <slot /> donde se inserta el contenido de cada página
+  Si querés cambiar la fuente, el título por defecto o sumar
+  scripts (Google Analytics, etc.) este es el archivo.
+*/
+
+import "../styles/global.css";
+
+// Props que puede recibir cada página para personalizar el <head>.
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Vocational Lab · Donde futuro y vocación se encuentran",
+  description = "Programa de orientación vocacional para jóvenes que quieren explorar su futuro con método, con pares y desde el rol protagonista de su propia historia.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <!-- SEO básico -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <!-- Open Graph (para que se vea bien al compartir el link) -->
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+
+    <!-- Fuentes desde Google Fonts: Fraunces (serif para títulos) e Inter (sans para cuerpo) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

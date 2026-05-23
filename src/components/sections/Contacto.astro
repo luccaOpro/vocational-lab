@@ -1,0 +1,199 @@
+---
+/*
+  SECCIÓN 8 · INSCRIPCIÓN Y CONTACTO
+  Dos columnas:
+   · Izquierda: formulario de reserva (5 campos según el Word)
+   · Derecha: alternativa por WhatsApp/email para los que prefieren hablar
+  El form todavía NO está conectado a ningún backend: cuando definamos
+  herramienta (Netlify Forms / Formspree / Zapier) lo enchufamos.
+*/
+---
+
+<section id="contacto" class="contacto section">
+  <div class="container">
+    <header class="contacto__head">
+      <p class="eyebrow">Inscripción y contacto</p>
+      <h2>¿Querés empezar el viaje?</h2>
+      <p class="contacto__sub">
+        Próxima edición — Agosto 2026 · Grupos reducidos
+      </p>
+    </header>
+
+    <div class="contacto__grid">
+      <!-- Columna 1 · Formulario de reserva -->
+      <div class="contacto__card contacto__card--principal">
+        <h3>Quiero mi lugar</h3>
+        <p class="contacto__intro">
+          Completá el formulario y te enviamos toda la información del
+          programa — incluyendo precio, fechas y formato.
+        </p>
+
+        <form class="form" action="#" method="post" name="reserva" novalidate>
+          <label class="form__field">
+            <span class="form__label">Nombre</span>
+            <input type="text" name="nombre" required autocomplete="name" />
+          </label>
+
+          <label class="form__field">
+            <span class="form__label">Email</span>
+            <input type="email" name="email" required autocomplete="email" />
+          </label>
+
+          <label class="form__field">
+            <span class="form__label">Teléfono</span>
+            <input type="tel" name="telefono" required autocomplete="tel" />
+          </label>
+
+          <label class="form__field">
+            <span class="form__label">País</span>
+            <input type="text" name="pais" required autocomplete="country-name" />
+          </label>
+
+          <label class="form__field form__field--full">
+            <span class="form__label">¿Cómo nos encontraste?</span>
+            <input type="text" name="origen" />
+          </label>
+
+          <button type="submit" class="btn btn-primary form__submit">
+            Reservá tu lugar →
+          </button>
+        </form>
+      </div>
+
+      <!-- Columna 2 · Alternativa de contacto directo -->
+      <div class="contacto__card contacto__card--alt">
+        <h3>Prefiero hablar primero</h3>
+        <p>
+          Si tenés dudas o querés entender si el programa es para vos
+          antes de decidir, escribinos directo.
+        </p>
+        <p class="contacto__inversion">
+          Inversión a consultar — trabajamos con becas y planes de pago.
+        </p>
+
+        <ul class="contacto__links">
+          <li>
+            <a href="mailto:hola@vocationallab.com">hola@vocationallab.com</a>
+          </li>
+          <li>
+            <a href="https://instagram.com/vocationallab" target="_blank" rel="noopener">
+              @vocationallab
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .contacto {
+    background: var(--color-surface);
+  }
+
+  .contacto__head {
+    max-width: 720px;
+    margin-bottom: 3rem;
+  }
+  .contacto__sub {
+    margin: 1rem 0 0;
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+  }
+
+  .contacto__grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 2rem;
+  }
+  @media (max-width: 880px) {
+    .contacto__grid { grid-template-columns: 1fr; }
+  }
+
+  .contacto__card {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    padding: 2.2rem;
+  }
+  .contacto__card h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.55rem;
+  }
+  .contacto__intro {
+    margin: 0 0 1.75rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* Formulario */
+  .form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.1rem;
+  }
+  @media (max-width: 560px) {
+    .form { grid-template-columns: 1fr; }
+  }
+  .form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .form__field--full { grid-column: 1 / -1; }
+  .form__label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+  .form input {
+    font: inherit;
+    color: var(--color-ink);
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.9rem;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .form input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background: #fff;
+  }
+  .form__submit {
+    grid-column: 1 / -1;
+    justify-self: flex-start;
+    margin-top: 0.5rem;
+  }
+
+  /* Card alternativa */
+  .contacto__card--alt {
+    background: var(--color-ink);
+    color: var(--color-bg);
+    border-color: var(--color-ink);
+  }
+  .contacto__card--alt :global(h3) { color: var(--color-bg); }
+  .contacto__card--alt p { color: rgba(250, 247, 242, 0.85); }
+  .contacto__inversion {
+    margin-top: 1.25rem !important;
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: rgba(250, 247, 242, 0.7) !important;
+  }
+
+  .contacto__links {
+    list-style: none;
+    margin: 1.75rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .contacto__links a {
+    color: var(--color-bg);
+    border-bottom: 1px solid rgba(250, 247, 242, 0.3);
+    padding-bottom: 2px;
+    transition: border-color 0.15s ease;
+  }
+  .contacto__links a:hover {
+    border-color: var(--color-accent);
+  }
+</style>

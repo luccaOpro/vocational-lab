@@ -1,0 +1,136 @@
+---
+/*
+  Pop-up flotante "Próxima edición — Agosto 2026".
+  Aparece abajo a la derecha al hacer scroll. Se puede cerrar.
+  Toda la lógica es vanilla JS, sin dependencias.
+*/
+---
+
+<aside id="popup-proxima" class="popup" hidden>
+  <div class="popup__body">
+    <p class="popup__titulo">Próxima edición</p>
+    <p class="popup__sub">Agosto 2026</p>
+    <a href="#contacto" class="popup__cta">Reservá tu lugar →</a>
+  </div>
+  <button class="popup__close" type="button" aria-label="Cerrar aviso">×</button>
+</aside>
+
+<script>
+  // Mostramos el pop-up cuando el usuario ya hizo algo de scroll
+  // (que ya esté interesado en el contenido) y nunca antes lo cerró.
+  const KEY = "vl_popup_cerrado";
+  const popup = document.getElementById("popup-proxima");
+
+  if (popup && !sessionStorage.getItem(KEY)) {
+    const onScroll = () => {
+      if (window.scrollY > 400) {
+        popup.hidden = false;
+        popup.classList.add("popup--visible");
+        window.removeEventListener("scroll", onScroll);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    popup.querySelector(".popup__close")?.addEventListener("click", () => {
+      popup.classList.remove("popup--visible");
+      sessionStorage.setItem(KEY, "1");
+      setTimeout(() => (popup.hidden = true), 200);
+    });
+  }
+</script>
+
+<style>
+  .popup {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 60;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    max-width: 340px;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    padding: 1.1rem 1.25rem 1.1rem 1.25rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+
+  .popup--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .popup__titulo {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+  .popup__sub {
+    margin: 0.15rem 0 0.7rem;
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+  }
+  .popup__cta {
+    color: var(--color-bg);
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+    font-size: 0.95rem;
+  }
+  .popup__cta:hover { color: var(--color-accent); }
+
+  .popup__close {
+    background: transparent;
+    border: 0;
+    color: rgba(250, 247, 242, 0.6);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.25rem;
+  }
+  .popup__close:hover { color: var(--color-bg); }
+
+  /* En mobile el pop-up pasa a ser una barra horizontal compacta
+     pegada al pie de pantalla (full width con márgenes). Esconde
+     el eyebrow "PRÓXIMA EDICIÓN" para ganar espacio, y muestra
+     "Agosto 2026" + CTA en una sola línea. */
+  @media (max-width: 560px) {
+    .popup {
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: 0.75rem;
+      max-width: none;
+      padding: 0.7rem 0.9rem;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .popup__body {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+    }
+    .popup__titulo { display: none; }
+    .popup__sub {
+      margin: 0;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    .popup__cta {
+      font-size: 0.85rem;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+    .popup__close {
+      font-size: 1.2rem;
+      margin-left: 0;
+    }
+  }
+</style>

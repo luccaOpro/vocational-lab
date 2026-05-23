@@ -1,0 +1,221 @@
+---
+/*
+  SECCIÓN 5 · EL PROGRAMA
+  El núcleo: las 5 etapas del viaje.
+  Más arriba: título + bajada + placeholder del mapa.
+  Más abajo: las 5 etapas en línea + resumen de qué te llevás.
+*/
+
+const etapas = [
+  {
+    n: "01",
+    nombre: "El llamado",
+    cuerpo:
+      "Entrás al viaje. Te sumás al grupo. Abrís el proceso desde donde estás.",
+  },
+  {
+    n: "02",
+    nombre: "El origen",
+    cuerpo:
+      "Descubrís de dónde venís: tus talentos, tus intereses, tus creencias heredadas. El árbol vocacional que construís acá es el suelo de todo lo que sigue.",
+  },
+  {
+    n: "03",
+    nombre: "La búsqueda",
+    cuerpo:
+      "Trazás tu mapa personal de posibilidades. Aprendés a explorar el mundo del trabajo y del estudio sin sesgos, con método propio.",
+  },
+  {
+    n: "04",
+    nombre: "Lanzar la flecha",
+    cuerpo:
+      "Tomás decisiones concretas. Construís tu plan A y tu plan B. Armás tu portfolio: estudios, prácticas, intereses, todo cuenta.",
+  },
+  {
+    n: "05",
+    nombre: "Volver con tesoros",
+    cuerpo:
+      "Integrás el recorrido, recibís tu informe personalizado en vivo y, si querés, compartís el espacio con tu familia.",
+  },
+];
+
+const llevas = [
+  "Tu mapa personal",
+  "Tests psicométricos integrados a tus propios hallazgos",
+  "Plan de acción concreto",
+  "Tu portfolio en construcción",
+];
+---
+
+<section id="programa" class="programa section">
+  <div class="container">
+    <header class="programa__head">
+      <p class="eyebrow">El programa</p>
+      <h2 class="programa__title">
+        Un viaje de <em>8 encuentros</em> en 5 etapas.
+      </h2>
+      <p class="programa__lead">
+        Un proceso con estructura, con método y un mapa claro — donde
+        cada etapa tiene un propósito y vos sos el protagonista de
+        principio a fin.
+      </p>
+    </header>
+
+    <!-- Placeholder del mapa visual del viaje.
+         Cuando llegue Mapa_del_Viaje_v2.png, lo reemplazamos por una <img>. -->
+    <figure class="programa__mapa" aria-label="Mapa visual del viaje (pendiente)">
+      <div class="programa__mapa-placeholder">
+        <span>Mapa del viaje</span>
+        <small>Imagen central — pendiente de integración</small>
+      </div>
+    </figure>
+
+    <ol class="etapas">
+      {etapas.map((e) => (
+        <li class="etapa">
+          <span class="etapa__n">{e.n}</span>
+          <h3 class="etapa__nombre">{e.nombre}</h3>
+          <p class="etapa__cuerpo">{e.cuerpo}</p>
+        </li>
+      ))}
+    </ol>
+
+    <div class="programa__cierre">
+      <h3 class="programa__cierre-title">Al terminar, tenés:</h3>
+      <ul class="programa__llevas">
+        {llevas.map((l) => <li>{l}</li>)}
+      </ul>
+      <p class="programa__formato">
+        6 encuentros grupales + 2 sesiones individuales
+        · 100% online · Grupos reducidos
+      </p>
+      <div class="programa__ctas">
+        <a href="#contacto" class="btn btn-primary">Quiero anotarme</a>
+        <a href="#contacto" class="btn btn-secondary">Quiero conocer todos los detalles</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .programa__head {
+    max-width: 760px;
+    margin-bottom: 3rem;
+  }
+  .programa__title em {
+    font-style: italic;
+    color: var(--color-accent);
+  }
+  .programa__lead {
+    margin-top: 1.25rem;
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+    max-width: 60ch;
+  }
+
+  /* Placeholder del mapa — se va a reemplazar por <img src="..." /> */
+  .programa__mapa {
+    margin: 3rem 0 4rem;
+  }
+  .programa__mapa-placeholder {
+    display: grid;
+    place-items: center;
+    gap: 0.4rem;
+    aspect-ratio: 16 / 7;
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    color: var(--color-ink-muted);
+    background:
+      repeating-linear-gradient(
+        135deg,
+        transparent,
+        transparent 14px,
+        rgba(0,0,0,0.02) 14px,
+        rgba(0,0,0,0.02) 28px
+      );
+  }
+  .programa__mapa-placeholder span {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    color: var(--color-ink-soft);
+  }
+  .programa__mapa-placeholder small {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Lista de etapas */
+  .etapas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.25rem;
+  }
+  @media (max-width: 1024px) {
+    .etapas { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .etapas { grid-template-columns: 1fr; }
+  }
+
+  .etapa {
+    border-top: 2px solid var(--color-accent);
+    padding-top: 1rem;
+  }
+  .etapa__n {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 1.1rem;
+    color: var(--color-accent);
+    margin-bottom: 0.5rem;
+  }
+  .etapa__nombre {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+  }
+  .etapa__cuerpo {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.97rem;
+    line-height: 1.55;
+  }
+
+  /* Cierre con resumen */
+  .programa__cierre {
+    margin-top: 4rem;
+    padding: 2.5rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+  }
+  .programa__cierre-title {
+    font-size: 1.25rem;
+    margin: 0 0 1rem;
+  }
+  .programa__llevas {
+    list-style: none;
+    margin: 0 0 1.5rem;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    font-size: 1rem;
+  }
+  .programa__llevas li {
+    padding: 0.5rem 0.9rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 999px;
+  }
+  .programa__formato {
+    color: var(--color-ink-soft);
+    margin: 0 0 1.5rem;
+  }
+  .programa__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+</style>

@@ -1,0 +1,92 @@
+---
+/*
+  SECCIÓN 4 · DIFERENCIAL
+  Por qué Vocational Lab es distinto a otros procesos de orientación.
+  Frase grande arriba + 3 puntos diferenciales en grid.
+*/
+
+const diferenciales = [
+  {
+    titulo: "La combinación que hace la diferencia.",
+    cuerpo:
+      "Psicología del proceso de construir identidad, más visión del futuro del trabajo y nuevos modelos de carrera. Las dos miradas juntas, en cada encuentro.",
+  },
+  {
+    titulo: "Un portfolio de posibilidades, no una respuesta única.",
+    cuerpo:
+      "No te decimos qué estudiar. Te ayudamos a construir un mapa propio — real y accionable — donde caben múltiples caminos posibles.",
+  },
+  {
+    titulo: "Un grupo que es parte del proceso.",
+    cuerpo: "Explorás con pares que están en el mismo momento.",
+  },
+];
+---
+
+<section id="diferencial" class="dif section">
+  <div class="container">
+    <header class="dif__head">
+      <p class="eyebrow">Diferencial</p>
+      <h2 class="dif__title">
+        Un programa que incorpora <em>IA</em> y <em>futurismo</em>.
+      </h2>
+      <p class="dif__lead">
+        Porque elegir en 2026 no es lo mismo que elegir en 2000.
+        Trabajamos con la realidad del trabajo que viene, no con el
+        mapa del pasado.
+      </p>
+    </header>
+
+    <div class="dif__grid">
+      {diferenciales.map((d) => (
+        <article class="dif__item">
+          <h3>{d.titulo}</h3>
+          <p>{d.cuerpo}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .dif {
+    background: var(--color-surface);
+  }
+
+  .dif__head {
+    max-width: 760px;
+    margin-bottom: 3.5rem;
+  }
+
+  .dif__title em {
+    font-style: italic;
+    color: var(--color-accent);
+  }
+
+  .dif__lead {
+    margin-top: 1.25rem;
+    font-size: 1.15rem;
+    color: var(--color-ink-soft);
+    max-width: 58ch;
+  }
+
+  .dif__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+  }
+
+  @media (max-width: 880px) {
+    .dif__grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+
+  .dif__item h3 {
+    font-size: 1.3rem;
+    margin: 0 0 0.6rem;
+    line-height: 1.25;
+  }
+  .dif__item p {
+    margin: 0;
+    color: var(--color-ink-soft);
+  }
+</style>

@@ -1,0 +1,137 @@
+---
+/*
+  SECCIÓN 7 · EL EQUIPO
+  Julia Vargas y Laura Pires + nota sobre la comunidad.
+  Las fotos van como placeholders hasta que el usuario las pase.
+*/
+
+const personas = [
+  {
+    nombre: "Julia Vargas",
+    bio: "Licenciada en Relaciones del Trabajo y Magíster en Políticas Laborales (Università di Bologna). Más de dos décadas construyendo equipos, culturas y programas de aprendizaje en organizaciones globales. Docente universitaria, coach ontológica y especialista en futuro del trabajo — acompañando a personas y organizaciones a tomar las riendas de su transformación laboral.",
+    cita:
+      "Toda mi carrera tuvo un hilo conductor: identificar en cada persona la chispa que le hace brillar los ojos. Vocational Lab es la forma de hacer eso abierto, para todos.",
+  },
+  {
+    nombre: "Laura Pires",
+    bio: "Psicóloga sistémica especializada en familia y juventud, con foco en desarrollo de identidad y orientación vocacional. Treinta años acompañando — como clínica, como docente, como directora de escuelas y como consultora en desarrollo de líderes. Colabora con Argentina Cibersegura, ONG enfocada en ciudadanía digital y construcción de identidad en entornos digitales. Integra en cada proceso su mirada psicológica profunda con el conocimiento del mundo organizacional, la educación y las artes — porque acompañar a alguien en la construcción de su futuro es, también, un acto creativo.",
+    cita:
+      "Vocational Lab me permite ofrecer todo ese recorrido a personas en un momento clave de su vida — y acompañarlas hacia el despliegue de su mayor potencial.",
+  },
+];
+---
+
+<section id="equipo" class="equipo section">
+  <div class="container">
+    <header class="equipo__head">
+      <p class="eyebrow">El equipo</p>
+      <h2>Las guías del viaje.</h2>
+    </header>
+
+    <div class="equipo__personas">
+      {personas.map((p) => (
+        <article class="persona">
+          <div class="persona__foto" aria-label={`Foto de ${p.nombre} (pendiente)`}>
+            <span>{p.nombre.split(" ").map(n => n[0]).join("")}</span>
+          </div>
+          <div class="persona__cuerpo">
+            <h3 class="persona__nombre">{p.nombre}</h3>
+            <p class="persona__bio">{p.bio}</p>
+            <blockquote class="persona__cita">
+              <p>“{p.cita}”</p>
+            </blockquote>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <div class="equipo__comunidad">
+      <h3>La comunidad</h3>
+      <p>
+        El programa no lo hacés solo. Lo hacés con un grupo de pares que
+        están en el mismo momento — y eso, de por sí, ya es parte del viaje.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .equipo__head {
+    margin-bottom: 3rem;
+  }
+
+  .equipo__personas {
+    display: grid;
+    gap: 4rem;
+  }
+
+  .persona {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 2.5rem;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    .persona {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+
+  /* Placeholder de foto cuadrada con iniciales en su interior. */
+  .persona__foto {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    border: 1px dashed var(--color-line);
+    display: grid;
+    place-items: center;
+    font-family: var(--font-serif);
+    font-size: 2.4rem;
+    color: var(--color-ink-muted);
+  }
+  @media (max-width: 760px) {
+    .persona__foto {
+      max-width: 200px;
+    }
+  }
+
+  .persona__nombre {
+    font-size: 1.6rem;
+    margin: 0 0 0.75rem;
+  }
+  .persona__bio {
+    margin: 0 0 1.25rem;
+    color: var(--color-ink-soft);
+  }
+  .persona__cita {
+    margin: 0;
+    padding: 1rem 0 0 1.25rem;
+    border-left: 3px solid var(--color-accent);
+  }
+  .persona__cita p {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.1rem;
+    color: var(--color-ink);
+    line-height: 1.45;
+  }
+
+  .equipo__comunidad {
+    margin-top: 4rem;
+    padding-top: 3rem;
+    border-top: 1px solid var(--color-line);
+    max-width: 720px;
+  }
+  .equipo__comunidad h3 {
+    font-size: 1.5rem;
+    margin: 0 0 0.75rem;
+  }
+  .equipo__comunidad p {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 1.05rem;
+  }
+</style>
