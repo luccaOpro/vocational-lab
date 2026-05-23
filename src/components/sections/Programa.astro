@@ -49,10 +49,10 @@ const llevas = [
 
 <section id="programa" class="programa section">
   <div class="container">
-    <header class="programa__head">
+    <header class="programa__head" data-animate>
       <p class="eyebrow">El programa</p>
       <h2 class="programa__title">
-        Un viaje de <em>8 encuentros</em> en 5 etapas.
+        Un viaje de <em><span class="counter" data-target="8">8</span> encuentros</em> en 5 etapas.
       </h2>
       <p class="programa__lead">
         Un proceso con estructura, con método y un mapa claro — donde
@@ -70,7 +70,7 @@ const llevas = [
       </div>
     </figure>
 
-    <ol class="etapas">
+    <ol class="etapas" data-stagger>
       {etapas.map((e) => (
         <li class="etapa">
           <span class="etapa__n">{e.n}</span>
@@ -80,7 +80,7 @@ const llevas = [
       ))}
     </ol>
 
-    <div class="programa__cierre">
+    <div class="programa__cierre" data-animate data-delay="200">
       <h3 class="programa__cierre-title">Al terminar, tenés:</h3>
       <ul class="programa__llevas">
         {llevas.map((l) => <li>{l}</li>)}
@@ -218,4 +218,48 @@ const llevas = [
     flex-wrap: wrap;
     gap: 0.8rem;
   }
+
+  /* El número del contador hereda el color del <em> que lo envuelve */
+  .counter { font-variant-numeric: tabular-nums; }
 </style>
+
+<script>
+  /*
+    Contador animado — efecto 4.
+    Anima el "8" de "8 encuentros" de 0 → 8 cuando la sección
+    entra al viewport. Solo si el usuario no prefiere menos movimiento.
+  */
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const counter = document.querySelector<HTMLElement>(".counter[data-target]");
+    if (counter) {
+      const target = parseInt(counter.dataset.target ?? "0", 10);
+
+      const obs = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (!entry.isIntersecting) continue;
+            obs.unobserve(entry.target);
+
+            const duration = 900; // ms
+            const startTime = performance.now();
+
+            function tick(now: number) {
+              const elapsed = now - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              // Ease-out cúbico
+              const eased = 1 - Math.pow(1 - progress, 3);
+              counter.textContent = String(Math.round(eased * target));
+              if (progress < 1) requestAnimationFrame(tick);
+              else counter.textContent = String(target);
+            }
+
+            requestAnimationFrame(tick);
+          }
+        },
+        { threshold: 0.5 }
+      );
+
+      obs.observe(counter);
+    }
+  }
+</script>

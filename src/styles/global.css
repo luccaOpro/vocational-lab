@@ -178,3 +178,56 @@ p { margin: 0 0 1em; }
   border-top: 1px solid var(--color-line);
   margin: 4rem 0;
 }
+
+/* ============================================================
+   SISTEMA DE ANIMACIONES
+   ------------------------------------------------------------
+   Dos tipos:
+   · [data-animate]  → fade + slide-up individual al entrar al viewport
+   · [data-stagger]  → lo mismo pero los hijos aparecen uno por uno
+
+   El JS que activa estas clases vive en Layout.astro.
+   Para deshabilitar en un elemento específico: no le pongas el atributo.
+   prefers-reduced-motion: respetamos la configuración del sistema.
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+
+  /* --- Fade-in individual --- */
+  [data-animate] {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity  0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  [data-animate].visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Variantes de delay para escalonar elementos hermanos */
+  [data-animate][data-delay="100"] { transition-delay: 100ms; }
+  [data-animate][data-delay="200"] { transition-delay: 200ms; }
+  [data-animate][data-delay="300"] { transition-delay: 300ms; }
+  [data-animate][data-delay="400"] { transition-delay: 400ms; }
+
+  /* --- Stagger: hijos aparecen uno por uno --- */
+  [data-stagger] > * {
+    opacity: 0;
+    transform: translateY(22px);
+    transition:
+      opacity  0.55s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  [data-stagger].visible > *:nth-child(1) { transition-delay:   0ms; }
+  [data-stagger].visible > *:nth-child(2) { transition-delay:  80ms; }
+  [data-stagger].visible > *:nth-child(3) { transition-delay: 160ms; }
+  [data-stagger].visible > *:nth-child(4) { transition-delay: 240ms; }
+  [data-stagger].visible > *:nth-child(5) { transition-delay: 320ms; }
+  [data-stagger].visible > * {
+    opacity: 1;
+    transform: none;
+  }
+
+}

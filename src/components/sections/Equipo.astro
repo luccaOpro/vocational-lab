@@ -23,12 +23,12 @@ const personas = [
 
 <section id="equipo" class="equipo section">
   <div class="container">
-    <header class="equipo__head">
+    <header class="equipo__head" data-animate>
       <p class="eyebrow">El equipo</p>
       <h2>Las guías del viaje.</h2>
     </header>
 
-    <div class="equipo__personas">
+    <div class="equipo__personas" data-stagger>
       {personas.map((p) => (
         <article class="persona">
           <div class="persona__foto" aria-label={`Foto de ${p.nombre} (pendiente)`}>

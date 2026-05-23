@@ -46,12 +46,12 @@ const caminos = [
 
 <section id="caminos" class="caminos section">
   <div class="container">
-    <header class="caminos__head">
+    <header class="caminos__head" data-animate>
       <p class="eyebrow">Nuestros caminos</p>
       <h2>Tres formas de hacer el viaje.</h2>
     </header>
 
-    <div class="caminos__grid">
+    <div class="caminos__grid" data-animate data-delay="200">
       {caminos.map((c) => (
         <article class:list={["camino", c.destacado && "camino--destacado"]}>
           <span class="camino__etiqueta">{c.etiqueta}</span>

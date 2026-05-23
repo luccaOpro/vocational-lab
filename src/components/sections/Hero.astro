@@ -29,6 +29,31 @@
 </section>
 
 <style>
+  /* --- Animación de entrada del hero (al cargar la página) ---
+     Cada elemento aparece con un leve fade + slide-up, con delays
+     escalonados para que se lean en orden natural. Solo si el sistema
+     no tiene prefers-reduced-motion activado. */
+  @keyframes heroFade {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__eyebrow {
+      animation: heroFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 100ms both;
+    }
+    .hero__title {
+      animation: heroFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 260ms both;
+    }
+    .hero__lead {
+      animation: heroFade 0.75s cubic-bezier(0.16, 1, 0.3, 1) 430ms both;
+    }
+    .hero__ctas {
+      animation: heroFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 570ms both;
+    }
+  }
+
+  /* --- Estilos de layout --- */
   .hero {
     padding-top: clamp(5rem, 11vw, 9rem);
     padding-bottom: clamp(5rem, 10vw, 8rem);

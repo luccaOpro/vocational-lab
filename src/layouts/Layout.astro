@@ -55,4 +55,31 @@ const {
   <body>
     <slot />
   </body>
+
+  <script>
+    /*
+      IntersectionObserver global — activa las clases .visible en los
+      elementos con [data-animate] y [data-stagger] cuando entran al
+      viewport. Se dispara una sola vez por elemento y luego se desconecta.
+      Ver src/styles/global.css para las reglas CSS que hacen el efecto.
+    */
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            observer.unobserve(entry.target);
+          }
+        }
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -50px 0px",
+      }
+    );
+
+    document
+      .querySelectorAll("[data-animate], [data-stagger]")
+      .forEach((el) => observer.observe(el));
+  </script>
 </html>

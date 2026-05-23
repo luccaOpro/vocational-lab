@@ -25,7 +25,7 @@ const diferenciales = [
 
 <section id="diferencial" class="dif section">
   <div class="container">
-    <header class="dif__head">
+    <header class="dif__head" data-animate>
       <p class="eyebrow">Diferencial</p>
       <h2 class="dif__title">
         Un programa que incorpora <em>IA</em> y <em>futurismo</em>.
@@ -37,7 +37,7 @@ const diferenciales = [
       </p>
     </header>
 
-    <div class="dif__grid">
+    <div class="dif__grid" data-stagger>
       {diferenciales.map((d) => (
         <article class="dif__item">
           <h3>{d.titulo}</h3>
