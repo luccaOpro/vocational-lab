@@ -55,6 +55,158 @@ export function traducirError(error: unknown): string {
   return msg;
 }
 
+// ============================================================
+// Modal de formulario
+// ============================================================
+
+export interface FormField {
+  /** Nombre del campo (key del objeto resultado). */
+  name: string;
+  /** Texto que ve el usuario. */
+  label: string;
+  /** Tipo de input. Default: "text". */
+  type?: "text" | "textarea" | "date" | "email";
+  /** Si es obligatorio. */
+  required?: boolean;
+  /** Valor inicial (para edición). */
+  value?: string;
+  /** Texto guía cuando el campo está vacío. */
+  placeholder?: string;
+  /** Largo mínimo (para validación). */
+  minLength?: number;
+  /** Sólo para textarea: cantidad de líneas visibles. */
+  rows?: number;
+  /** Texto chico bajo el campo (ayuda). */
+  hint?: string;
+}
+
+export interface FormOpts {
+  titulo: string;
+  /** Descripción opcional debajo del título. */
+  mensaje?: string;
+  campos: FormField[];
+  confirmLabel?: string;
+  cancelLabel?: string;
+}
+
+/**
+ * Modal de formulario. Devuelve un objeto con los valores ingresados
+ * (keyed por field.name), o null si el usuario cancela / cierra.
+ */
+export function formModal(opciones: FormOpts): Promise<Record<string, string> | null> {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("modal-form");
+    if (!modal) {
+      console.warn("[ui] modal-form no está en el DOM, fallback a prompt.");
+      const result: Record<string, string> = {};
+      for (const f of opciones.campos) {
+        const v = window.prompt(f.label, f.value ?? "");
+        if (v === null) { resolve(null); return; }
+        result[f.name] = v;
+      }
+      resolve(result);
+      return;
+    }
+
+    const $titulo = document.getElementById("modal-form-titulo") as HTMLElement;
+    const $mensaje = document.getElementById("modal-form-mensaje") as HTMLElement;
+    const $campos = document.getElementById("modal-form-campos") as HTMLElement;
+    const $form = document.getElementById("modal-form-form") as HTMLFormElement;
+    const $cancel = document.getElementById("modal-form-cancel") as HTMLButtonElement;
+    const $ok = document.getElementById("modal-form-ok") as HTMLButtonElement;
+    const $backdrop = modal.querySelector("[data-modal-backdrop]") as HTMLElement;
+
+    $titulo.textContent = opciones.titulo;
+    if (opciones.mensaje) {
+      $mensaje.textContent = opciones.mensaje;
+      $mensaje.hidden = false;
+    } else {
+      $mensaje.textContent = "";
+      $mensaje.hidden = true;
+    }
+    $ok.textContent = opciones.confirmLabel ?? "Guardar";
+    $cancel.textContent = opciones.cancelLabel ?? "Cancelar";
+
+    // Render dinámico de los campos.
+    $campos.innerHTML = opciones.campos.map(renderField).join("");
+
+    // Asignar valores iniciales.
+    for (const f of opciones.campos) {
+      const el = $form.elements.namedItem(f.name) as HTMLInputElement | HTMLTextAreaElement | null;
+      if (el) el.value = f.value ?? "";
+    }
+
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    void modal.offsetWidth;
+    modal.classList.add("modal--visible");
+
+    // Auto-focus en el primer campo.
+    requestAnimationFrame(() => {
+      const first = $form.querySelector("input, textarea") as HTMLElement | null;
+      first?.focus();
+    });
+
+    function cleanup(result: Record<string, string> | null) {
+      modal.classList.remove("modal--visible");
+      setTimeout(() => {
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+      }, 200);
+      $form.removeEventListener("submit", onSubmit);
+      $cancel.removeEventListener("click", onCancel);
+      $backdrop.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onEscape);
+      resolve(result);
+    }
+
+    function onSubmit(e: Event) {
+      e.preventDefault();
+      const fd = new FormData($form);
+      const result: Record<string, string> = {};
+      for (const f of opciones.campos) {
+        result[f.name] = String(fd.get(f.name) ?? "").trim();
+      }
+      cleanup(result);
+    }
+    function onCancel() { cleanup(null); }
+    function onEscape(e: KeyboardEvent) { if (e.key === "Escape") cleanup(null); }
+
+    $form.addEventListener("submit", onSubmit);
+    $cancel.addEventListener("click", onCancel);
+    $backdrop.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onEscape);
+  });
+}
+
+function renderField(f: FormField): string {
+  const id = `modal-field-${f.name}`;
+  const type = f.type ?? "text";
+  const required = f.required ? "required" : "";
+  const minLength = f.minLength ? `minlength="${f.minLength}"` : "";
+  const placeholder = f.placeholder ? `placeholder="${escAttr(f.placeholder)}"` : "";
+  const labelStar = f.required ? " *" : "";
+  const hint = f.hint ? `<small class="modal__campo-hint">${escAttr(f.hint)}</small>` : "";
+
+  const inputHTML = type === "textarea"
+    ? `<textarea id="${id}" name="${escAttr(f.name)}" rows="${f.rows ?? 4}" ${required} ${minLength} ${placeholder}></textarea>`
+    : `<input id="${id}" name="${escAttr(f.name)}" type="${type}" ${required} ${minLength} ${placeholder} />`;
+
+  return `
+    <label class="modal__campo" for="${id}">
+      <span class="modal__campo-label">${escAttr(f.label)}${labelStar}</span>
+      ${inputHTML}
+      ${hint}
+    </label>
+  `;
+}
+
+function escAttr(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
  * Devuelve HTML para un spinner + label opcional.
  * Útil para usar dentro de innerHTML cuando se está cargando algo.

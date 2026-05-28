@@ -55,7 +55,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../../lib/supabase";
   import { requireRol } from "../../../../lib/auth-guard";
-  import { showToast, confirmModal, traducirError } from "../../../../lib/ui";
+  import { showToast, confirmModal, formModal, traducirError } from "../../../../lib/ui";
 
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB para material del profe
 
@@ -283,30 +283,38 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   // ============ Módulos ============
   async function editarModulo(id: string | null, mods: Modulo[], numeroSugerido?: number) {
     const existente = id ? mods.find((m) => m.id === id) : null;
-    const tituloActual = existente?.titulo ?? "";
-    const descActual = existente?.descripcion ?? "";
     const numero = existente?.numero ?? numeroSugerido ?? 1;
 
-    // Modal simple con prompt para nombre + descripción.
-    const nuevoTitulo = window.prompt(
-      `Título del módulo ${numero}:`,
-      tituloActual
-    );
-    if (nuevoTitulo === null) return;
-    if (nuevoTitulo.trim().length < 2) {
-      showToast("El título tiene que tener al menos 2 caracteres.", "error");
-      return;
-    }
+    const result = await formModal({
+      titulo: existente ? `Editar módulo ${numero}` : `Nuevo módulo ${numero}`,
+      campos: [
+        {
+          name: "titulo",
+          label: "Título del módulo",
+          type: "text",
+          required: true,
+          minLength: 2,
+          value: existente?.titulo ?? "",
+          placeholder: "Ej: Bienvenida — el viaje empieza acá",
+        },
+        {
+          name: "descripcion",
+          label: "Descripción",
+          type: "textarea",
+          rows: 3,
+          value: existente?.descripcion ?? "",
+          placeholder: "Una bajada que orienta al alumno sobre el módulo.",
+          hint: "Opcional. Se muestra al alumno cuando abre el curso.",
+        },
+      ],
+      confirmLabel: existente ? "Guardar cambios" : "Crear módulo",
+    });
 
-    const nuevaDesc = window.prompt(
-      "Descripción del módulo (puede quedar vacía):",
-      descActual ?? ""
-    );
-    if (nuevaDesc === null) return;
+    if (!result) return;
 
     const payload = {
-      titulo: nuevoTitulo.trim(),
-      descripcion: nuevaDesc.trim() || null,
+      titulo: result.titulo,
+      descripcion: result.descripcion || null,
     };
 
     const { error } = existente
@@ -419,10 +427,14 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
   // ============ Tareas ============
   async function editarTarea(tareaId: string | null, moduloId: string | null) {
-    let existente: any = null;
+    let existente: { titulo: string; consigna: string; fecha_entrega: string | null; modulo_id: string } | null = null;
     if (tareaId) {
-      const { data } = await supabase.from("tareas").select("titulo, consigna, fecha_entrega, modulo_id").eq("id", tareaId).maybeSingle();
-      existente = data;
+      const { data } = await supabase
+        .from("tareas")
+        .select("titulo, consigna, fecha_entrega, modulo_id")
+        .eq("id", tareaId)
+        .maybeSingle();
+      existente = data ?? null;
       moduloId = data?.modulo_id ?? null;
     }
     if (!moduloId) {
@@ -430,29 +442,48 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       return;
     }
 
-    const nuevoTitulo = window.prompt("Título de la tarea:", existente?.titulo ?? "");
-    if (nuevoTitulo === null) return;
-    if (nuevoTitulo.trim().length < 2) {
-      showToast("El título tiene que tener al menos 2 caracteres.", "error");
-      return;
-    }
-
-    const nuevaConsigna = window.prompt("Consigna (lo que el alumno tiene que hacer):", existente?.consigna ?? "");
-    if (nuevaConsigna === null) return;
-
     const fechaActual = existente?.fecha_entrega
       ? new Date(existente.fecha_entrega).toISOString().slice(0, 10)
       : "";
-    const nuevaFecha = window.prompt(
-      "Fecha de entrega (YYYY-MM-DD, dejá vacío si no aplica):",
-      fechaActual
-    );
-    if (nuevaFecha === null) return;
+
+    const result = await formModal({
+      titulo: existente ? "Editar tarea" : "Nueva tarea",
+      campos: [
+        {
+          name: "titulo",
+          label: "Título de la tarea",
+          type: "text",
+          required: true,
+          minLength: 2,
+          value: existente?.titulo ?? "",
+          placeholder: "Ej: Carta a tu yo del futuro",
+        },
+        {
+          name: "consigna",
+          label: "Consigna",
+          type: "textarea",
+          required: true,
+          rows: 5,
+          value: existente?.consigna ?? "",
+          placeholder: "Lo que el alumno tiene que hacer, con detalle.",
+        },
+        {
+          name: "fecha_entrega",
+          label: "Fecha de entrega",
+          type: "date",
+          value: fechaActual,
+          hint: "Opcional. Si no la ponés, la tarea no tiene fecha límite.",
+        },
+      ],
+      confirmLabel: existente ? "Guardar cambios" : "Crear tarea",
+    });
+
+    if (!result) return;
 
     const payload = {
-      titulo: nuevoTitulo.trim(),
-      consigna: nuevaConsigna.trim(),
-      fecha_entrega: nuevaFecha.trim() || null,
+      titulo: result.titulo,
+      consigna: result.consigna,
+      fecha_entrega: result.fecha_entrega || null,
     };
 
     const { error } = tareaId
