@@ -1,0 +1,80 @@
+---
+/*
+  Página 404 — se muestra cuando alguien entra a una URL que no existe.
+  Usa el Layout público (no el AulaLayout) porque puede aterrizar
+  cualquiera, no solo usuarios logueados.
+*/
+
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout
+  title="Página no encontrada · Vocational Lab"
+  description="No encontramos esa página. Te invitamos a volver al inicio."
+>
+  <main class="error">
+    <div class="error__inner container">
+      <span class="error__codigo">404</span>
+      <h1 class="error__titulo">
+        No encontramos esa página.<br />
+        <em>Pero el viaje sigue.</em>
+      </h1>
+      <p class="error__bajada">
+        Quizás escribiste mal la dirección, o lo que buscabas ya no está acá.
+      </p>
+      <div class="error__ctas">
+        <a href="/" class="btn btn-primary">Volver al inicio</a>
+        <a href="/aula/login" class="btn btn-secondary">Ir al aula</a>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .error {
+    min-height: 70vh;
+    display: grid;
+    place-items: center;
+    padding: clamp(3rem, 8vw, 6rem) 0;
+    background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
+  }
+  .error__inner {
+    max-width: 720px;
+    text-align: center;
+  }
+
+  .error__codigo {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: clamp(4rem, 10vw, 7rem);
+    line-height: 1;
+    color: var(--color-accent);
+    margin-bottom: 1.2rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+
+  .error__titulo {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.5rem;
+  }
+  .error__titulo em {
+    font-style: italic;
+    color: var(--color-accent);
+  }
+
+  .error__bajada {
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+    margin: 0 0 2.5rem;
+  }
+
+  .error__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    justify-content: center;
+  }
+</style>

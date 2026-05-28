@@ -132,11 +132,19 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $kpiPendientes.textContent = String(np);
 
     $cursos.innerHTML = (cursos ?? []).length === 0
-      ? `<p class="profe__vacio">Todavía no tenés cursos asignados.</p>`
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📚</span>
+          <h3 class="empty-state__titulo">Sin cursos asignados todavía</h3>
+          <p class="empty-state__bajada">Cuando te asignen un curso, va a aparecer acá.</p>
+        </div>`
       : `<div class="profe__cursos">${(cursos as CursoRow[]).map(renderCurso).join("")}</div>`;
 
     $entregas.innerHTML = np === 0
-      ? `<p class="profe__vacio">Nada pendiente. 🎯</p>`
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">🎯</span>
+          <h3 class="empty-state__titulo">¡Todo al día!</h3>
+          <p class="empty-state__bajada">No tenés entregas esperando devolución por ahora.</p>
+        </div>`
       : `<ul class="entregas">${(entregas as unknown as EntregaRow[]).map(renderEntrega).join("")}</ul>`;
 
     $loader.hidden = true;

@@ -147,9 +147,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     });
 
     if (filtrados.length === 0) {
+      const vacio = todos.length === 0
+        ? { icono: "👥", titulo: "Sin usuarios registrados", bajada: "Cuando se registre alguien va a aparecer acá." }
+        : { icono: "🔍", titulo: "Sin coincidencias", bajada: "Probá con otro nombre, mail o filtro de rol." };
       $body.innerHTML = `
-        <tr><td colspan="4" class="tabla__vacio">
-          ${todos.length === 0 ? "Todavía no hay usuarios." : "No coincide ningún usuario con el filtro."}
+        <tr><td colspan="4" style="padding:1.5rem;">
+          <div class="empty-state">
+            <span class="empty-state__icono" aria-hidden="true">${vacio.icono}</span>
+            <h3 class="empty-state__titulo">${vacio.titulo}</h3>
+            <p class="empty-state__bajada">${vacio.bajada}</p>
+          </div>
         </td></tr>
       `;
       return;

@@ -33,12 +33,15 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         </header>
 
         {/* Estado: sin cursos. */}
-        <div id="cursos-vacio" class="cursos__vacio" hidden>
-          <p>Todavía no tenés cursos asignados.</p>
-          <p class="cursos__vacio-hint">
-            Si recién pagaste, esperá a que activemos tu acceso —
-            te avisamos por mail cuando esté listo.
-          </p>
+        <div id="cursos-vacio" hidden>
+          <div class="empty-state">
+            <span class="empty-state__icono" aria-hidden="true">📚</span>
+            <h3 class="empty-state__titulo">Todavía no tenés cursos</h3>
+            <p class="empty-state__bajada">
+              Si recién pagaste, esperá a que activemos tu acceso —
+              te avisamos por mail cuando esté listo.
+            </p>
+          </div>
         </div>
 
         {/* Grid de cursos — lo llenamos desde JS. */}

@@ -239,4 +239,78 @@
   @media (prefers-reduced-motion: reduce) {
     .loader__spinner { animation-duration: 1.6s; }
   }
+
+  /* ============ Fade-in para contenido del aula ============ */
+  /* Aplica un fade-in suave a cualquier contenedor con id que termine
+     en "-contenido" cuando deja de estar oculto. Evita el "salto" al
+     cargar datos. */
+  [id$="-contenido"]:not([hidden]) {
+    animation: aula-fadein 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes aula-fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [id$="-contenido"]:not([hidden]) { animation: none; }
+  }
+
+  /* ============ Empty state reutilizable ============ */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    background: #fff;
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    max-width: 540px;
+    margin: 0 auto;
+  }
+  .empty-state__icono {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--color-bg);
+    font-size: 1.8rem;
+    margin-bottom: 1.2rem;
+  }
+  .empty-state__titulo {
+    font-size: 1.2rem;
+    margin: 0 0 0.5rem;
+    color: var(--color-ink);
+  }
+  .empty-state__bajada {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    max-width: 36ch;
+  }
+  .empty-state__cta {
+    margin-top: 1.3rem;
+    padding: 0.6rem 1.1rem;
+    background: var(--color-deep);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-weight: 500;
+  }
+  .empty-state__cta:hover { background: #1a2c64; }
+
+  /* ============ Focus accesible (consistente en todo el aula) ============ */
+  .aula-body :focus-visible {
+    outline: 2px solid var(--color-deep);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+  .aula-body button:focus-visible,
+  .aula-body a:focus-visible {
+    outline-offset: 3px;
+  }
 </style>

@@ -201,7 +201,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $resumen.textContent = curso.resumen ?? "";
 
     const html = (modulos as ModuloRow[]).map((m) => renderModulo(m, entregas)).join("");
-    $modulos.innerHTML = html || `<p class="curso__sin-modulos">Este curso todavía no tiene módulos cargados.</p>`;
+    $modulos.innerHTML = html || `
+      <div class="empty-state">
+        <span class="empty-state__icono" aria-hidden="true">🌱</span>
+        <h3 class="empty-state__titulo">El curso está arrancando</h3>
+        <p class="empty-state__bajada">Todavía no hay módulos cargados. Vas a verlos cuando el equipo los publique.</p>
+      </div>
+    `;
 
     $loader.hidden = true;
     $contenido.hidden = false;

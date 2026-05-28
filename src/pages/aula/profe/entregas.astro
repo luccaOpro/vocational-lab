@@ -93,11 +93,19 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${corr.length} corregida${corr.length === 1 ? "" : "s"}`;
 
     $pendientes.innerHTML = pend.length === 0
-      ? `<p class="entregasp__vacio">Nada pendiente. 🎯</p>`
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">🎯</span>
+          <h3 class="empty-state__titulo">¡Al día!</h3>
+          <p class="empty-state__bajada">No tenés entregas para corregir por ahora.</p>
+        </div>`
       : `<ul class="lista">${pend.map((e) => renderItem(e, "pendiente")).join("")}</ul>`;
 
     $corregidas.innerHTML = corr.length === 0
-      ? `<p class="entregasp__vacio">Todavía no corregiste ninguna.</p>`
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📝</span>
+          <h3 class="empty-state__titulo">Sin correcciones todavía</h3>
+          <p class="empty-state__bajada">Cuando empieces a corregir entregas, van a aparecer acá.</p>
+        </div>`
       : `<ul class="lista">${corr.map((e) => renderItem(e, "corregida")).join("")}</ul>`;
 
     $loader.hidden = true;
