@@ -37,7 +37,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../../lib/supabase";
-  import { requireSession } from "../../../lib/auth-guard";
+  import { requireSession, mostrarBannerSiPreview } from "../../../lib/auth-guard";
   import { showToast, confirmModal, traducirError } from "../../../lib/ui";
 
   // Tamaño máximo de archivo permitido (en bytes). 10 MB.
@@ -134,6 +134,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const auth = await requireSession();
     if (!auth) return;
     const userId = auth.session.user.id;
+    mostrarBannerSiPreview(auth.profile);
 
     // 2. Slug del querystring.
     const slug = new URLSearchParams(window.location.search).get("slug");
