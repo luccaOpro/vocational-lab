@@ -68,7 +68,7 @@ const etiqueta = etiquetaPorRol[rol];
       {links.map((l) => (
         <a href={l.href} class={activo(...l.match)}>{l.label}</a>
       ))}
-      <a href="/aula/login" class="navaula__logout">Cerrar sesión</a>
+      <a href="/aula/login" class="navaula__logout" data-aula-logout>Cerrar sesión</a>
     </nav>
 
     {/* Hamburguesa para mobile */}
@@ -115,7 +115,7 @@ const etiqueta = etiquetaPorRol[rol];
     {links.map((l) => (
       <a href={l.href} data-aula-link>{l.label}</a>
     ))}
-    <a href="/aula/login" data-aula-link class="navaula__panel-logout">Cerrar sesión</a>
+    <a href="/aula/login" data-aula-link data-aula-logout class="navaula__panel-logout">Cerrar sesión</a>
   </nav>
 </aside>
 
@@ -369,5 +369,16 @@ const etiqueta = etiquetaPorRol[rol];
   links.forEach((l) => l.addEventListener('click', () => setMenu(false)));
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && panel?.dataset.open === 'true') setMenu(false);
+  });
+
+  // Cerrar sesión real: signOut de Supabase antes de redirigir.
+  import("../../lib/supabase").then(({ supabase }) => {
+    document.querySelectorAll<HTMLAnchorElement>('[data-aula-logout]').forEach((el) => {
+      el.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await supabase.auth.signOut();
+        window.location.href = '/aula/login';
+      });
+    });
   });
 </script>

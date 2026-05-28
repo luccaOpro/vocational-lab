@@ -1,8 +1,8 @@
 ---
 /*
-  /aula/login — pantalla de ingreso al aula.
-  Por ahora es solo visual: el botón "Entrar" lleva directo a /aula/mis-cursos
-  sin validar nada. Cuando integremos Supabase, acá va el supabase.auth.signInWithPassword().
+  /aula/login — login REAL contra Supabase.
+  Cuando auth.signInWithPassword() devuelve OK, redirigimos
+  a /aula/mis-cursos. Si falla, mostramos el error.
 */
 
 import AulaLayout from "../../layouts/AulaLayout.astro";
@@ -21,39 +21,109 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         Si ya tenés tu acceso, ingresá con el mail con el que te inscribiste.
       </p>
 
-      <form class="login__form" action="/aula/mis-cursos" method="get">
+      <form id="login-form" class="login__form">
         <label class="login__label">
           <span>Mail</span>
-          <input type="email" name="mail" placeholder="tu@mail.com" required />
+          <input type="email" name="mail" placeholder="tu@mail.com" required autocomplete="email" />
         </label>
 
         <label class="login__label">
           <span>Contraseña</span>
-          <input type="password" name="pass" placeholder="••••••••" required />
+          <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password" />
         </label>
 
-        <button type="submit" class="login__submit">Entrar</button>
+        <p id="login-error" class="login__msg-error" hidden></p>
 
-        <a href="#" class="login__olvido">Olvidé mi contraseña</a>
+        <button type="submit" id="login-submit" class="login__submit">Entrar</button>
+
+        <a href="#" class="login__olvido" id="login-recover">Olvidé mi contraseña</a>
       </form>
 
       <p class="login__ayuda">
         ¿Todavía no tenés acceso? <a href="/#contacto">Escribinos</a>
         y te activamos tu cuenta.
       </p>
-
-      {/* Bloque DEMO — desaparece cuando haya auth real. */}
-      <div class="login__demo">
-        <span class="login__demo-titulo">Modo demo · Ver el aula</span>
-        <div class="login__demo-links">
-          <a href="/aula/mis-cursos">Como alumno</a>
-          <a href="/aula/profe">Como profe</a>
-          <a href="/aula/admin">Como admin</a>
-        </div>
-      </div>
     </div>
   </main>
 </AulaLayout>
+
+<script>
+  import { supabase } from "../../lib/supabase";
+
+  const $form = document.getElementById("login-form") as HTMLFormElement;
+  const $error = document.getElementById("login-error") as HTMLElement;
+  const $submit = document.getElementById("login-submit") as HTMLButtonElement;
+  const $recover = document.getElementById("login-recover") as HTMLAnchorElement;
+
+  // Si ya hay sesión activa, redirigimos directo a "mis cursos".
+  (async () => {
+    const { data } = await supabase.auth.getSession();
+    if (data.session) {
+      window.location.href = "/aula/mis-cursos";
+    }
+  })();
+
+  function mostrarError(msg: string) {
+    $error.textContent = msg;
+    $error.hidden = false;
+  }
+
+  function limpiarError() {
+    $error.hidden = true;
+    $error.textContent = "";
+  }
+
+  $form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    limpiarError();
+    $submit.disabled = true;
+    $submit.textContent = "Entrando…";
+
+    const formData = new FormData($form);
+    const email = String(formData.get("mail"));
+    const password = String(formData.get("pass"));
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      // Traducimos algunos errores comunes al español.
+      const msg = error.message.includes("Invalid login credentials")
+        ? "Mail o contraseña incorrectos."
+        : error.message.includes("Email not confirmed")
+        ? "Tu mail todavía no está confirmado. Revisá tu casilla."
+        : `No pudimos entrar: ${error.message}`;
+      mostrarError(msg);
+      $submit.disabled = false;
+      $submit.textContent = "Entrar";
+      return;
+    }
+
+    // Login OK → mis cursos.
+    window.location.href = "/aula/mis-cursos";
+  });
+
+  // "Olvidé mi contraseña" — envía un mail de recuperación.
+  $recover.addEventListener("click", async (e) => {
+    e.preventDefault();
+    limpiarError();
+    const mail = (new FormData($form).get("mail") as string)?.trim();
+    if (!mail) {
+      mostrarError("Escribí tu mail arriba y volvé a apretar 'Olvidé mi contraseña'.");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(mail, {
+      redirectTo: `${window.location.origin}/aula/login`,
+    });
+    if (error) {
+      mostrarError(`No pudimos enviar el mail: ${error.message}`);
+      return;
+    }
+    mostrarError(""); // limpia
+    $error.hidden = false;
+    $error.style.color = "var(--color-deep)";
+    $error.textContent = `Te enviamos un mail a ${mail} para resetear la contraseña.`;
+  });
+</script>
 
 <style>
   .login {
@@ -97,10 +167,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     font-weight: 600;
   }
 
-  .login__titulo {
-    font-size: 1.9rem;
-    margin: 0 0 0.5rem;
-  }
+  .login__titulo { font-size: 1.9rem; margin: 0 0 0.5rem; }
   .login__bajada {
     color: var(--color-ink-soft);
     margin: 0 0 2rem;
@@ -137,6 +204,16 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     background: #fff;
   }
 
+  .login__msg-error {
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    background: rgba(216, 85, 42, 0.1);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+    font-size: 0.9rem;
+  }
+
   .login__submit {
     margin-top: 0.5rem;
     padding: 0.9rem 1rem;
@@ -150,7 +227,8 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     cursor: pointer;
     transition: background 0.15s ease;
   }
-  .login__submit:hover { background: var(--color-accent-dark); }
+  .login__submit:hover:not(:disabled) { background: var(--color-accent-dark); }
+  .login__submit:disabled { opacity: 0.7; cursor: wait; }
 
   .login__olvido {
     margin-top: 0.25rem;
@@ -174,34 +252,4 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     text-decoration: underline;
     text-underline-offset: 3px;
   }
-
-  /* Bloque "demo" — temporal hasta que haya auth real. */
-  .login__demo {
-    margin-top: 1.5rem;
-    padding: 1rem 1.1rem;
-    background: var(--color-bg);
-    border: 1px dashed var(--color-line);
-    border-radius: var(--radius-sm);
-    text-align: center;
-  }
-  .login__demo-titulo {
-    display: block;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-    margin-bottom: 0.6rem;
-  }
-  .login__demo-links {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-    font-size: 0.9rem;
-  }
-  .login__demo-links a {
-    color: var(--color-deep);
-    border-bottom: 1px solid currentColor;
-  }
-  .login__demo-links a:hover { color: var(--color-accent); }
 </style>

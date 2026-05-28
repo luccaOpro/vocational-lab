@@ -1,54 +1,129 @@
 ---
 /*
-  /aula/mis-cursos — pantalla principal del alumno una vez que entró.
-  Muestra la lista de cursos donde está inscripto, cada uno con un
-  resumen, profesor, período y barra de progreso. Click → al curso.
+  /aula/mis-cursos — pantalla principal del alumno una vez logueado.
+  ---
+  La página renderiza un "esqueleto" estático (loader + estructura) y
+  un script del cliente que:
+    1. Chequea sesión. Si no hay → redirige a /aula/login.
+    2. Trae el profile del user para saber nombre y rol.
+    3. Trae los cursos visibles (filtrados por RLS).
+    4. Pinta las cards.
 */
 
 import AulaLayout from "../../layouts/AulaLayout.astro";
-import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
 ---
 
 <AulaLayout title="Mis cursos · Aula Vocational Lab">
   <main class="cursos">
     <div class="container">
-      <header class="cursos__head">
-        <p class="cursos__eyebrow">Aula · Hola de nuevo</p>
-        <h1 class="cursos__titulo">Hola, {alumnoDemo.nombre.split(" ")[0]}.</h1>
-        <p class="cursos__bajada">Estos son tus cursos activos.</p>
-      </header>
+      {/* Loader inicial — se oculta cuando llegan los datos. */}
+      <div id="cursos-loader" class="cursos__loader">Cargando tus cursos…</div>
 
-      <div class="cursos__grid">
-        {cursosDemo.map((c) => (
-          <a href={`/aula/curso/${c.slug}`} class="curso-card">
-            <div class="curso-card__head">
-              <span class="curso-card__periodo">{c.periodo}</span>
-              <span class={`curso-card__estado ${c.progreso === 100 ? "is-completo" : ""}`}>
-                {c.progreso === 100 ? "Completo" : "En curso"}
-              </span>
-            </div>
+      {/* Contenido real — empieza oculto, se muestra cuando hay datos. */}
+      <div id="cursos-contenido" hidden>
+        <header class="cursos__head">
+          <p class="cursos__eyebrow">Aula · Hola de nuevo</p>
+          <h1 class="cursos__titulo" id="saludo">Hola.</h1>
+          <p class="cursos__bajada" id="bajada">Estos son tus cursos activos.</p>
+        </header>
 
-            <h2 class="curso-card__titulo">{c.titulo}</h2>
-            <p class="curso-card__resumen">{c.resumen}</p>
+        {/* Estado: sin cursos. */}
+        <div id="cursos-vacio" class="cursos__vacio" hidden>
+          <p>Todavía no tenés cursos asignados.</p>
+          <p class="cursos__vacio-hint">
+            Si recién pagaste, esperá a que activemos tu acceso —
+            te avisamos por mail cuando esté listo.
+          </p>
+        </div>
 
-            <div class="curso-card__profe">
-              Con <strong>{c.profesor}</strong>
-            </div>
-
-            <div class="curso-card__progreso" aria-label={`Progreso ${c.progreso}%`}>
-              <div class="curso-card__barra">
-                <span style={`width: ${c.progreso}%`}></span>
-              </div>
-              <span class="curso-card__porcentaje">{c.progreso}%</span>
-            </div>
-
-            <span class="curso-card__entrar">Entrar al curso →</span>
-          </a>
-        ))}
+        {/* Grid de cursos — lo llenamos desde JS. */}
+        <div id="cursos-grid" class="cursos__grid"></div>
       </div>
     </div>
   </main>
 </AulaLayout>
+
+<script>
+  import { supabase } from "../../lib/supabase";
+
+  const $loader = document.getElementById("cursos-loader")!;
+  const $contenido = document.getElementById("cursos-contenido") as HTMLElement;
+  const $saludo = document.getElementById("saludo")!;
+  const $grid = document.getElementById("cursos-grid")!;
+  const $vacio = document.getElementById("cursos-vacio") as HTMLElement;
+
+  async function cargar() {
+    // 1. Chequeo de sesión — sin sesión, no se accede al aula.
+    const { data: sesion } = await supabase.auth.getSession();
+    if (!sesion.session) {
+      window.location.href = "/aula/login";
+      return;
+    }
+
+    // 2. Profile (para el saludo y para saber el rol).
+    const { data: profile, error: errProfile } = await supabase
+      .from("profiles")
+      .select("nombre, rol")
+      .eq("id", sesion.session.user.id)
+      .single();
+
+    if (errProfile) {
+      $loader.textContent = `Error al cargar tu perfil: ${errProfile.message}`;
+      return;
+    }
+
+    // 3. Cursos visibles para este user (RLS los filtra).
+    const { data: cursos, error: errCursos } = await supabase
+      .from("cursos")
+      .select("id, slug, titulo, resumen, periodo, publicado")
+      .eq("publicado", true)
+      .order("creado_en", { ascending: false });
+
+    if (errCursos) {
+      $loader.textContent = `Error al cargar cursos: ${errCursos.message}`;
+      return;
+    }
+
+    // 4. Pintar.
+    const primerNombre = profile.nombre.split(" ")[0];
+    $saludo.textContent = `Hola, ${primerNombre}.`;
+    $loader.hidden = true;
+    $contenido.hidden = false;
+
+    if (!cursos || cursos.length === 0) {
+      $vacio.hidden = false;
+      return;
+    }
+
+    $grid.innerHTML = cursos
+      .map(
+        (c) => `
+        <a href="/aula/curso/${escape(c.slug)}" class="curso-card">
+          <div class="curso-card__head">
+            <span class="curso-card__periodo">${escape(c.periodo ?? "")}</span>
+            <span class="curso-card__estado">En curso</span>
+          </div>
+          <h2 class="curso-card__titulo">${escape(c.titulo)}</h2>
+          <p class="curso-card__resumen">${escape(c.resumen ?? "")}</p>
+          <span class="curso-card__entrar">Entrar al curso →</span>
+        </a>
+      `
+      )
+      .join("");
+  }
+
+  // Mini helper para evitar inyección de HTML.
+  function escape(str: string): string {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  cargar();
+</script>
 
 <style>
   .cursos {
@@ -56,10 +131,13 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     padding: clamp(2.5rem, 6vw, 4rem) 0 5rem;
   }
 
-  .cursos__head {
-    max-width: 720px;
-    margin-bottom: 3rem;
+  .cursos__loader {
+    color: var(--color-ink-soft);
+    font-style: italic;
+    padding: 2rem 0;
   }
+
+  .cursos__head { max-width: 720px; margin-bottom: 3rem; }
   .cursos__eyebrow {
     font-family: var(--font-sans);
     font-size: 0.78rem;
@@ -79,6 +157,17 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     margin: 0;
   }
 
+  .cursos__vacio {
+    background: #fff;
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    text-align: center;
+    color: var(--color-ink-soft);
+  }
+  .cursos__vacio p { margin: 0 0 0.5rem; }
+  .cursos__vacio-hint { font-size: 0.9rem; color: var(--color-ink-muted); }
+
   /* ===== Grid de cursos ===== */
   .cursos__grid {
     display: grid;
@@ -86,7 +175,7 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   }
 
-  .curso-card {
+  :global(.curso-card) {
     display: flex;
     flex-direction: column;
     gap: 0.9rem;
@@ -97,13 +186,13 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     color: var(--color-ink);
     transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   }
-  .curso-card:hover {
+  :global(.curso-card:hover) {
     transform: translateY(-3px);
     box-shadow: 0 18px 40px rgba(19, 27, 61, 0.08);
     border-color: var(--color-deep);
   }
 
-  .curso-card__head {
+  :global(.curso-card__head) {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -112,7 +201,7 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     text-transform: uppercase;
     color: var(--color-ink-muted);
   }
-  .curso-card__estado {
+  :global(.curso-card__estado) {
     padding: 0.25rem 0.55rem;
     border-radius: 99px;
     background: rgba(36, 58, 130, 0.1);
@@ -121,60 +210,18 @@ import { alumnoDemo, cursosDemo } from "../../data/cursos-demo";
     letter-spacing: 0.04em;
     text-transform: none;
   }
-  .curso-card__estado.is-completo {
-    background: rgba(201, 162, 76, 0.18);
-    color: #7a5f1f;
-  }
-
-  .curso-card__titulo {
+  :global(.curso-card__titulo) {
     font-size: 1.35rem;
     margin: 0;
     line-height: 1.2;
   }
-  .curso-card__resumen {
+  :global(.curso-card__resumen) {
     margin: 0;
     color: var(--color-ink-soft);
     font-size: 0.95rem;
     line-height: 1.5;
   }
-  .curso-card__profe {
-    font-size: 0.9rem;
-    color: var(--color-ink-soft);
-  }
-  .curso-card__profe strong {
-    color: var(--color-ink);
-    font-weight: 500;
-  }
-
-  /* Barra de progreso */
-  .curso-card__progreso {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.3rem;
-  }
-  .curso-card__barra {
-    flex: 1;
-    height: 6px;
-    background: var(--color-line);
-    border-radius: 99px;
-    overflow: hidden;
-  }
-  .curso-card__barra span {
-    display: block;
-    height: 100%;
-    background: var(--color-accent);
-    border-radius: 99px;
-    transition: width 0.4s ease;
-  }
-  .curso-card__porcentaje {
-    font-size: 0.85rem;
-    color: var(--color-ink-soft);
-    min-width: 36px;
-    text-align: right;
-  }
-
-  .curso-card__entrar {
+  :global(.curso-card__entrar) {
     margin-top: 0.4rem;
     color: var(--color-accent);
     font-weight: 500;
