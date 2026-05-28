@@ -150,52 +150,63 @@ comment on table public.transferencias is 'Transferencias bancarias por confirma
 -- Devuelve el rol del usuario logueado actual ('alumno', 'profe', 'admin' o null).
 create or replace function public.user_role()
 returns text
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
-as $$
-  select rol from public.profiles where id = auth.uid();
-$$;
+as $func$
+begin
+  return (select rol from public.profiles where id = auth.uid());
+end;
+$func$;
 
 -- Boolean shortcut: es admin?
 create or replace function public.is_admin()
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
-as $$
-  select coalesce((select rol = 'admin' from public.profiles where id = auth.uid()), false);
-$$;
+as $func$
+begin
+  return coalesce(
+    (select rol = 'admin' from public.profiles where id = auth.uid()),
+    false
+  );
+end;
+$func$;
 
 -- Boolean shortcut: es profe del curso indicado?
 create or replace function public.is_profe_de_curso(p_curso_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
-as $$
-  select exists (
+as $func$
+begin
+  return exists (
     select 1 from public.cursos_profesores
     where curso_id = p_curso_id and profesor_id = auth.uid()
   );
-$$;
+end;
+$func$;
 
 -- Boolean shortcut: está inscripto activo en el curso?
 create or replace function public.is_alumno_inscripto(p_curso_id uuid)
 returns boolean
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
-as $$
-  select exists (
+as $func$
+begin
+  return exists (
     select 1 from public.inscripciones
     where curso_id = p_curso_id and alumno_id = auth.uid() and activo = true
   );
-$$;
+end;
+$func$;
 
 
 -- ============================================================
@@ -207,7 +218,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $func$
 begin
   insert into public.profiles (id, nombre, rol)
   values (
@@ -217,7 +228,7 @@ begin
   );
   return new;
 end;
-$$;
+$func$;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
