@@ -1,8 +1,12 @@
 ---
 /*
-  /aula/login — login REAL contra Supabase.
-  Cuando auth.signInWithPassword() devuelve OK, redirigimos
-  a /aula/mis-cursos. Si falla, mostramos el error.
+  /aula/login — login + registro contra Supabase.
+  ---
+  Dos vistas en una sola página, alternables con un toggle:
+    1. Login (default): mail + contraseña → signInWithPassword.
+    2. Registro: nombre + mail + contraseña → signUp.
+       El trigger handle_new_user crea automáticamente el profile
+       con rol = 'alumno'. Admin después puede promover el rol.
 */
 
 import AulaLayout from "../../layouts/AulaLayout.astro";
@@ -16,33 +20,63 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         <span>Vocational Lab</span>
       </a>
 
-      <h1 class="login__titulo">Entrá al aula.</h1>
-      <p class="login__bajada">
-        Si ya tenés tu acceso, ingresá con el mail con el que te inscribiste.
-      </p>
+      {/* ============ MODO LOGIN ============ */}
+      <div id="modo-login">
+        <h1 class="login__titulo">Entrá al aula.</h1>
+        <p class="login__bajada">
+          Si ya tenés acceso, ingresá con tu mail y contraseña.
+        </p>
 
-      <form id="login-form" class="login__form">
-        <label class="login__label">
-          <span>Mail</span>
-          <input type="email" name="mail" placeholder="tu@mail.com" required autocomplete="email" />
-        </label>
+        <form id="login-form" class="login__form">
+          <label class="login__label">
+            <span>Mail</span>
+            <input type="email" name="mail" placeholder="tu@mail.com" required autocomplete="email" />
+          </label>
+          <label class="login__label">
+            <span>Contraseña</span>
+            <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password" />
+          </label>
+          <p id="login-error" class="login__msg-error" hidden></p>
+          <button type="submit" id="login-submit" class="login__submit">Entrar</button>
+          <a href="#" class="login__olvido" id="login-recover">Olvidé mi contraseña</a>
+        </form>
 
-        <label class="login__label">
-          <span>Contraseña</span>
-          <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password" />
-        </label>
+        <p class="login__ayuda">
+          ¿Todavía no tenés cuenta?
+          <a href="#" id="ir-a-registro">Crear una nueva</a>
+        </p>
+      </div>
 
-        <p id="login-error" class="login__msg-error" hidden></p>
+      {/* ============ MODO REGISTRO ============ */}
+      <div id="modo-registro" hidden>
+        <h1 class="login__titulo">Crear cuenta.</h1>
+        <p class="login__bajada">
+          Completá tus datos. Te activamos el acceso cuando confirmemos tu inscripción.
+        </p>
 
-        <button type="submit" id="login-submit" class="login__submit">Entrar</button>
+        <form id="signup-form" class="login__form">
+          <label class="login__label">
+            <span>Nombre y apellido</span>
+            <input type="text" name="nombre" placeholder="María Pérez" required autocomplete="name" minlength="2" />
+          </label>
+          <label class="login__label">
+            <span>Mail</span>
+            <input type="email" name="mail" placeholder="tu@mail.com" required autocomplete="email" />
+          </label>
+          <label class="login__label">
+            <span>Contraseña</span>
+            <input type="password" name="pass" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" />
+          </label>
+          <p id="signup-error" class="login__msg-error" hidden></p>
+          <p id="signup-ok" class="login__msg-ok" hidden></p>
+          <button type="submit" id="signup-submit" class="login__submit">Crear cuenta</button>
+        </form>
 
-        <a href="#" class="login__olvido" id="login-recover">Olvidé mi contraseña</a>
-      </form>
-
-      <p class="login__ayuda">
-        ¿Todavía no tenés acceso? <a href="/#contacto">Escribinos</a>
-        y te activamos tu cuenta.
-      </p>
+        <p class="login__ayuda">
+          ¿Ya tenés cuenta?
+          <a href="#" id="ir-a-login">Iniciá sesión</a>
+        </p>
+      </div>
     </div>
   </main>
 </AulaLayout>
@@ -51,15 +85,48 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   import { supabase } from "../../lib/supabase";
   import { homePorRol, type Rol } from "../../lib/auth-guard";
 
-  const $form = document.getElementById("login-form") as HTMLFormElement;
-  const $error = document.getElementById("login-error") as HTMLElement;
-  const $submit = document.getElementById("login-submit") as HTMLButtonElement;
-  const $recover = document.getElementById("login-recover") as HTMLAnchorElement;
+  // ============ Referencias DOM ============
+  const $modoLogin = document.getElementById("modo-login") as HTMLElement;
+  const $modoRegistro = document.getElementById("modo-registro") as HTMLElement;
 
-  /**
-   * Lee el rol del user logueado y lo manda al home de su rol.
-   * Si no se puede leer el rol, fallback a /aula/mis-cursos.
-   */
+  // Login
+  const $loginForm = document.getElementById("login-form") as HTMLFormElement;
+  const $loginError = document.getElementById("login-error") as HTMLElement;
+  const $loginSubmit = document.getElementById("login-submit") as HTMLButtonElement;
+  const $loginRecover = document.getElementById("login-recover") as HTMLAnchorElement;
+
+  // Registro
+  const $signupForm = document.getElementById("signup-form") as HTMLFormElement;
+  const $signupError = document.getElementById("signup-error") as HTMLElement;
+  const $signupOk = document.getElementById("signup-ok") as HTMLElement;
+  const $signupSubmit = document.getElementById("signup-submit") as HTMLButtonElement;
+
+  // Toggles
+  const $irARegistro = document.getElementById("ir-a-registro") as HTMLAnchorElement;
+  const $irALogin = document.getElementById("ir-a-login") as HTMLAnchorElement;
+
+  // ============ Toggle entre vistas ============
+  $irARegistro.addEventListener("click", (e) => {
+    e.preventDefault();
+    $modoLogin.hidden = true;
+    $modoRegistro.hidden = false;
+    history.replaceState(null, "", "#registro");
+  });
+
+  $irALogin.addEventListener("click", (e) => {
+    e.preventDefault();
+    $modoLogin.hidden = false;
+    $modoRegistro.hidden = true;
+    history.replaceState(null, "", window.location.pathname);
+  });
+
+  // Si la URL tiene #registro, arrancamos en esa vista.
+  if (window.location.hash === "#registro") {
+    $modoLogin.hidden = true;
+    $modoRegistro.hidden = false;
+  }
+
+  // ============ Helpers ============
   async function redirigirSegunRol(userId: string) {
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -76,7 +143,17 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     window.location.href = destino;
   }
 
-  // Si ya hay sesión activa, mandamos directo al home del rol.
+  function mostrarMensaje(el: HTMLElement, msg: string) {
+    el.textContent = msg;
+    el.hidden = false;
+  }
+
+  function ocultarMensaje(el: HTMLElement) {
+    el.hidden = true;
+    el.textContent = "";
+  }
+
+  // ============ Si ya hay sesión, redirigimos ============
   (async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
@@ -84,70 +161,109 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     }
   })();
 
-  function mostrarError(msg: string) {
-    $error.textContent = msg;
-    $error.hidden = false;
-  }
-
-  function limpiarError() {
-    $error.hidden = true;
-    $error.textContent = "";
-  }
-
-  $form.addEventListener("submit", async (e) => {
+  // ============ LOGIN ============
+  $loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    limpiarError();
-    $submit.disabled = true;
-    $submit.textContent = "Entrando…";
+    ocultarMensaje($loginError);
+    $loginSubmit.disabled = true;
+    $loginSubmit.textContent = "Entrando…";
 
-    const formData = new FormData($form);
+    const formData = new FormData($loginForm);
     const email = String(formData.get("mail"));
     const password = String(formData.get("pass"));
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      // Traducimos algunos errores comunes al español.
       const msg = error.message.includes("Invalid login credentials")
         ? "Mail o contraseña incorrectos."
         : error.message.includes("Email not confirmed")
         ? "Tu mail todavía no está confirmado. Revisá tu casilla."
         : `No pudimos entrar: ${error.message}`;
-      mostrarError(msg);
-      $submit.disabled = false;
-      $submit.textContent = "Entrar";
+      mostrarMensaje($loginError, msg);
+      $loginSubmit.disabled = false;
+      $loginSubmit.textContent = "Entrar";
       return;
     }
 
-    // Login OK → redirigimos según el rol del user.
     if (data.user) {
       await redirigirSegunRol(data.user.id);
     } else {
-      // Fallback raro (no debería pasar).
       window.location.href = "/aula/mis-cursos";
     }
   });
 
-  // "Olvidé mi contraseña" — envía un mail de recuperación.
-  $recover.addEventListener("click", async (e) => {
+  // "Olvidé mi contraseña" — envía mail de recuperación.
+  $loginRecover.addEventListener("click", async (e) => {
     e.preventDefault();
-    limpiarError();
-    const mail = (new FormData($form).get("mail") as string)?.trim();
+    ocultarMensaje($loginError);
+    const mail = (new FormData($loginForm).get("mail") as string)?.trim();
     if (!mail) {
-      mostrarError("Escribí tu mail arriba y volvé a apretar 'Olvidé mi contraseña'.");
+      mostrarMensaje($loginError, "Escribí tu mail arriba y volvé a apretar 'Olvidé mi contraseña'.");
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(mail, {
       redirectTo: `${window.location.origin}/aula/login`,
     });
     if (error) {
-      mostrarError(`No pudimos enviar el mail: ${error.message}`);
+      mostrarMensaje($loginError, `No pudimos enviar el mail: ${error.message}`);
       return;
     }
-    mostrarError(""); // limpia
-    $error.hidden = false;
-    $error.style.color = "var(--color-deep)";
-    $error.textContent = `Te enviamos un mail a ${mail} para resetear la contraseña.`;
+    $loginError.style.color = "var(--color-deep)";
+    mostrarMensaje($loginError, `Te enviamos un mail a ${mail} para resetear la contraseña.`);
+  });
+
+  // ============ REGISTRO ============
+  $signupForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    ocultarMensaje($signupError);
+    ocultarMensaje($signupOk);
+    $signupSubmit.disabled = true;
+    $signupSubmit.textContent = "Creando cuenta…";
+
+    const formData = new FormData($signupForm);
+    const nombre = String(formData.get("nombre")).trim();
+    const email = String(formData.get("mail")).trim().toLowerCase();
+    const password = String(formData.get("pass"));
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        // El trigger handle_new_user usa este metadata para el nombre del profile.
+        data: { nombre },
+        emailRedirectTo: `${window.location.origin}/aula/login`,
+      },
+    });
+
+    if (error) {
+      const msg = error.message.includes("already registered") || error.message.includes("already been registered")
+        ? "Ese mail ya está registrado. Probá iniciar sesión."
+        : error.message.includes("Password should be")
+        ? "La contraseña tiene que tener al menos 8 caracteres."
+        : `No pudimos crear la cuenta: ${error.message}`;
+      mostrarMensaje($signupError, msg);
+      $signupSubmit.disabled = false;
+      $signupSubmit.textContent = "Crear cuenta";
+      return;
+    }
+
+    // Dos escenarios según la configuración de Supabase:
+    //  · "Confirm email" activado → necesitan confirmar antes de loguearse.
+    //  · "Confirm email" desactivado → se loguean directo.
+    if (data.session) {
+      // Auto-loguead@ ya. Redirigimos según rol (será 'alumno' por default).
+      await redirigirSegunRol(data.session.user.id);
+    } else {
+      // Esperando confirmación de mail.
+      mostrarMensaje(
+        $signupOk,
+        `¡Cuenta creada! Te enviamos un mail a ${email} para confirmarla. Revisá tu casilla y volvé a iniciar sesión.`
+      );
+      $signupForm.reset();
+      $signupSubmit.disabled = false;
+      $signupSubmit.textContent = "Crear cuenta";
+    }
   });
 </script>
 
@@ -164,7 +280,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
   .login__card {
     width: 100%;
-    max-width: 420px;
+    max-width: 440px;
     background: #fff;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
@@ -230,14 +346,23 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     background: #fff;
   }
 
-  .login__msg-error {
+  .login__msg-error,
+  .login__msg-ok {
     margin: 0;
     padding: 0.7rem 0.9rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .login__msg-error {
     background: rgba(216, 85, 42, 0.1);
     border-left: 3px solid var(--color-accent);
-    border-radius: var(--radius-sm);
     color: var(--color-accent);
-    font-size: 0.9rem;
+  }
+  .login__msg-ok {
+    background: rgba(36, 58, 130, 0.08);
+    border-left: 3px solid var(--color-deep);
+    color: var(--color-deep);
   }
 
   .login__submit {
@@ -277,5 +402,6 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     color: var(--color-accent);
     text-decoration: underline;
     text-underline-offset: 3px;
+    cursor: pointer;
   }
 </style>
