@@ -1,0 +1,521 @@
+---
+/*
+  /aula/curso?slug=X — vista del curso para el alumno.
+  ---
+  Lee del querystring el slug, carga curso + módulos + archivos + tareas
+  + entrega del alumno actual (si existe).
+
+  Por qué querystring y no /aula/curso/[slug]:
+  estamos en modo static y los slugs son dinámicos (vienen de DB).
+  Más adelante migramos a SSR y URLs lindas.
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Curso · Aula Vocational Lab">
+  <main class="curso">
+    <div class="container">
+      <a href="/aula/mis-cursos" class="curso__volver">← Volver a mis cursos</a>
+
+      <div id="curso-loader" class="curso__loader">Cargando curso…</div>
+
+      <div id="curso-contenido" hidden>
+        <header class="curso__head">
+          <span class="curso__periodo" id="curso-periodo"></span>
+          <h1 class="curso__titulo" id="curso-titulo"></h1>
+          <p class="curso__resumen" id="curso-resumen"></p>
+        </header>
+
+        <section id="curso-modulos" class="curso__modulos"></section>
+      </div>
+
+      <div id="curso-error" class="curso__error" hidden></div>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+
+  const $loader = document.getElementById("curso-loader") as HTMLElement;
+  const $contenido = document.getElementById("curso-contenido") as HTMLElement;
+  const $periodo = document.getElementById("curso-periodo")!;
+  const $titulo = document.getElementById("curso-titulo")!;
+  const $resumen = document.getElementById("curso-resumen")!;
+  const $modulos = document.getElementById("curso-modulos")!;
+  const $error = document.getElementById("curso-error") as HTMLElement;
+
+  function escape(str: string | null | undefined): string {
+    return String(str ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function mostrarError(msg: string) {
+    $loader.hidden = true;
+    $error.hidden = false;
+    $error.textContent = msg;
+  }
+
+  const estadoLabels: Record<string, string> = {
+    pendiente: "Pendiente de entrega",
+    entregada: "Entregada — esperando corrección",
+    corregida: "Corregida",
+  };
+
+  type ArchivoRow = {
+    id: string;
+    nombre: string;
+    tipo: "pdf" | "video" | "audio" | "link";
+    peso_kb: number | null;
+  };
+  type TareaRow = {
+    id: string;
+    titulo: string;
+    consigna: string;
+    fecha_entrega: string | null;
+  };
+  type ModuloRow = {
+    id: string;
+    numero: number;
+    titulo: string;
+    descripcion: string | null;
+    archivos_modulo: ArchivoRow[];
+    tareas: TareaRow[];
+  };
+  type EntregaRow = {
+    id: string;
+    tarea_id: string;
+    nota: string | null;
+    comentario: string | null;
+    corregida_en: string | null;
+  };
+
+  function formatoFecha(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+    } catch {
+      return iso;
+    }
+  }
+
+  function formatoPeso(kb: number | null) {
+    if (!kb) return "";
+    if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+    return `${kb} KB`;
+  }
+
+  function iconoTipo(tipo: ArchivoRow["tipo"]) {
+    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : "↗";
+  }
+
+  function estadoEntrega(entrega: EntregaRow | undefined) {
+    if (!entrega) return "pendiente";
+    if (entrega.corregida_en) return "corregida";
+    return "entregada";
+  }
+
+  async function cargar() {
+    // 1. Guard de sesión.
+    const { data: sesion } = await supabase.auth.getSession();
+    if (!sesion.session) {
+      window.location.href = "/aula/login";
+      return;
+    }
+    const userId = sesion.session.user.id;
+
+    // 2. Slug del querystring.
+    const slug = new URLSearchParams(window.location.search).get("slug");
+    if (!slug) {
+      mostrarError("Falta el parámetro 'slug' en la URL.");
+      return;
+    }
+
+    // 3. Curso por slug.
+    const { data: curso, error: errCurso } = await supabase
+      .from("cursos")
+      .select("id, slug, titulo, resumen, periodo")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (errCurso) {
+      mostrarError(`Error al cargar el curso: ${errCurso.message}`);
+      return;
+    }
+    if (!curso) {
+      mostrarError(`No encontramos ese curso (o no tenés permiso para verlo).`);
+      return;
+    }
+
+    // 4. Módulos con archivos y tareas (en una sola query con joins).
+    const { data: modulos, error: errModulos } = await supabase
+      .from("modulos")
+      .select(`
+        id, numero, titulo, descripcion,
+        archivos_modulo (id, nombre, tipo, peso_kb),
+        tareas (id, titulo, consigna, fecha_entrega)
+      `)
+      .eq("curso_id", curso.id)
+      .order("numero");
+
+    if (errModulos) {
+      mostrarError(`Error al cargar los módulos: ${errModulos.message}`);
+      return;
+    }
+
+    // 5. Entregas del alumno actual para las tareas de este curso.
+    const tareaIds = (modulos ?? []).flatMap((m: ModuloRow) => (m.tareas ?? []).map((t) => t.id));
+    let entregas: EntregaRow[] = [];
+    if (tareaIds.length > 0) {
+      const { data: entregasData, error: errEntregas } = await supabase
+        .from("entregas")
+        .select("id, tarea_id, nota, comentario, corregida_en")
+        .eq("alumno_id", userId)
+        .in("tarea_id", tareaIds);
+
+      if (errEntregas) {
+        mostrarError(`Error al cargar tus entregas: ${errEntregas.message}`);
+        return;
+      }
+      entregas = entregasData ?? [];
+    }
+
+    // 6. Pintar todo.
+    $periodo.textContent = curso.periodo ?? "";
+    $titulo.textContent = curso.titulo;
+    $resumen.textContent = curso.resumen ?? "";
+
+    const html = (modulos as ModuloRow[]).map((m) => renderModulo(m, entregas)).join("");
+    $modulos.innerHTML = html || `<p class="curso__sin-modulos">Este curso todavía no tiene módulos cargados.</p>`;
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  function renderModulo(m: ModuloRow, entregas: EntregaRow[]): string {
+    const tarea = m.tareas?.[0];
+    const entrega = tarea ? entregas.find((e) => e.tarea_id === tarea.id) : undefined;
+    const estado = estadoEntrega(entrega);
+
+    return `
+      <article class="modulo">
+        <header class="modulo__head">
+          <span class="modulo__numero">Módulo ${m.numero}</span>
+          <h2 class="modulo__titulo">${escape(m.titulo)}</h2>
+          <p class="modulo__descripcion">${escape(m.descripcion)}</p>
+        </header>
+
+        <div class="modulo__bloques">
+          <div class="bloque">
+            <h3 class="bloque__titulo">Material</h3>
+            ${renderArchivos(m.archivos_modulo ?? [])}
+          </div>
+
+          ${tarea ? `
+            <div class="bloque">
+              <h3 class="bloque__titulo">Tarea</h3>
+              <div class="tarea tarea--${estado}">
+                <div class="tarea__head">
+                  <h4 class="tarea__titulo">${escape(tarea.titulo)}</h4>
+                  <span class="tarea__estado">${estadoLabels[estado]}</span>
+                </div>
+                <p class="tarea__consigna">${escape(tarea.consigna)}</p>
+                <p class="tarea__fecha">
+                  <strong>Entrega:</strong> ${escape(formatoFecha(tarea.fecha_entrega))}
+                </p>
+                ${renderEstadoTarea(estado, entrega, tarea.id)}
+              </div>
+            </div>
+          ` : ""}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderArchivos(archivos: ArchivoRow[]): string {
+    if (archivos.length === 0) {
+      return `<p class="bloque__vacio">Sin material todavía.</p>`;
+    }
+    return `
+      <ul class="archivos">
+        ${archivos.map((a) => `
+          <li class="archivo">
+            <span class="archivo__icono" aria-hidden="true">${iconoTipo(a.tipo)}</span>
+            <div class="archivo__cuerpo">
+              <span class="archivo__nombre">${escape(a.nombre)}</span>
+              <span class="archivo__meta">${escape(formatoPeso(a.peso_kb))}</span>
+            </div>
+            <a href="#" class="archivo__btn" data-archivo-id="${a.id}">Descargar</a>
+          </li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  function renderEstadoTarea(estado: string, entrega: EntregaRow | undefined, tareaId: string): string {
+    if (estado === "pendiente") {
+      return `
+        <div class="tarea__accion">
+          <label class="tarea__upload">
+            <input type="file" data-tarea-id="${tareaId}" />
+            <span class="tarea__btn">Subir entrega</span>
+          </label>
+          <p class="tarea__hint">La subida real la conectamos en la próxima sesión.</p>
+        </div>
+      `;
+    }
+    if (estado === "entregada") {
+      return `
+        <p class="tarea__nota">
+          Tu entrega está en camino. Vas a recibir una devolución por mail cuando esté corregida.
+        </p>
+      `;
+    }
+    // corregida
+    return `
+      <div class="tarea__devolucion">
+        <p class="tarea__devolucion-nota"><strong>Nota:</strong> ${escape(entrega?.nota ?? "")}</p>
+        <blockquote class="tarea__devolucion-comentario">
+          "${escape(entrega?.comentario ?? "")}"
+        </blockquote>
+      </div>
+    `;
+  }
+
+  cargar();
+</script>
+
+<style>
+  .curso {
+    flex: 1;
+    padding: clamp(2rem, 5vw, 3rem) 0 5rem;
+  }
+
+  .curso__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .curso__volver:hover { color: var(--color-ink); }
+
+  .curso__loader,
+  .curso__error {
+    color: var(--color-ink-soft);
+    font-style: italic;
+    padding: 2rem 0;
+  }
+  .curso__error {
+    color: var(--color-accent);
+    font-style: normal;
+  }
+
+  .curso__head {
+    max-width: 780px;
+    margin-bottom: 3.5rem;
+    padding-bottom: 2.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .curso__periodo {
+    display: inline-block;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.9rem;
+  }
+  .curso__titulo { font-size: clamp(2rem, 4.5vw, 2.8rem); margin: 0 0 0.8rem; }
+  .curso__resumen {
+    color: var(--color-ink-soft);
+    font-size: 1.05rem;
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .curso__modulos {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+  }
+
+  .curso__sin-modulos {
+    color: var(--color-ink-soft);
+    font-style: italic;
+    padding: 1rem 0;
+  }
+
+  :global(.modulo) {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+  }
+  :global(.modulo__head) { margin-bottom: 1.8rem; }
+  :global(.modulo__numero) {
+    display: inline-block;
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin-bottom: 0.6rem;
+  }
+  :global(.modulo__titulo) { font-size: 1.5rem; margin: 0 0 0.6rem; }
+  :global(.modulo__descripcion) { color: var(--color-ink-soft); margin: 0; max-width: 60ch; }
+
+  :global(.modulo__bloques) { display: grid; gap: 2rem; }
+  @media (min-width: 880px) {
+    :global(.modulo__bloques) { grid-template-columns: 1fr 1fr; }
+  }
+
+  :global(.bloque__titulo) {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 0.9rem;
+  }
+  :global(.bloque__vacio) {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-style: italic;
+    font-size: 0.92rem;
+  }
+
+  :global(.archivos) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  :global(.archivo) {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+  }
+  :global(.archivo__icono) {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-size: 1rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.archivo__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  :global(.archivo__nombre) {
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.archivo__meta) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+  }
+  :global(.archivo__btn) {
+    font-size: 0.85rem;
+    color: var(--color-deep);
+    font-weight: 500;
+  }
+  :global(.archivo__btn:hover) { color: var(--color-accent); }
+
+  :global(.tarea) {
+    padding: 1.1rem 1.2rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--color-ink-muted);
+  }
+  :global(.tarea--pendiente) { border-left-color: var(--color-accent); }
+  :global(.tarea--entregada) { border-left-color: var(--color-deep); }
+  :global(.tarea--corregida) { border-left-color: var(--color-gold); }
+
+  :global(.tarea__head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+  :global(.tarea__titulo) { font-size: 1.05rem; margin: 0; }
+  :global(.tarea__estado) {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+  :global(.tarea__consigna) {
+    margin: 0 0 0.7rem;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+  :global(.tarea__fecha) {
+    margin: 0 0 0.9rem;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.tarea__fecha strong) { color: var(--color-ink); font-weight: 500; }
+
+  :global(.tarea__upload input) { display: none; }
+  :global(.tarea__btn) {
+    display: inline-block;
+    padding: 0.55rem 1rem;
+    background: var(--color-accent);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  :global(.tarea__btn:hover) { background: var(--color-accent-dark); }
+  :global(.tarea__hint) {
+    margin: 0.5rem 0 0;
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+    font-style: italic;
+  }
+
+  :global(.tarea__nota) {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.9rem;
+    font-style: italic;
+  }
+
+  :global(.tarea__devolucion) { display: flex; flex-direction: column; gap: 0.5rem; }
+  :global(.tarea__devolucion-nota) { margin: 0; font-size: 0.95rem; }
+  :global(.tarea__devolucion-nota strong) { color: var(--color-ink); font-weight: 500; }
+  :global(.tarea__devolucion-comentario) {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border-left: 2px solid var(--color-gold);
+    font-family: var(--font-serif);
+    font-style: italic;
+    color: var(--color-ink);
+    line-height: 1.5;
+  }
+</style>

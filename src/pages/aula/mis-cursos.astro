@@ -98,7 +98,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     $grid.innerHTML = cursos
       .map(
         (c) => `
-        <a href="/aula/curso/${escape(c.slug)}" class="curso-card">
+        <a href="/aula/curso?slug=${encodeURIComponent(c.slug)}" class="curso-card">
           <div class="curso-card__head">
             <span class="curso-card__periodo">${escape(c.periodo ?? "")}</span>
             <span class="curso-card__estado">En curso</span>
