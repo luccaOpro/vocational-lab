@@ -76,6 +76,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../lib/supabase";
   import { requireSession, homePorRol, type Rol } from "../../lib/auth-guard";
+  import { showToast, confirmModal } from "../../lib/ui";
 
   const $loader = document.getElementById("perfil-loader") as HTMLElement;
   const $contenido = document.getElementById("perfil-contenido") as HTMLElement;
@@ -112,6 +113,8 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     admin: "Administrador/a",
   };
 
+  // Mantiene los mensajes inline como fallback,
+  // pero los principales ahora usan showToast() (mejor UX).
   function mostrarMsg(el: HTMLElement, mensaje: string) {
     el.textContent = mensaje;
     el.hidden = false;
@@ -182,11 +185,11 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
       const nuevo = $input.value.trim();
       if (nuevo.length < 2) {
-        mostrarMsg($err, "El nombre tiene que tener al menos 2 caracteres.");
+        showToast("El nombre tiene que tener al menos 2 caracteres.", "error");
         return;
       }
       if (nuevo === profile.nombre) {
-        mostrarMsg($ok, "No hay cambios para guardar.");
+        showToast("No hay cambios para guardar.", "info");
         return;
       }
 
@@ -202,14 +205,14 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       $btn.textContent = "Guardar";
 
       if (error) {
-        mostrarMsg($err, `No se pudo guardar: ${error.message}`);
+        showToast(`No se pudo guardar: ${error.message}`, "error");
         return;
       }
 
       profile.nombre = nuevo;
       $nombre.textContent = nuevo;
       $avatar.textContent = iniciales(nuevo);
-      mostrarMsg($ok, "Nombre actualizado.");
+      showToast("Nombre actualizado.");
     });
   }
 
@@ -228,11 +231,11 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       const pass2 = String(fd.get("pass2"));
 
       if (pass.length < 8) {
-        mostrarMsg($err, "La contraseña tiene que tener al menos 8 caracteres.");
+        showToast("La contraseña tiene que tener al menos 8 caracteres.", "error");
         return;
       }
       if (pass !== pass2) {
-        mostrarMsg($err, "Las dos contraseñas no coinciden.");
+        showToast("Las dos contraseñas no coinciden.", "error");
         return;
       }
 
@@ -245,11 +248,11 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       $btn.textContent = "Cambiar contraseña";
 
       if (error) {
-        mostrarMsg($err, `No se pudo cambiar: ${error.message}`);
+        showToast(`No se pudo cambiar: ${error.message}`, "error");
         return;
       }
 
-      mostrarMsg($ok, "Contraseña actualizada.");
+      showToast("Contraseña actualizada.");
       $form.reset();
     });
   }
@@ -257,6 +260,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   function enchufarLogout() {
     const $btn = document.getElementById("btn-logout") as HTMLButtonElement;
     $btn.addEventListener("click", async () => {
+      const ok = await confirmModal({
+        titulo: "Cerrar sesión",
+        mensaje: "¿Querés salir del aula?",
+        confirmLabel: "Cerrar sesión",
+      });
+      if (!ok) return;
       await supabase.auth.signOut();
       window.location.href = "/aula/login";
     });

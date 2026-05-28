@@ -1,0 +1,209 @@
+---
+/*
+  UIRoot — contenedores globales para toasts y modales del aula.
+  Se incluye una sola vez por layout (AulaLayout) al final del <body>.
+
+  Los helpers para usarlos viven en src/lib/ui.ts:
+    · showToast(mensaje, tipo)
+    · confirmModal(opciones)
+*/
+---
+
+{/* Contenedor de toasts (esquina inferior derecha). */}
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+{/* Modal de confirmación reusable. */}
+<div
+  id="modal-confirm"
+  class="modal"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="modal-confirm-titulo"
+>
+  <div class="modal__backdrop" data-modal-backdrop></div>
+  <div class="modal__panel" role="document">
+    <h2 class="modal__titulo" id="modal-confirm-titulo"></h2>
+    <p class="modal__mensaje" id="modal-confirm-mensaje"></p>
+    <div class="modal__acciones">
+      <button
+        id="modal-confirm-cancel"
+        type="button"
+        class="modal__btn modal__btn--ghost"
+      >Cancelar</button>
+      <button
+        id="modal-confirm-ok"
+        type="button"
+        class="modal__btn modal__btn--primary"
+      >Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<style is:global>
+  /* ============ Toasts ============ */
+  .toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    pointer-events: none;
+    max-width: calc(100vw - 3rem);
+  }
+
+  .toast {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.85rem 1.1rem;
+    min-width: 240px;
+    max-width: 380px;
+    background: #fff;
+    color: var(--color-ink);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-line);
+    box-shadow: 0 10px 30px rgba(19, 27, 61, 0.16);
+    font-size: 0.92rem;
+    line-height: 1.4;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    pointer-events: auto;
+  }
+  .toast--visible {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .toast__icono {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .toast--ok .toast__icono {
+    background: rgba(36, 58, 130, 0.12);
+    color: var(--color-deep);
+  }
+  .toast--error {
+    border-left: 3px solid var(--color-accent);
+  }
+  .toast--error .toast__icono {
+    background: rgba(216, 85, 42, 0.15);
+    color: var(--color-accent);
+  }
+  .toast--info .toast__icono {
+    background: rgba(123, 130, 157, 0.15);
+    color: var(--color-ink-soft);
+  }
+
+  .toast__mensaje { flex: 1; min-width: 0; }
+
+  @media (max-width: 540px) {
+    .toast-container {
+      left: 1rem;
+      right: 1rem;
+      max-width: none;
+      bottom: 1rem;
+    }
+    .toast { min-width: 0; max-width: none; }
+  }
+
+  /* ============ Modal ============ */
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9100;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+  }
+
+  .modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(19, 27, 61, 0.55);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .modal--visible .modal__backdrop { opacity: 1; }
+
+  .modal__panel {
+    position: relative;
+    background: #fff;
+    width: 100%;
+    max-width: 420px;
+    padding: 1.8rem 1.8rem 1.4rem;
+    border-radius: var(--radius-md);
+    box-shadow: 0 30px 80px rgba(19, 27, 61, 0.3);
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+  }
+  .modal--visible .modal__panel {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+
+  .modal__titulo {
+    font-size: 1.25rem;
+    margin: 0 0 0.6rem;
+    line-height: 1.25;
+  }
+  .modal__mensaje {
+    margin: 0 0 1.4rem;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .modal__mensaje[hidden] { display: none; }
+
+  .modal__acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .modal__btn {
+    padding: 0.65rem 1.1rem;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.93rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .modal__btn--ghost {
+    background: transparent;
+    color: var(--color-ink-soft);
+    border-color: var(--color-line);
+  }
+  .modal__btn--ghost:hover {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+  .modal__btn--primary {
+    background: var(--color-deep);
+    color: #fff;
+    border-color: var(--color-deep);
+  }
+  .modal__btn--primary:hover { background: #1a2c64; }
+  .modal__btn--danger {
+    background: var(--color-accent);
+    color: #fff;
+    border-color: var(--color-accent);
+  }
+  .modal__btn--danger:hover { background: var(--color-accent-dark); }
+
+  body.modal-open { overflow: hidden; }
+</style>

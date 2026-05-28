@@ -63,6 +63,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireRol, type Rol } from "../../../lib/auth-guard";
+  import { showToast, confirmModal } from "../../../lib/ui";
 
   const $loader = document.getElementById("usuarios-loader") as HTMLElement;
   const $wrap = document.getElementById("usuarios-wrap") as HTMLElement;
@@ -194,9 +195,21 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         const nuevo = sel.value as Rol;
         if (nuevo === original) return;
 
-        const ok = confirm(
-          `¿Cambiar el rol de este usuario a "${nuevo}"?`
-        );
+        // Buscar al usuario para mostrar su nombre en el modal.
+        const u = todos.find((x) => x.id === userId);
+        const labelRol: Record<Rol, string> = {
+          alumno: "Alumno",
+          profe: "Profesor/a",
+          admin: "Administrador/a",
+        };
+
+        const ok = await confirmModal({
+          titulo: "Cambiar rol",
+          mensaje: `¿Querés cambiar el rol de ${u?.nombre ?? "este usuario"} a "${labelRol[nuevo]}"?`,
+          confirmLabel: "Cambiar",
+          danger: nuevo === "admin",
+        });
+
         if (!ok) {
           sel.value = original;
           return;
@@ -209,7 +222,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           .eq("id", userId);
 
         if (error) {
-          alert(`No se pudo actualizar: ${error.message}`);
+          showToast(`No se pudo actualizar: ${error.message}`, "error");
           sel.value = original;
           sel.disabled = false;
           return;
@@ -220,8 +233,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         sel.className = `rol-select rol-select--${nuevo}`;
         sel.disabled = false;
 
-        // Actualizamos el row en memoria también.
-        const u = todos.find((x) => x.id === userId);
         if (u) u.rol = nuevo;
 
         // Actualizar el color del avatar.
@@ -230,6 +241,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         if (avatar) {
           avatar.className = `celda-usuario__avatar celda-usuario__avatar--${nuevo}`;
         }
+
+        showToast(`${u?.nombre ?? "Usuario"} ahora es ${labelRol[nuevo]}.`);
       });
     });
   }
