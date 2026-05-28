@@ -1,41 +1,278 @@
 ---
 /*
-  /aula/perfil — placeholder.
-  Pantalla pendiente: cambiar contraseña, datos del alumno, etc.
-  Por ahora solo muestra al alumno demo y un mensaje de "próximamente".
+  /aula/perfil — perfil del usuario logueado.
+  ---
+  Muestra los datos del profile (nombre, mail, rol, fecha de alta) y
+  permite editar el nombre y cambiar la contraseña.
 */
 
 import AulaLayout from "../../layouts/AulaLayout.astro";
-import { alumnoDemo } from "../../data/cursos-demo";
 ---
 
-<AulaLayout title="Mi perfil · Aula Vocational Lab">
+<AulaLayout title="Mi perfil · Aula Vocational Lab" rol="alumno">
   <main class="perfil">
     <div class="container">
-      <a href="/aula/mis-cursos" class="perfil__volver">← Volver a mis cursos</a>
+      <a href="#" id="perfil-volver" class="perfil__volver">← Volver</a>
 
-      <header class="perfil__head">
-        <p class="perfil__eyebrow">Mi perfil</p>
-        <h1 class="perfil__titulo">{alumnoDemo.nombre}</h1>
-        <p class="perfil__mail">{alumnoDemo.email}</p>
-      </header>
+      <div id="perfil-loader" class="perfil__loader">Cargando tu perfil…</div>
 
-      <section class="perfil__card">
-        <h2 class="perfil__card-titulo">Esta sección está en construcción.</h2>
-        <p class="perfil__card-body">
-          Acá vas a poder cambiar tu contraseña, actualizar tu foto y datos
-          de contacto, y revisar tu historial de pagos.
-        </p>
-      </section>
+      <div id="perfil-contenido" hidden>
+        <header class="perfil__head">
+          <div class="perfil__avatar" id="p-avatar"></div>
+          <div class="perfil__head-cuerpo">
+            <h1 class="perfil__nombre" id="p-nombre"></h1>
+            <p class="perfil__mail" id="p-mail"></p>
+            <span class="perfil__rol-badge" id="p-rol-badge"></span>
+          </div>
+        </header>
+
+        <p class="perfil__meta" id="p-creado-en"></p>
+
+        {/* ── Editar nombre ── */}
+        <section class="card">
+          <h2 class="card__titulo">Editar perfil</h2>
+          <form id="form-nombre" class="form">
+            <label class="form__label">
+              <span>Nombre y apellido</span>
+              <input type="text" name="nombre" id="input-nombre" required minlength="2" />
+            </label>
+            <button type="submit" class="form__submit">Guardar</button>
+            <p id="msg-nombre-ok" class="form__msg-ok" hidden></p>
+            <p id="msg-nombre-error" class="form__msg-error" hidden></p>
+          </form>
+        </section>
+
+        {/* ── Cambiar contraseña ── */}
+        <section class="card">
+          <h2 class="card__titulo">Cambiar contraseña</h2>
+          <form id="form-password" class="form">
+            <label class="form__label">
+              <span>Nueva contraseña</span>
+              <input type="password" name="pass" minlength="8" required autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+            </label>
+            <label class="form__label">
+              <span>Confirmar nueva contraseña</span>
+              <input type="password" name="pass2" minlength="8" required autocomplete="new-password" placeholder="Repetí la nueva contraseña" />
+            </label>
+            <button type="submit" class="form__submit">Cambiar contraseña</button>
+            <p id="msg-pass-ok" class="form__msg-ok" hidden></p>
+            <p id="msg-pass-error" class="form__msg-error" hidden></p>
+          </form>
+        </section>
+
+        {/* ── Cerrar sesión ── */}
+        <section class="card card--ghost">
+          <h2 class="card__titulo">Sesión</h2>
+          <p class="card__bajada">Cuando termines, cerrá sesión para que nadie use tu cuenta.</p>
+          <button id="btn-logout" type="button" class="form__submit form__submit--ghost">Cerrar sesión</button>
+        </section>
+      </div>
+
+      <p id="perfil-error" class="perfil__error" hidden></p>
     </div>
   </main>
 </AulaLayout>
 
-<style>
-  .perfil {
-    flex: 1;
-    padding: clamp(2rem, 5vw, 3rem) 0 5rem;
+<script>
+  import { supabase } from "../../lib/supabase";
+  import { requireSession, homePorRol, type Rol } from "../../lib/auth-guard";
+
+  const $loader = document.getElementById("perfil-loader") as HTMLElement;
+  const $contenido = document.getElementById("perfil-contenido") as HTMLElement;
+  const $errorBox = document.getElementById("perfil-error") as HTMLElement;
+  const $volver = document.getElementById("perfil-volver") as HTMLAnchorElement;
+
+  const $avatar = document.getElementById("p-avatar")!;
+  const $nombre = document.getElementById("p-nombre")!;
+  const $mail = document.getElementById("p-mail")!;
+  const $rolBadge = document.getElementById("p-rol-badge")!;
+  const $creadoEn = document.getElementById("p-creado-en")!;
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
   }
+
+  function iniciales(nombre: string) {
+    return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  }
+
+  function formatoFechaLarga(iso: string) {
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+
+  const labelRol: Record<Rol, string> = {
+    alumno: "Alumno",
+    profe: "Profesor/a",
+    admin: "Administrador/a",
+  };
+
+  function mostrarMsg(el: HTMLElement, mensaje: string) {
+    el.textContent = mensaje;
+    el.hidden = false;
+    setTimeout(() => { el.hidden = true; }, 4000);
+  }
+
+  type ProfileFull = {
+    id: string;
+    nombre: string;
+    email: string;
+    rol: Rol;
+    creado_en: string;
+  };
+
+  async function cargar() {
+    const auth = await requireSession();
+    if (!auth) return;
+
+    // Traemos profile completo (con email y creado_en).
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("id, nombre, email, rol, creado_en")
+      .eq("id", auth.session.user.id)
+      .single<ProfileFull>();
+
+    if (error || !profile) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error: ${error?.message ?? "no se pudo cargar el perfil"}`;
+      return;
+    }
+
+    // Render del header.
+    $avatar.textContent = iniciales(profile.nombre);
+    $avatar.classList.add(`perfil__avatar--${profile.rol}`);
+    $nombre.textContent = profile.nombre;
+    $mail.textContent = profile.email;
+    $rolBadge.textContent = labelRol[profile.rol];
+    $rolBadge.classList.add(`perfil__rol-badge--${profile.rol}`);
+    $creadoEn.textContent = `Cuenta creada el ${formatoFechaLarga(profile.creado_en)}.`;
+
+    // El "← Volver" lleva al home del rol del user.
+    $volver.href = homePorRol[profile.rol];
+
+    // Pre-rellenamos el input del nombre.
+    const $inputNombre = document.getElementById("input-nombre") as HTMLInputElement;
+    $inputNombre.value = profile.nombre;
+
+    // Conectar handlers.
+    enchufarFormNombre(profile);
+    enchufarFormPassword();
+    enchufarLogout();
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  function enchufarFormNombre(profile: ProfileFull) {
+    const $form = document.getElementById("form-nombre") as HTMLFormElement;
+    const $input = document.getElementById("input-nombre") as HTMLInputElement;
+    const $btn = $form.querySelector("button") as HTMLButtonElement;
+    const $ok = document.getElementById("msg-nombre-ok") as HTMLElement;
+    const $err = document.getElementById("msg-nombre-error") as HTMLElement;
+
+    $form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $ok.hidden = true; $err.hidden = true;
+
+      const nuevo = $input.value.trim();
+      if (nuevo.length < 2) {
+        mostrarMsg($err, "El nombre tiene que tener al menos 2 caracteres.");
+        return;
+      }
+      if (nuevo === profile.nombre) {
+        mostrarMsg($ok, "No hay cambios para guardar.");
+        return;
+      }
+
+      $btn.disabled = true;
+      $btn.textContent = "Guardando…";
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ nombre: nuevo })
+        .eq("id", profile.id);
+
+      $btn.disabled = false;
+      $btn.textContent = "Guardar";
+
+      if (error) {
+        mostrarMsg($err, `No se pudo guardar: ${error.message}`);
+        return;
+      }
+
+      profile.nombre = nuevo;
+      $nombre.textContent = nuevo;
+      $avatar.textContent = iniciales(nuevo);
+      mostrarMsg($ok, "Nombre actualizado.");
+    });
+  }
+
+  function enchufarFormPassword() {
+    const $form = document.getElementById("form-password") as HTMLFormElement;
+    const $btn = $form.querySelector("button") as HTMLButtonElement;
+    const $ok = document.getElementById("msg-pass-ok") as HTMLElement;
+    const $err = document.getElementById("msg-pass-error") as HTMLElement;
+
+    $form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $ok.hidden = true; $err.hidden = true;
+
+      const fd = new FormData($form);
+      const pass = String(fd.get("pass"));
+      const pass2 = String(fd.get("pass2"));
+
+      if (pass.length < 8) {
+        mostrarMsg($err, "La contraseña tiene que tener al menos 8 caracteres.");
+        return;
+      }
+      if (pass !== pass2) {
+        mostrarMsg($err, "Las dos contraseñas no coinciden.");
+        return;
+      }
+
+      $btn.disabled = true;
+      $btn.textContent = "Cambiando…";
+
+      const { error } = await supabase.auth.updateUser({ password: pass });
+
+      $btn.disabled = false;
+      $btn.textContent = "Cambiar contraseña";
+
+      if (error) {
+        mostrarMsg($err, `No se pudo cambiar: ${error.message}`);
+        return;
+      }
+
+      mostrarMsg($ok, "Contraseña actualizada.");
+      $form.reset();
+    });
+  }
+
+  function enchufarLogout() {
+    const $btn = document.getElementById("btn-logout") as HTMLButtonElement;
+    $btn.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      window.location.href = "/aula/login";
+    });
+  }
+
+  cargar().catch((err) => {
+    console.error("[perfil]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .perfil { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
   .perfil__volver {
     display: inline-block;
     font-size: 0.9rem;
@@ -44,41 +281,169 @@ import { alumnoDemo } from "../../data/cursos-demo";
   }
   .perfil__volver:hover { color: var(--color-ink); }
 
+  .perfil__loader { color: var(--color-ink-soft); font-style: italic; padding: 2rem 0; }
+  .perfil__error { color: var(--color-accent); padding: 1rem 0; }
+
+  /* ── Encabezado: avatar + nombre + mail + badge ── */
   .perfil__head {
-    margin-bottom: 2.5rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid var(--color-line);
+    display: flex;
+    align-items: center;
+    gap: 1.4rem;
+    margin-bottom: 0.8rem;
   }
-  .perfil__eyebrow {
-    font-size: 0.78rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-    margin: 0 0 0.9rem;
+  .perfil__avatar {
+    display: grid;
+    place-items: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--color-ink-muted);
+    color: #fff;
+    font-family: var(--font-serif);
+    font-size: 1.6rem;
+    font-weight: 500;
+    flex-shrink: 0;
   }
-  .perfil__titulo {
-    font-size: clamp(2rem, 4vw, 2.4rem);
-    margin: 0 0 0.4rem;
+  .perfil__avatar--alumno { background: var(--color-gold); color: var(--color-ink); }
+  .perfil__avatar--profe { background: var(--color-deep); color: #fff; }
+  .perfil__avatar--admin { background: var(--color-accent); color: #fff; }
+
+  .perfil__head-cuerpo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+  .perfil__nombre {
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    margin: 0;
+    line-height: 1.1;
   }
   .perfil__mail {
-    color: var(--color-ink-soft);
     margin: 0;
+    color: var(--color-ink-soft);
     font-size: 0.95rem;
   }
 
-  .perfil__card {
+  .perfil__rol-badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 0.25rem 0.65rem;
+    border-radius: 99px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    margin-top: 0.2rem;
+    background: var(--color-bg);
+    color: var(--color-ink-soft);
+  }
+  .perfil__rol-badge--alumno {
+    background: rgba(201, 162, 76, 0.18);
+    color: #7a5f1f;
+  }
+  .perfil__rol-badge--profe {
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+  }
+  .perfil__rol-badge--admin {
+    background: rgba(216, 85, 42, 0.12);
+    color: var(--color-accent);
+  }
+
+  .perfil__meta {
+    color: var(--color-ink-muted);
+    font-size: 0.88rem;
+    margin: 0 0 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  /* ── Cards de edición ── */
+  .card {
     background: #fff;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
-    padding: 2rem;
-    max-width: 600px;
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+    max-width: 560px;
   }
-  .perfil__card-titulo {
-    font-size: 1.2rem;
-    margin: 0 0 0.6rem;
+  .card--ghost {
+    background: transparent;
+    border-style: dashed;
   }
-  .perfil__card-body {
+  .card__titulo {
+    font-size: 1.1rem;
+    margin: 0 0 1.2rem;
+  }
+  .card__bajada {
+    margin: 0 0 1rem;
     color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .form { display: flex; flex-direction: column; gap: 1rem; }
+  .form__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .form__label input {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+  .form__label input:focus {
+    outline: none;
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+
+  .form__submit {
+    padding: 0.75rem 1.2rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-deep);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background 0.15s ease;
+  }
+  .form__submit:hover:not(:disabled) { background: #1a2c64; }
+  .form__submit:disabled { opacity: 0.7; cursor: wait; }
+  .form__submit--ghost {
+    background: transparent;
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+  }
+  .form__submit--ghost:hover:not(:disabled) {
+    background: var(--color-bg);
+  }
+
+  .form__msg-ok,
+  .form__msg-error {
     margin: 0;
+    padding: 0.6rem 0.9rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+  }
+  .form__msg-ok {
+    background: rgba(36, 58, 130, 0.08);
+    border-left: 3px solid var(--color-deep);
+    color: var(--color-deep);
+  }
+  .form__msg-error {
+    background: rgba(216, 85, 42, 0.1);
+    border-left: 3px solid var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  @media (max-width: 540px) {
+    .perfil__head { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    .perfil__avatar { width: 60px; height: 60px; font-size: 1.4rem; }
   }
 </style>
