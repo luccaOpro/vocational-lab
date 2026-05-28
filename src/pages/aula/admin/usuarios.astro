@@ -174,7 +174,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     return `
       <tr data-user-id="${esc(u.id)}">
-        <td>
+        <td data-label="Usuario">
           <div class="celda-usuario">
             <div class="celda-usuario__avatar celda-usuario__avatar--${esc(u.rol)}">
               ${esc(iniciales(u.nombre))}
@@ -185,9 +185,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             </div>
           </div>
         </td>
-        <td class="celda-meta">${esc(u.email)}</td>
-        <td class="celda-meta">${esc(formatoFecha(u.creado_en))}</td>
-        <td class="celda-rol">
+        <td data-label="Mail" class="celda-meta">${esc(u.email)}</td>
+        <td data-label="Creado" class="celda-meta">${esc(formatoFecha(u.creado_en))}</td>
+        <td data-label="Rol" class="celda-rol">
           <select
             class="rol-select rol-select--${esc(u.rol)}"
             data-user-id="${esc(u.id)}"
@@ -305,8 +305,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     margin-bottom: 1.5rem;
   }
   .usuarios__buscar {
-    flex: 1;
-    min-width: 240px;
+    flex: 1 1 200px;
+    min-width: 0;
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -432,4 +432,63 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.rol-select--alumno) { color: #7a5f1f; border-color: rgba(201, 162, 76, 0.5); background: rgba(201, 162, 76, 0.12); }
   :global(.rol-select--profe) { color: var(--color-deep); border-color: rgba(36, 58, 130, 0.4); background: rgba(36, 58, 130, 0.08); }
   :global(.rol-select--admin) { color: var(--color-accent); border-color: rgba(216, 85, 42, 0.4); background: rgba(216, 85, 42, 0.1); }
+
+  /* ===== Mobile: la tabla pasa a card view ===== */
+  @media (max-width: 640px) {
+    .tabla-wrap {
+      overflow-x: visible;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+    .tabla, .tabla tbody, .tabla tr {
+      display: block;
+      width: 100%;
+    }
+    .tabla thead { display: none; }
+    .tabla tr {
+      background: #fff;
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.1rem;
+      margin-bottom: 0.7rem;
+    }
+    .tabla tr:hover { background: #fff; }
+    .tabla td {
+      display: grid;
+      grid-template-columns: 80px 1fr;
+      gap: 0.7rem;
+      align-items: center;
+      padding: 0.4rem 0;
+      border: 0;
+      white-space: normal;
+    }
+    .tabla td::before {
+      content: attr(data-label);
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--color-ink-muted);
+      font-weight: 500;
+    }
+    /* Primera celda (Usuario) ocupa todo el ancho, sin label visible. */
+    .tabla td:first-child {
+      grid-template-columns: 1fr;
+      padding-bottom: 0.7rem;
+      margin-bottom: 0.4rem;
+      border-bottom: 1px solid var(--color-line);
+    }
+    .tabla td:first-child::before { display: none; }
+    /* Mail puede ser largo: que rompa palabra. */
+    :global(.celda-meta) { word-break: break-word; }
+    /* El select de rol full-width en mobile. */
+    :global(.celda-rol .rol-select) { width: 100%; }
+    /* Empty state: que ocupe todo el ancho sin grid. */
+    .tabla td[colspan] {
+      display: block;
+      grid-template-columns: none;
+      padding: 0;
+    }
+    .tabla td[colspan]::before { display: none; }
+  }
 </style>
