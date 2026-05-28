@@ -1,0 +1,410 @@
+---
+/*
+  /aula/admin/usuarios — gestión de roles del aula.
+  ---
+  Lista todos los usuarios registrados. Por cada uno: dropdown para
+  cambiar el rol (alumno / profe / admin). El cambio se aplica al vuelo.
+  El admin NO puede cambiar su propio rol (footgun guard).
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Usuarios · Admin · Vocational Lab" rol="admin">
+  <main class="usuarios">
+    <div class="container">
+      <a href="/aula/admin" class="usuarios__volver">← Volver al panel</a>
+
+      <header class="usuarios__head">
+        <p class="usuarios__eyebrow">Admin</p>
+        <h1 class="usuarios__titulo">Usuarios</h1>
+        <p class="usuarios__bajada" id="usuarios-bajada">Cargando…</p>
+      </header>
+
+      <div class="usuarios__filtros">
+        <label class="usuarios__buscar">
+          <span class="usuarios__buscar-icono" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            id="buscar"
+            placeholder="Buscar por nombre o mail…"
+            autocomplete="off"
+          />
+        </label>
+        <select id="filtro-rol" class="usuarios__filtro-rol">
+          <option value="">Todos los roles</option>
+          <option value="alumno">Solo alumnos</option>
+          <option value="profe">Solo profes</option>
+          <option value="admin">Solo admin</option>
+        </select>
+      </div>
+
+      <div id="usuarios-loader" class="usuarios__loader">Cargando usuarios…</div>
+
+      <div id="usuarios-wrap" class="tabla-wrap" hidden>
+        <table class="tabla">
+          <thead>
+            <tr>
+              <th scope="col">Usuario</th>
+              <th scope="col">Mail</th>
+              <th scope="col">Creado</th>
+              <th scope="col">Rol</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body"></tbody>
+        </table>
+      </div>
+
+      <p id="usuarios-error" class="usuarios__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireRol, type Rol } from "../../../lib/auth-guard";
+
+  const $loader = document.getElementById("usuarios-loader") as HTMLElement;
+  const $wrap = document.getElementById("usuarios-wrap") as HTMLElement;
+  const $body = document.getElementById("tabla-body") as HTMLElement;
+  const $bajada = document.getElementById("usuarios-bajada") as HTMLElement;
+  const $errorBox = document.getElementById("usuarios-error") as HTMLElement;
+  const $buscar = document.getElementById("buscar") as HTMLInputElement;
+  const $filtroRol = document.getElementById("filtro-rol") as HTMLSelectElement;
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function iniciales(nombre: string) {
+    return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  }
+
+  function formatoFecha(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+
+  type UsuarioRow = {
+    id: string;
+    nombre: string;
+    email: string;
+    rol: Rol;
+    creado_en: string;
+  };
+
+  let todos: UsuarioRow[] = [];
+  let miUserId: string | null = null;
+
+  async function cargar() {
+    // Solo admin puede ver esta pantalla.
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+    miUserId = auth.session.user.id;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, nombre, email, rol, creado_en")
+      .order("creado_en", { ascending: false });
+
+    if (error) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error: ${error.message}`;
+      return;
+    }
+
+    todos = (data ?? []) as UsuarioRow[];
+    $bajada.textContent = `${todos.length} usuario${todos.length === 1 ? "" : "s"} registrado${todos.length === 1 ? "" : "s"}`;
+    renderTabla();
+    $loader.hidden = true;
+    $wrap.hidden = false;
+  }
+
+  function renderTabla() {
+    const query = $buscar.value.trim().toLowerCase();
+    const rolFiltro = $filtroRol.value;
+
+    const filtrados = todos.filter((u) => {
+      if (rolFiltro && u.rol !== rolFiltro) return false;
+      if (query) {
+        const haystack = `${u.nombre} ${u.email}`.toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (filtrados.length === 0) {
+      $body.innerHTML = `
+        <tr><td colspan="4" class="tabla__vacio">
+          ${todos.length === 0 ? "Todavía no hay usuarios." : "No coincide ningún usuario con el filtro."}
+        </td></tr>
+      `;
+      return;
+    }
+
+    $body.innerHTML = filtrados.map(renderFila).join("");
+    enchufarSelects();
+  }
+
+  function renderFila(u: UsuarioRow): string {
+    const esElMismo = u.id === miUserId;
+    const opts = (["alumno", "profe", "admin"] as Rol[])
+      .map((r) => `<option value="${r}" ${u.rol === r ? "selected" : ""}>${r}</option>`)
+      .join("");
+
+    return `
+      <tr data-user-id="${esc(u.id)}">
+        <td>
+          <div class="celda-usuario">
+            <div class="celda-usuario__avatar celda-usuario__avatar--${esc(u.rol)}">
+              ${esc(iniciales(u.nombre))}
+            </div>
+            <div>
+              <span class="celda-usuario__nombre">${esc(u.nombre)}</span>
+              ${esElMismo ? `<span class="celda-usuario__yo">(vos)</span>` : ""}
+            </div>
+          </div>
+        </td>
+        <td class="celda-meta">${esc(u.email)}</td>
+        <td class="celda-meta">${esc(formatoFecha(u.creado_en))}</td>
+        <td class="celda-rol">
+          <select
+            class="rol-select rol-select--${esc(u.rol)}"
+            data-user-id="${esc(u.id)}"
+            data-rol-original="${esc(u.rol)}"
+            ${esElMismo ? "disabled title='No podés cambiar tu propio rol'" : ""}
+          >${opts}</select>
+        </td>
+      </tr>
+    `;
+  }
+
+  function enchufarSelects() {
+    $body.querySelectorAll<HTMLSelectElement>(".rol-select").forEach((sel) => {
+      sel.addEventListener("change", async () => {
+        const userId = sel.dataset.userId!;
+        const original = sel.dataset.rolOriginal as Rol;
+        const nuevo = sel.value as Rol;
+        if (nuevo === original) return;
+
+        const ok = confirm(
+          `¿Cambiar el rol de este usuario a "${nuevo}"?`
+        );
+        if (!ok) {
+          sel.value = original;
+          return;
+        }
+
+        sel.disabled = true;
+        const { error } = await supabase
+          .from("profiles")
+          .update({ rol: nuevo })
+          .eq("id", userId);
+
+        if (error) {
+          alert(`No se pudo actualizar: ${error.message}`);
+          sel.value = original;
+          sel.disabled = false;
+          return;
+        }
+
+        // Refrescamos el dataset y la clase visual.
+        sel.dataset.rolOriginal = nuevo;
+        sel.className = `rol-select rol-select--${nuevo}`;
+        sel.disabled = false;
+
+        // Actualizamos el row en memoria también.
+        const u = todos.find((x) => x.id === userId);
+        if (u) u.rol = nuevo;
+
+        // Actualizar el color del avatar.
+        const fila = sel.closest("tr");
+        const avatar = fila?.querySelector(".celda-usuario__avatar");
+        if (avatar) {
+          avatar.className = `celda-usuario__avatar celda-usuario__avatar--${nuevo}`;
+        }
+      });
+    });
+  }
+
+  // Filtros
+  $buscar.addEventListener("input", renderTabla);
+  $filtroRol.addEventListener("change", renderTabla);
+
+  cargar().catch((err) => {
+    console.error("[usuarios]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .usuarios { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .usuarios__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .usuarios__volver:hover { color: var(--color-ink); }
+
+  .usuarios__head {
+    margin-bottom: 2rem;
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .usuarios__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .usuarios__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.4rem; }
+  .usuarios__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .usuarios__filtros {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .usuarios__buscar {
+    flex: 1;
+    min-width: 240px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 0.9rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+  }
+  .usuarios__buscar input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    padding: 0.65rem 0;
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    outline: none;
+  }
+  .usuarios__buscar-icono { font-size: 0.95rem; color: var(--color-ink-muted); }
+
+  .usuarios__filtro-rol {
+    padding: 0.65rem 0.85rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: #fff;
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .usuarios__loader {
+    color: var(--color-ink-soft);
+    font-style: italic;
+    padding: 1.5rem 0;
+  }
+  .usuarios__error {
+    color: var(--color-accent);
+    padding: 1rem 0;
+  }
+
+  .tabla-wrap {
+    overflow-x: auto;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+  }
+  .tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .tabla th, .tabla td {
+    padding: 0.85rem 1.1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--color-line);
+    white-space: nowrap;
+  }
+  .tabla th {
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    font-weight: 500;
+    background: var(--color-bg);
+  }
+  .tabla tbody tr:last-child td { border-bottom: 0; }
+  .tabla tbody tr:hover { background: var(--color-bg); }
+  :global(.tabla__vacio) {
+    text-align: center;
+    color: var(--color-ink-muted);
+    font-style: italic;
+    padding: 2rem 1rem;
+  }
+
+  :global(.celda-usuario) {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+  :global(.celda-usuario__avatar) {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    background: var(--color-ink-muted);
+  }
+  :global(.celda-usuario__avatar--alumno) { background: var(--color-gold); color: var(--color-ink); }
+  :global(.celda-usuario__avatar--profe) { background: var(--color-deep); color: #fff; }
+  :global(.celda-usuario__avatar--admin) { background: var(--color-accent); color: #fff; }
+  :global(.celda-usuario__nombre) { display: block; font-weight: 500; }
+  :global(.celda-usuario__yo) {
+    display: inline-block;
+    margin-left: 0.4rem;
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    font-style: italic;
+  }
+
+  :global(.celda-meta) { color: var(--color-ink-soft); }
+  :global(.celda-rol) { min-width: 130px; }
+
+  :global(.rol-select) {
+    padding: 0.4rem 0.7rem;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  :global(.rol-select:disabled) {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  :global(.rol-select--alumno) { color: #7a5f1f; border-color: rgba(201, 162, 76, 0.5); background: rgba(201, 162, 76, 0.12); }
+  :global(.rol-select--profe) { color: var(--color-deep); border-color: rgba(36, 58, 130, 0.4); background: rgba(36, 58, 130, 0.08); }
+  :global(.rol-select--admin) { color: var(--color-accent); border-color: rgba(216, 85, 42, 0.4); background: rgba(216, 85, 42, 0.1); }
+</style>

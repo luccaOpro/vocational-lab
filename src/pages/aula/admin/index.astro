@@ -1,25 +1,15 @@
 ---
 /*
-  /aula/admin — dashboard del ADMIN (Lucca / equipo Vocational Lab).
+  /aula/admin — dashboard del admin.
   ---
-  Muestra resumen del estado del aula:
-   · alumnos activos
-   · cursos
-   · transferencias por confirmar
-  El admin puede marcar una transferencia como confirmada → eso da
-  acceso al alumno en el aula. (Por ahora la acción es visual.)
+  KPIs reales del estado del aula:
+   · usuarios totales (alumnos / profes / admins)
+   · cursos publicados
+   · entregas pendientes
+   · transferencias pendientes (cuando se implemente la carga)
 */
 
 import AulaLayout from "../../../layouts/AulaLayout.astro";
-import {
-  alumnosDemo,
-  cursosDemo,
-  transferenciasDemo,
-} from "../../../data/cursos-demo";
-
-const alumnosActivos = alumnosDemo.filter((a) => a.pago === "pagado").length;
-const pendientesPago = alumnosDemo.filter((a) => a.pago === "pendiente").length;
-const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "pendiente");
 ---
 
 <AulaLayout title="Admin · Aula Vocational Lab" rol="admin">
@@ -27,62 +17,133 @@ const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "p
     <div class="container">
       <header class="admin__head">
         <p class="admin__eyebrow">Admin</p>
-        <h1 class="admin__titulo">Panel general</h1>
-        <p class="admin__bajada">
-          {pendientesTransferencia.length > 0
-            ? `Tenés ${pendientesTransferencia.length} transferencia${pendientesTransferencia.length === 1 ? "" : "s"} por confirmar.`
-            : "No hay transferencias pendientes."}
-        </p>
+        <h1 class="admin__titulo" id="admin-titulo">Panel general</h1>
+        <p class="admin__bajada" id="admin-bajada">Cargando…</p>
       </header>
 
-      {/* KPIs */}
-      <section class="kpis">
-        <article class="kpi">
-          <span class="kpi__numero">{alumnosActivos}</span>
-          <span class="kpi__label">Alumnos activos</span>
-        </article>
-        <article class="kpi">
-          <span class="kpi__numero">{cursosDemo.length}</span>
-          <span class="kpi__label">Cursos publicados</span>
-        </article>
-        <article class="kpi kpi--alerta">
-          <span class="kpi__numero">{pendientesPago}</span>
-          <span class="kpi__label">Pagos pendientes</span>
-        </article>
-      </section>
+      <div id="admin-loader" class="admin__loader">Cargando datos…</div>
 
-      {/* Transferencias por confirmar */}
-      <section class="admin__seccion">
-        <div class="admin__seccion-head">
-          <h2 class="admin__seccion-titulo">Transferencias por confirmar</h2>
-          <a href="/aula/admin/alumnos" class="admin__seccion-link">Ver todos los alumnos →</a>
-        </div>
+      <div id="admin-contenido" hidden>
+        <section class="kpis">
+          <article class="kpi">
+            <span class="kpi__numero" id="kpi-alumnos">0</span>
+            <span class="kpi__label">Alumnos</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__numero" id="kpi-profes">0</span>
+            <span class="kpi__label">Profes</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__numero" id="kpi-admins">0</span>
+            <span class="kpi__label">Admins</span>
+          </article>
+          <article class="kpi">
+            <span class="kpi__numero" id="kpi-cursos">0</span>
+            <span class="kpi__label">Cursos publicados</span>
+          </article>
+          <article class="kpi kpi--alerta">
+            <span class="kpi__numero" id="kpi-pendientes">0</span>
+            <span class="kpi__label">Entregas a corregir</span>
+          </article>
+        </section>
 
-        {pendientesTransferencia.length === 0 ? (
-          <p class="admin__vacio">Todo al día por acá.</p>
-        ) : (
-          <ul class="transfers">
-            {pendientesTransferencia.map((t) => (
-              <li class="transfer">
-                <div class="transfer__cuerpo">
-                  <span class="transfer__nombre">{t.alumnoNombre}</span>
-                  <span class="transfer__mail">{t.alumnoEmail}</span>
-                  <span class="transfer__meta">
-                    {t.curso} · {t.monto} · Recibida el {t.fecha}
-                  </span>
-                </div>
-                <div class="transfer__acciones">
-                  <button type="button" class="btn-ghost">Rechazar</button>
-                  <button type="button" class="btn-primary">Confirmar y activar</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section class="admin__seccion">
+          <div class="admin__seccion-head">
+            <h2 class="admin__seccion-titulo">Accesos rápidos</h2>
+          </div>
+          <div class="acciones">
+            <a href="/aula/admin/usuarios" class="accion">
+              <span class="accion__icono">👥</span>
+              <div>
+                <span class="accion__titulo">Gestionar usuarios</span>
+                <span class="accion__bajada">Promover a profe/admin, ver mails, controlar roles.</span>
+              </div>
+            </a>
+            <a href="/aula/profe/entregas" class="accion">
+              <span class="accion__icono">📝</span>
+              <div>
+                <span class="accion__titulo">Ver entregas</span>
+                <span class="accion__bajada">Repasar lo entregado por los alumnos y las correcciones.</span>
+              </div>
+            </a>
+            <a href="/aula/mis-cursos" class="accion">
+              <span class="accion__icono">📚</span>
+              <div>
+                <span class="accion__titulo">Ver cursos</span>
+                <span class="accion__bajada">Mirar los cursos como los ve un alumno.</span>
+              </div>
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <p id="admin-error" class="admin__error" hidden></p>
     </div>
   </main>
 </AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireRol } from "../../../lib/auth-guard";
+
+  const $loader = document.getElementById("admin-loader") as HTMLElement;
+  const $contenido = document.getElementById("admin-contenido") as HTMLElement;
+  const $errorBox = document.getElementById("admin-error") as HTMLElement;
+  const $titulo = document.getElementById("admin-titulo")!;
+  const $bajada = document.getElementById("admin-bajada")!;
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    $titulo.textContent = `Hola, ${auth.profile.nombre.split(" ")[0]}.`;
+
+    // Consultas en paralelo para acelerar.
+    const [profilesRes, cursosRes, entregasRes] = await Promise.all([
+      supabase.from("profiles").select("rol"),
+      supabase.from("cursos").select("id").eq("publicado", true),
+      supabase.from("entregas").select("id").is("corregida_en", null),
+    ]);
+
+    if (profilesRes.error) return mostrarError(profilesRes.error.message);
+    if (cursosRes.error) return mostrarError(cursosRes.error.message);
+    if (entregasRes.error) return mostrarError(entregasRes.error.message);
+
+    const profiles = profilesRes.data ?? [];
+    const cursos = cursosRes.data ?? [];
+    const entregas = entregasRes.data ?? [];
+
+    const conteo = { alumno: 0, profe: 0, admin: 0 };
+    for (const p of profiles) {
+      conteo[p.rol as keyof typeof conteo] = (conteo[p.rol as keyof typeof conteo] ?? 0) + 1;
+    }
+
+    document.getElementById("kpi-alumnos")!.textContent = String(conteo.alumno);
+    document.getElementById("kpi-profes")!.textContent = String(conteo.profe);
+    document.getElementById("kpi-admins")!.textContent = String(conteo.admin);
+    document.getElementById("kpi-cursos")!.textContent = String(cursos.length);
+    document.getElementById("kpi-pendientes")!.textContent = String(entregas.length);
+
+    $bajada.textContent =
+      entregas.length === 0
+        ? "Sin entregas pendientes. Todo al día."
+        : `Hay ${entregas.length} entrega${entregas.length === 1 ? "" : "s"} esperando corrección.`;
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  function mostrarError(msg: string) {
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error: ${msg}`;
+  }
+
+  cargar().catch((err) => {
+    console.error("[admin]", err);
+    mostrarError(err instanceof Error ? err.message : String(err));
+  });
+</script>
 
 <style>
   .admin { flex: 1; padding: clamp(2.5rem, 6vw, 4rem) 0 5rem; }
@@ -102,14 +163,24 @@ const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "p
   }
   .admin__bajada { color: var(--color-ink-soft); margin: 0; font-size: 1.05rem; }
 
+  .admin__loader {
+    color: var(--color-ink-soft);
+    font-style: italic;
+    padding: 2rem 0;
+  }
+  .admin__error {
+    color: var(--color-accent);
+    padding: 1rem 0;
+  }
+
   .kpis {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 1rem;
     margin-bottom: 3rem;
   }
   .kpi {
-    padding: 1.4rem;
+    padding: 1.3rem;
     background: #fff;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
@@ -126,7 +197,7 @@ const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "p
   }
   .kpi--alerta .kpi__numero { color: var(--color-accent); }
   .kpi__label {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-ink-muted);
@@ -141,61 +212,45 @@ const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "p
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--color-line);
     flex-wrap: wrap;
-    gap: 0.5rem;
   }
   .admin__seccion-titulo { font-size: 1.3rem; margin: 0; }
-  .admin__seccion-link {
-    font-size: 0.9rem;
-    color: var(--color-accent);
-    font-weight: 500;
-  }
-  .admin__vacio { color: var(--color-ink-soft); font-style: italic; margin: 0; }
 
-  /* Transferencias */
-  .transfers { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.7rem; }
-  .transfer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  /* Accesos rápidos */
+  .acciones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1rem;
-    padding: 1.1rem 1.3rem;
+  }
+  .accion {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 1.3rem;
     background: #fff;
     border: 1px solid var(--color-line);
-    border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-md);
+    color: var(--color-ink);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   }
-  .transfer__cuerpo { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
-  .transfer__nombre { font-weight: 500; }
-  .transfer__mail { font-size: 0.88rem; color: var(--color-ink-muted); }
-  .transfer__meta { font-size: 0.85rem; color: var(--color-ink-soft); }
-  .transfer__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-
-  .btn-primary, .btn-ghost {
-    padding: 0.55rem 1rem;
-    border-radius: var(--radius-sm);
-    font-family: inherit;
-    font-size: 0.9rem;
+  .accion:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(19, 27, 61, 0.08);
+    border-color: var(--color-accent);
+  }
+  .accion__icono {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .accion__titulo {
+    display: block;
     font-weight: 500;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-    white-space: nowrap;
+    margin-bottom: 0.2rem;
   }
-  .btn-primary {
-    background: var(--color-accent);
-    color: #fff;
-    border: 1px solid var(--color-accent);
-  }
-  .btn-primary:hover { background: var(--color-accent-dark); border-color: var(--color-accent-dark); }
-  .btn-ghost {
-    background: transparent;
+  .accion__bajada {
+    display: block;
+    font-size: 0.88rem;
     color: var(--color-ink-soft);
-    border: 1px solid var(--color-line);
-  }
-  .btn-ghost:hover { background: var(--color-bg); color: var(--color-ink); }
-
-  @media (max-width: 700px) {
-    .transfer { flex-direction: column; align-items: flex-start; }
-    .transfer__acciones { width: 100%; }
-    .transfer__acciones button { flex: 1; }
+    line-height: 1.4;
   }
 </style>
