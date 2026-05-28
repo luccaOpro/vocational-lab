@@ -1,0 +1,167 @@
+---
+/*
+  /aula/login — pantalla de ingreso al aula.
+  Por ahora es solo visual: el botón "Entrar" lleva directo a /aula/mis-cursos
+  sin validar nada. Cuando integremos Supabase, acá va el supabase.auth.signInWithPassword().
+*/
+
+import AulaLayout from "../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Ingresar al aula · Vocational Lab" nav={false}>
+  <main class="login">
+    <div class="login__card">
+      <a href="/" class="login__brand">
+        <span class="login__brand-mark">VL</span>
+        <span>Vocational Lab</span>
+      </a>
+
+      <h1 class="login__titulo">Entrá al aula.</h1>
+      <p class="login__bajada">
+        Si ya tenés tu acceso, ingresá con el mail con el que te inscribiste.
+      </p>
+
+      <form class="login__form" action="/aula/mis-cursos" method="get">
+        <label class="login__label">
+          <span>Mail</span>
+          <input type="email" name="mail" placeholder="tu@mail.com" required />
+        </label>
+
+        <label class="login__label">
+          <span>Contraseña</span>
+          <input type="password" name="pass" placeholder="••••••••" required />
+        </label>
+
+        <button type="submit" class="login__submit">Entrar</button>
+
+        <a href="#" class="login__olvido">Olvidé mi contraseña</a>
+      </form>
+
+      <p class="login__ayuda">
+        ¿Todavía no tenés acceso? <a href="/#contacto">Escribinos</a>
+        y te activamos tu cuenta.
+      </p>
+    </div>
+  </main>
+</AulaLayout>
+
+<style>
+  .login {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 3rem 1.5rem;
+    background:
+      radial-gradient(ellipse at top, rgba(36, 58, 130, 0.06) 0%, transparent 60%),
+      linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
+  }
+
+  .login__card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2.5rem 2rem;
+    box-shadow: 0 18px 60px rgba(19, 27, 61, 0.08);
+  }
+
+  .login__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.8rem;
+  }
+  .login__brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .login__titulo {
+    font-size: 1.9rem;
+    margin: 0 0 0.5rem;
+  }
+  .login__bajada {
+    color: var(--color-ink-soft);
+    margin: 0 0 2rem;
+    font-size: 0.98rem;
+  }
+
+  .login__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .login__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .login__label input {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .login__label input:focus {
+    outline: none;
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+
+  .login__submit {
+    margin-top: 0.5rem;
+    padding: 0.9rem 1rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .login__submit:hover { background: var(--color-accent-dark); }
+
+  .login__olvido {
+    margin-top: 0.25rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .login__olvido:hover { color: var(--color-ink); }
+
+  .login__ayuda {
+    margin: 2rem 0 0;
+    text-align: center;
+    color: var(--color-ink-muted);
+    font-size: 0.88rem;
+    line-height: 1.5;
+  }
+  .login__ayuda a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+</style>

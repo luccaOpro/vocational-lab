@@ -1,0 +1,325 @@
+---
+/*
+  Barra de navegación del AULA (área privada).
+  ---
+  Diferente de la del sitio público:
+   · Logo "VL" linkeado a /aula/mis-cursos (la "home" del aula).
+   · Links: Mis cursos / Mi perfil / Cerrar sesión.
+   · En mobile colapsa a hamburguesa con panel lateral.
+
+  Por ahora "Cerrar sesión" redirige a /aula/login.
+  Cuando integremos Supabase, ese link va a llamar al signOut() de verdad.
+*/
+
+const { ruta } = { ruta: Astro.url.pathname };
+
+// Marcamos el link activo según la ruta actual.
+function activo(target: string) {
+  return ruta.startsWith(target) ? "is-active" : "";
+}
+---
+
+<header class="navaula">
+  <div class="navaula__inner container">
+    <a href="/aula/mis-cursos" class="navaula__brand">
+      <span class="navaula__brand-mark">VL</span>
+      <span class="navaula__brand-name">Vocational Lab · Aula</span>
+    </a>
+
+    {/* Links de desktop */}
+    <nav class="navaula__links" aria-label="Navegación del aula">
+      <a href="/aula/mis-cursos" class={activo("/aula/mis-cursos") + " " + activo("/aula/curso")}>Mis cursos</a>
+      <a href="/aula/perfil" class={activo("/aula/perfil")}>Mi perfil</a>
+      <a href="/aula/login" class="navaula__logout">Cerrar sesión</a>
+    </nav>
+
+    {/* Hamburguesa para mobile */}
+    <button
+      class="navaula__burger"
+      type="button"
+      aria-label="Abrir menú"
+      aria-expanded="false"
+      aria-controls="aula-menu"
+      data-aula-toggle
+    >
+      <span class="navaula__burger-bar"></span>
+      <span class="navaula__burger-bar"></span>
+      <span class="navaula__burger-bar"></span>
+    </button>
+  </div>
+</header>
+
+{/* Backdrop oscurecido para el panel mobile */}
+<div class="navaula__backdrop" data-aula-backdrop hidden></div>
+
+{/* Panel lateral mobile */}
+<aside
+  id="aula-menu"
+  class="navaula__panel"
+  aria-label="Menú del aula"
+  aria-hidden="true"
+>
+  <div class="navaula__panel-head">
+    <span class="navaula__panel-brand">Aula</span>
+    <button
+      class="navaula__close"
+      type="button"
+      aria-label="Cerrar menú"
+      data-aula-toggle
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" />
+      </svg>
+    </button>
+  </div>
+
+  <nav class="navaula__panel-links" aria-label="Navegación mobile del aula">
+    <a href="/aula/mis-cursos" data-aula-link>Mis cursos</a>
+    <a href="/aula/perfil" data-aula-link>Mi perfil</a>
+    <a href="/aula/login" data-aula-link class="navaula__panel-logout">Cerrar sesión</a>
+  </nav>
+</aside>
+
+<style>
+  /* ===== Barra superior ===== */
+  .navaula {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .navaula__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.85rem;
+    padding-bottom: 0.85rem;
+  }
+
+  /* Marca a la izquierda */
+  .navaula__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-serif);
+    font-weight: 500;
+    color: var(--color-bg);
+  }
+
+  .navaula__brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .navaula__brand-name {
+    font-size: 1rem;
+    color: var(--color-bg);
+  }
+
+  /* Links desktop */
+  .navaula__links {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+    font-size: 0.95rem;
+  }
+
+  .navaula__links a {
+    color: rgba(242, 234, 215, 0.78);
+    transition: color 0.15s ease;
+  }
+  .navaula__links a:hover,
+  .navaula__links a.is-active {
+    color: var(--color-bg);
+  }
+
+  /* "Cerrar sesión" se ve más sutil */
+  .navaula__logout {
+    padding: 0.4rem 0.85rem;
+    border: 1px solid rgba(242, 234, 215, 0.35);
+    border-radius: var(--radius-sm);
+    color: rgba(242, 234, 215, 0.78) !important;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .navaula__logout:hover {
+    background: rgba(242, 234, 215, 0.1);
+    border-color: rgba(242, 234, 215, 0.6);
+    color: var(--color-bg) !important;
+  }
+
+  /* ===== Hamburguesa ===== */
+  .navaula__burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--color-bg);
+  }
+  .navaula__burger-bar {
+    display: block;
+    width: 22px;
+    height: 1.6px;
+    margin: 0 auto;
+    background: currentColor;
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  .navaula__burger[aria-expanded="true"] .navaula__burger-bar:nth-child(1) {
+    transform: translateY(6.6px) rotate(45deg);
+  }
+  .navaula__burger[aria-expanded="true"] .navaula__burger-bar:nth-child(2) {
+    opacity: 0;
+  }
+  .navaula__burger[aria-expanded="true"] .navaula__burger-bar:nth-child(3) {
+    transform: translateY(-6.6px) rotate(-45deg);
+  }
+
+  /* ===== Backdrop oscurecido ===== */
+  .navaula__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(19, 27, 61, 0.55);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    z-index: 60;
+  }
+  .navaula__backdrop[data-open="true"] {
+    opacity: 1;
+  }
+
+  /* ===== Panel lateral mobile ===== */
+  .navaula__panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: min(82vw, 360px);
+    background: var(--color-bg);
+    border-left: 1px solid var(--color-line);
+    box-shadow: -20px 0 60px rgba(19, 27, 61, 0.18);
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .navaula__panel[data-open="true"] {
+    transform: translateX(0);
+  }
+
+  .navaula__panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .navaula__panel-brand {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--color-ink);
+  }
+
+  .navaula__close {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    color: var(--color-ink);
+    border-radius: var(--radius-sm);
+  }
+  .navaula__close:hover { background: var(--color-surface); }
+
+  .navaula__panel-links {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1.5rem 2rem;
+    gap: 0.25rem;
+  }
+  .navaula__panel-links a {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    color: var(--color-ink);
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .navaula__panel-logout {
+    margin-top: 1.2rem;
+    border-bottom: 0 !important;
+    background: var(--color-ink);
+    color: var(--color-bg) !important;
+    text-align: center;
+    border-radius: var(--radius-sm);
+    padding: 0.95rem 1rem !important;
+    font-family: var(--font-sans) !important;
+    font-size: 1rem !important;
+  }
+
+  /* ===== Breakpoint mobile ===== */
+  @media (max-width: 720px) {
+    .navaula__links { display: none; }
+    .navaula__burger { display: inline-flex; }
+    .navaula__brand-name { display: none; }
+  }
+
+  :global(body.aula-menu-open) { overflow: hidden; }
+</style>
+
+<script>
+  // Lógica del menú mobile del aula (mismo patrón que el nav público).
+  const toggles = document.querySelectorAll<HTMLElement>('[data-aula-toggle]');
+  const panel = document.getElementById('aula-menu');
+  const backdrop = document.querySelector<HTMLElement>('[data-aula-backdrop]');
+  const burger = document.querySelector<HTMLElement>('.navaula__burger');
+  const links = document.querySelectorAll<HTMLAnchorElement>('[data-aula-link]');
+
+  function setMenu(open: boolean) {
+    if (!panel || !backdrop || !burger) return;
+    panel.dataset.open = String(open);
+    panel.setAttribute('aria-hidden', String(!open));
+    if (open) {
+      backdrop.hidden = false;
+      void backdrop.offsetWidth;
+      backdrop.dataset.open = 'true';
+    } else {
+      backdrop.dataset.open = 'false';
+      setTimeout(() => { if (backdrop.dataset.open !== 'true') backdrop.hidden = true; }, 280);
+    }
+    burger.setAttribute('aria-expanded', String(open));
+    burger.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    document.body.classList.toggle('aula-menu-open', open);
+  }
+
+  toggles.forEach((el) => el.addEventListener('click', () => {
+    const isOpen = panel?.dataset.open === 'true';
+    setMenu(!isOpen);
+  }));
+  backdrop?.addEventListener('click', () => setMenu(false));
+  links.forEach((l) => l.addEventListener('click', () => setMenu(false)));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panel?.dataset.open === 'true') setMenu(false);
+  });
+</script>

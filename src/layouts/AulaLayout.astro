@@ -1,0 +1,72 @@
+---
+/*
+  Layout del AULA virtual (área privada).
+  ---
+  Se usa en todas las páginas bajo /aula/*. A diferencia del Layout
+  público:
+    · NO carga JSON-LD ni OG tags (las páginas privadas no se
+      comparten en redes ni se indexan en Google).
+    · Lleva <meta name="robots" content="noindex, nofollow">
+      para mantener el aula fuera de los buscadores.
+    · Inserta automáticamente el NavAula arriba en todas las páginas
+      del aula, salvo en login (que lo desactiva con la prop `nav`).
+*/
+
+import "../styles/global.css";
+import NavAula from "../components/aula/NavAula.astro";
+
+interface Props {
+  /** Título de la pestaña del navegador. */
+  title?: string;
+  /** Si false, no se muestra la barra de navegación del aula (ej: en login). */
+  nav?: boolean;
+}
+
+const { title = "Aula · Vocational Lab", nav = true } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-AR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{title}</title>
+    {/* El aula es privada: pedimos a buscadores que NO la indexen. */}
+    <meta name="robots" content="noindex, nofollow" />
+
+    {/* Favicon e íconos (mismos que el sitio público). */}
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+
+    {/* Color de la barra del navegador en mobile. */}
+    <meta name="theme-color" content="#131B3D" />
+
+    {/* Fuentes: Fraunces (serif) e Inter (sans) — mismas que el sitio público. */}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+    />
+  </head>
+
+  <body class="aula-body">
+    {nav && <NavAula />}
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  /*
+    Pequeños ajustes globales sólo para el área del aula.
+    El body sube un poco más arriba (sin gap del nav fijo del sitio público).
+  */
+  body.aula-body {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+</style>

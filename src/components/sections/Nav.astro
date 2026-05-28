@@ -19,6 +19,7 @@
       <a href="#caminos">Programas</a>
       <a href="#programa">Proceso</a>
       <a href="#equipo">Equipo</a>
+      <a href="/aula/login" class="nav__aula">Aula</a>
       <a href="#contacto" class="nav__cta">Hablemos</a>
     </nav>
 
@@ -71,6 +72,7 @@
     <a href="#caminos" data-menu-link>Programas</a>
     <a href="#programa" data-menu-link>Proceso</a>
     <a href="#equipo" data-menu-link>Equipo</a>
+    <a href="/aula/login" data-menu-link>Aula</a>
     <a href="#contacto" data-menu-link class="nav__panel-cta">Hablemos</a>
   </nav>
 </aside>
@@ -139,6 +141,19 @@
     color: #fff !important;
   }
   .nav__cta:hover { background: var(--color-accent-dark); }
+
+  /* Link "Aula" — botón secundario (borde) para diferenciarlo del CTA. */
+  .nav__aula {
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-ink);
+    color: var(--color-ink) !important;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .nav__aula:hover {
+    background: var(--color-ink);
+    color: var(--color-bg) !important;
+  }
 
   /* ===== Acciones mobile (CTA + hamburguesa) ===== */
   /* En desktop el contenedor es invisible — los links inline se encargan. */

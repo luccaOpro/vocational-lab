@@ -1,0 +1,84 @@
+---
+/*
+  /aula/perfil — placeholder.
+  Pantalla pendiente: cambiar contraseña, datos del alumno, etc.
+  Por ahora solo muestra al alumno demo y un mensaje de "próximamente".
+*/
+
+import AulaLayout from "../../layouts/AulaLayout.astro";
+import { alumnoDemo } from "../../data/cursos-demo";
+---
+
+<AulaLayout title="Mi perfil · Aula Vocational Lab">
+  <main class="perfil">
+    <div class="container">
+      <a href="/aula/mis-cursos" class="perfil__volver">← Volver a mis cursos</a>
+
+      <header class="perfil__head">
+        <p class="perfil__eyebrow">Mi perfil</p>
+        <h1 class="perfil__titulo">{alumnoDemo.nombre}</h1>
+        <p class="perfil__mail">{alumnoDemo.email}</p>
+      </header>
+
+      <section class="perfil__card">
+        <h2 class="perfil__card-titulo">Esta sección está en construcción.</h2>
+        <p class="perfil__card-body">
+          Acá vas a poder cambiar tu contraseña, actualizar tu foto y datos
+          de contacto, y revisar tu historial de pagos.
+        </p>
+      </section>
+    </div>
+  </main>
+</AulaLayout>
+
+<style>
+  .perfil {
+    flex: 1;
+    padding: clamp(2rem, 5vw, 3rem) 0 5rem;
+  }
+  .perfil__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .perfil__volver:hover { color: var(--color-ink); }
+
+  .perfil__head {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .perfil__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0 0 0.9rem;
+  }
+  .perfil__titulo {
+    font-size: clamp(2rem, 4vw, 2.4rem);
+    margin: 0 0 0.4rem;
+  }
+  .perfil__mail {
+    color: var(--color-ink-soft);
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .perfil__card {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 600px;
+  }
+  .perfil__card-titulo {
+    font-size: 1.2rem;
+    margin: 0 0 0.6rem;
+  }
+  .perfil__card-body {
+    color: var(--color-ink-soft);
+    margin: 0;
+  }
+</style>
