@@ -38,6 +38,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireSession } from "../../../lib/auth-guard";
+  import { showToast, confirmModal, traducirError } from "../../../lib/ui";
+
+  // Tamaño máximo de archivo permitido (en bytes). 10 MB.
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
   const $loader = document.getElementById("curso-loader") as HTMLElement;
   const $contenido = document.getElementById("curso-contenido") as HTMLElement;
@@ -146,7 +150,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .maybeSingle();
 
     if (errCurso) {
-      mostrarError(`Error al cargar el curso: ${errCurso.message}`);
+      mostrarError(`Error al cargar el curso: ${traducirError(errCurso)}`);
       return;
     }
     if (!curso) {
@@ -166,7 +170,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .order("numero");
 
     if (errModulos) {
-      mostrarError(`Error al cargar los módulos: ${errModulos.message}`);
+      mostrarError(`Error al cargar los módulos: ${traducirError(errModulos)}`);
       return;
     }
 
@@ -185,7 +189,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         .in("tarea_id", tareaIds);
 
       if (errEntregas) {
-        mostrarError(`Error al cargar tus entregas: ${errEntregas.message}`);
+        mostrarError(`Error al cargar tus entregas: ${traducirError(errEntregas)}`);
         return;
       }
       entregas = entregasData ?? [];
@@ -206,13 +210,17 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   /**
-   * Conecta cada input file de "Subir entrega" para que, al seleccionar archivo,
-   * lo suba a Supabase Storage e inserte/actualice el registro en entregas.
+   * Conecta cada input file de "Subir entrega" para que, al seleccionar archivo:
+   *  1. Valide el tamaño.
+   *  2. Si es reemplazo, pida confirmación con modal.
+   *  3. Suba el archivo y muestre toast del resultado.
    */
   function setupUploads() {
     document.querySelectorAll<HTMLInputElement>('input[type="file"][data-tarea-id]').forEach((input) => {
       input.addEventListener("change", async () => {
         const tareaId = input.dataset.tareaId!;
+        const esReemplazo = input.dataset.esReemplazo === "true";
+        const nombreTarea = input.dataset.tareaNombre ?? "esta tarea";
         const file = input.files?.[0];
         if (!file) return;
 
@@ -220,22 +228,53 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         const $hint = input.parentElement?.querySelector(".tarea__hint") as HTMLElement | null;
         const labelOriginal = $boton?.textContent ?? "Subir entrega";
 
+        // 1. Validar tamaño.
+        if (file.size > MAX_FILE_SIZE) {
+          showToast(
+            `El archivo "${file.name}" es de ${formatoTamanoFile(file.size)} — el máximo permitido es 10 MB.`,
+            "error"
+          );
+          input.value = "";
+          return;
+        }
+
+        // 2. Si es reemplazo, confirmar.
+        if (esReemplazo) {
+          const ok = await confirmModal({
+            titulo: "Reemplazar entrega",
+            mensaje: `Esto va a reemplazar el archivo que ya subiste para "${nombreTarea}". ¿Querés continuar?`,
+            confirmLabel: "Reemplazar",
+            danger: true,
+          });
+          if (!ok) {
+            input.value = "";
+            return;
+          }
+        }
+
+        // 3. Subir con feedback en el botón + toast al final.
         try {
-          if ($boton) $boton.textContent = "Subiendo…";
+          if ($boton) $boton.innerHTML = `<span class="loader__spinner" aria-hidden="true" style="width:14px;height:14px;border-width:2px;"></span> Subiendo…`;
           if ($hint) $hint.textContent = "";
 
           await subirEntrega(tareaId, file);
-
-          // Recargamos todo para que el bloque de la tarea pase a "entregada".
+          showToast(esReemplazo ? "Entrega reemplazada." : "Entrega enviada.");
           await cargar();
         } catch (err) {
           console.error("[upload]", err);
           if ($boton) $boton.textContent = labelOriginal;
-          if ($hint) $hint.textContent = err instanceof Error ? err.message : String(err);
-          input.value = ""; // permite reintentar con el mismo archivo
+          const msg = err instanceof Error ? err.message : String(err);
+          showToast(`No se pudo subir: ${traducirError(msg)}`, "error");
+          input.value = ""; // permite reintentar
         }
       });
     });
+  }
+
+  function formatoTamanoFile(bytes: number): string {
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${bytes} B`;
   }
 
   /**
@@ -321,7 +360,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
                 <p class="tarea__fecha">
                   <strong>Entrega:</strong> ${escape(formatoFecha(tarea.fecha_entrega))}
                 </p>
-                ${renderEstadoTarea(estado, entrega, tarea.id)}
+                ${renderEstadoTarea(estado, entrega, tarea.id, tarea.titulo)}
               </div>
             </div>
           ` : ""}
@@ -350,15 +389,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     `;
   }
 
-  function renderEstadoTarea(estado: string, entrega: EntregaRow | undefined, tareaId: string): string {
+  function renderEstadoTarea(estado: string, entrega: EntregaRow | undefined, tareaId: string, tareaNombre: string): string {
+    const nombreEsc = escape(tareaNombre);
     if (estado === "pendiente") {
       return `
         <div class="tarea__accion">
           <label class="tarea__upload">
-            <input type="file" data-tarea-id="${tareaId}" />
+            <input type="file" data-tarea-id="${tareaId}" data-tarea-nombre="${nombreEsc}" />
             <span class="tarea__btn">Subir entrega</span>
           </label>
-          <p class="tarea__hint"></p>
+          <p class="tarea__hint">Tamaño máximo: 10 MB.</p>
         </div>
       `;
     }
@@ -370,7 +410,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </p>
         <div class="tarea__accion">
           <label class="tarea__upload">
-            <input type="file" data-tarea-id="${tareaId}" />
+            <input type="file" data-tarea-id="${tareaId}" data-tarea-nombre="${nombreEsc}" data-es-reemplazo="true" />
             <span class="tarea__btn tarea__btn--secundario">Reemplazar archivo</span>
           </label>
           <p class="tarea__hint"></p>

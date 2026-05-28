@@ -373,11 +373,22 @@ const etiqueta = etiquetaPorRol[rol];
     if (e.key === 'Escape' && panel?.dataset.open === 'true') setMenu(false);
   });
 
-  // Cerrar sesión real: signOut de Supabase antes de redirigir.
-  import("../../lib/supabase").then(({ supabase }) => {
+  // Cerrar sesión real: pide confirmación y después signOut.
+  Promise.all([
+    import("../../lib/supabase"),
+    import("../../lib/ui"),
+  ]).then(([{ supabase }, { confirmModal }]) => {
     document.querySelectorAll<HTMLAnchorElement>('[data-aula-logout]').forEach((el) => {
       el.addEventListener('click', async (e) => {
         e.preventDefault();
+        // Si el panel mobile estaba abierto, cerramos primero.
+        document.body.classList.remove('aula-menu-open');
+        const ok = await confirmModal({
+          titulo: 'Cerrar sesión',
+          mensaje: '¿Querés salir del aula?',
+          confirmLabel: 'Cerrar sesión',
+        });
+        if (!ok) return;
         await supabase.auth.signOut();
         window.location.href = '/aula/login';
       });

@@ -14,7 +14,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     <div class="container">
       <a href="#" id="perfil-volver" class="perfil__volver">← Volver</a>
 
-      <div id="perfil-loader" class="perfil__loader">Cargando tu perfil…</div>
+      <div id="perfil-loader" class="perfil__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando tu perfil…</span>
+        </div>
+      </div>
 
       <div id="perfil-contenido" hidden>
         <header class="perfil__head">

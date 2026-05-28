@@ -12,7 +12,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <AulaLayout title="Profe · Aula Vocational Lab" rol="profe">
   <main class="profe">
     <div class="container">
-      <div id="profe-loader" class="profe__loader">Cargando…</div>
+      <div id="profe-loader" class="profe__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando tu panel…</span>
+        </div>
+      </div>
 
       <div id="profe-contenido" hidden>
         <header class="profe__head">
@@ -49,6 +54,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireSession } from "../../../lib/auth-guard";
+  import { traducirError } from "../../../lib/ui";
 
   const $loader = document.getElementById("profe-loader") as HTMLElement;
   const $contenido = document.getElementById("profe-contenido") as HTMLElement;
@@ -90,7 +96,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .eq("publicado", true)
       .order("creado_en", { ascending: false });
     if (errCursos) {
-      mostrarError(`Error al cargar cursos: ${errCursos.message}`);
+      mostrarError(`Error al cargar cursos: ${traducirError(errCursos)}`);
       return;
     }
 
@@ -112,7 +118,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .is("corregida_en", null)
       .order("enviada_en", { ascending: false });
     if (errEntregas) {
-      mostrarError(`Error al cargar entregas: ${errEntregas.message}`);
+      mostrarError(`Error al cargar entregas: ${traducirError(errEntregas)}`);
       return;
     }
 
@@ -138,7 +144,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   function mostrarError(msg: string) {
-    $loader.textContent = msg;
+    $loader.innerHTML = `<p class="profe__error">${msg.replace(/</g, "&lt;")}</p>`;
   }
 
   function renderCurso(c: CursoRow): string {

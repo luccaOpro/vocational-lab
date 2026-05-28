@@ -17,7 +17,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   <main class="cursos">
     <div class="container">
       {/* Loader inicial — se oculta cuando llegan los datos. */}
-      <div id="cursos-loader" class="cursos__loader">Cargando tus cursos…</div>
+      <div id="cursos-loader" class="cursos__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando tus cursos…</span>
+        </div>
+      </div>
 
       {/* Contenido real — empieza oculto, se muestra cuando hay datos. */}
       <div id="cursos-contenido" hidden>
@@ -46,6 +51,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../lib/supabase";
   import { requireSession } from "../../lib/auth-guard";
+  import { traducirError } from "../../lib/ui";
 
   const $loader = document.getElementById("cursos-loader")!;
   const $contenido = document.getElementById("cursos-contenido") as HTMLElement;
@@ -68,7 +74,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       .order("creado_en", { ascending: false });
 
     if (errCursos) {
-      $loader.textContent = `Error al cargar cursos: ${errCursos.message}`;
+      $loader.textContent = `Error al cargar cursos: ${traducirError(errCursos)}`;
       return;
     }
 

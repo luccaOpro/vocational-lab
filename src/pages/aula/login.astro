@@ -84,6 +84,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../lib/supabase";
   import { homePorRol, type Rol } from "../../lib/auth-guard";
+  import { traducirError } from "../../lib/ui";
 
   // ============ Referencias DOM ============
   const $modoLogin = document.getElementById("modo-login") as HTMLElement;
@@ -175,12 +176,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      const msg = error.message.includes("Invalid login credentials")
-        ? "Mail o contraseña incorrectos."
-        : error.message.includes("Email not confirmed")
-        ? "Tu mail todavía no está confirmado. Revisá tu casilla."
-        : `No pudimos entrar: ${error.message}`;
-      mostrarMensaje($loginError, msg);
+      mostrarMensaje($loginError, traducirError(error));
       $loginSubmit.disabled = false;
       $loginSubmit.textContent = "Entrar";
       return;
@@ -237,12 +233,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     });
 
     if (error) {
-      const msg = error.message.includes("already registered") || error.message.includes("already been registered")
-        ? "Ese mail ya está registrado. Probá iniciar sesión."
-        : error.message.includes("Password should be")
-        ? "La contraseña tiene que tener al menos 8 caracteres."
-        : `No pudimos crear la cuenta: ${error.message}`;
-      mostrarMensaje($signupError, msg);
+      mostrarMensaje($signupError, traducirError(error));
       $signupSubmit.disabled = false;
       $signupSubmit.textContent = "Crear cuenta";
       return;

@@ -21,7 +21,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <p class="admin__bajada" id="admin-bajada">Cargando…</p>
       </header>
 
-      <div id="admin-loader" class="admin__loader">Cargando datos…</div>
+      <div id="admin-loader" class="admin__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando datos…</span>
+        </div>
+      </div>
 
       <div id="admin-contenido" hidden>
         <section class="kpis">
@@ -85,6 +90,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
+  import { traducirError } from "../../../lib/ui";
 
   const $loader = document.getElementById("admin-loader") as HTMLElement;
   const $contenido = document.getElementById("admin-contenido") as HTMLElement;
@@ -136,7 +142,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   function mostrarError(msg: string) {
     $loader.hidden = true;
     $errorBox.hidden = false;
-    $errorBox.textContent = `Error: ${msg}`;
+    $errorBox.textContent = `Error: ${traducirError(msg)}`;
   }
 
   cargar().catch((err) => {

@@ -3,9 +3,72 @@
   ---
   - showToast(mensaje, tipo) → notificación efímera abajo a la derecha.
   - confirmModal(opciones)   → modal de confirmación. Devuelve Promise<boolean>.
+  - traducirError(error)     → traduce mensajes de error técnicos al castellano.
+  - spinnerHTML(label?)      → string HTML con un spinner + label opcional.
 
   Requieren que <UIRoot /> esté en el DOM (lo incluye AulaLayout).
 */
+
+/**
+ * Traduce errores comunes de Supabase y del navegador a mensajes
+ * legibles para el usuario final. Si no matchea ninguno conocido,
+ * devuelve el mensaje original.
+ */
+export function traducirError(error: unknown): string {
+  const msg = typeof error === "string"
+    ? error
+    : (error as { message?: string })?.message ?? String(error);
+
+  // Auth
+  if (msg.includes("Invalid login credentials")) return "Mail o contraseña incorrectos.";
+  if (msg.includes("Email not confirmed")) return "Tu mail todavía no está confirmado. Revisá tu casilla (también en spam).";
+  if (msg.includes("already registered") || msg.includes("already been registered")) {
+    return "Ese mail ya está registrado. Probá iniciar sesión.";
+  }
+  if (msg.includes("Password should be at least")) return "La contraseña tiene que tener al menos 8 caracteres.";
+  if (msg.includes("New password should be different")) return "La contraseña nueva tiene que ser distinta de la actual.";
+  if (msg.includes("rate limit") || msg.includes("Too many requests")) {
+    return "Demasiados intentos. Esperá un minuto y volvé a intentar.";
+  }
+
+  // Red
+  if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("network")) {
+    return "No pudimos conectarnos. Revisá tu internet y volvé a intentar.";
+  }
+
+  // Storage
+  if (msg.includes("Payload too large") || msg.includes("file size")) {
+    return "El archivo es demasiado grande.";
+  }
+
+  // DB / RLS
+  if (msg.includes("violates row-level security") || msg.includes("permission denied")) {
+    return "No tenés permiso para hacer esa acción.";
+  }
+  if (msg.includes("violates not-null constraint")) {
+    return "Falta completar un campo obligatorio.";
+  }
+  if (msg.includes("duplicate key") || msg.includes("violates unique constraint")) {
+    return "Ya existe un registro con esos datos.";
+  }
+
+  return msg;
+}
+
+/**
+ * Devuelve HTML para un spinner + label opcional.
+ * Útil para usar dentro de innerHTML cuando se está cargando algo.
+ */
+export function spinnerHTML(label?: string): string {
+  const escapedLabel = (label ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return `
+    <div class="loader" role="status">
+      <span class="loader__spinner" aria-hidden="true"></span>
+      ${escapedLabel ? `<span class="loader__label">${escapedLabel}</span>` : ""}
+    </div>
+  `;
+}
 
 export type ToastTipo = "ok" | "error" | "info";
 
