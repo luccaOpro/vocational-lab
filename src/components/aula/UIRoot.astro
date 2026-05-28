@@ -117,6 +117,11 @@
   }
 
   /* ============ Modal ============ */
+  /* IMPORTANTE: hidden manda. Si está oculto, no debe ocupar pantalla
+     ni capturar clicks (el display:grid de abajo sobreescribiría
+     hidden si no fuera por este reset). */
+  .modal[hidden] { display: none !important; }
+
   .modal {
     position: fixed;
     inset: 0;
