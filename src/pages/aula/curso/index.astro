@@ -93,6 +93,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   type EntregaRow = {
     id: string;
     tarea_id: string;
+    archivo_nombre: string;
     nota: string | null;
     comentario: string | null;
     corregida_en: string | null;
@@ -179,7 +180,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (tareaIds.length > 0) {
       const { data: entregasData, error: errEntregas } = await supabase
         .from("entregas")
-        .select("id, tarea_id, nota, comentario, corregida_en")
+        .select("id, tarea_id, archivo_nombre, nota, comentario, corregida_en")
         .eq("alumno_id", userId)
         .in("tarea_id", tareaIds);
 
@@ -200,6 +201,90 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $loader.hidden = true;
     $contenido.hidden = false;
+
+    setupUploads();
+  }
+
+  /**
+   * Conecta cada input file de "Subir entrega" para que, al seleccionar archivo,
+   * lo suba a Supabase Storage e inserte/actualice el registro en entregas.
+   */
+  function setupUploads() {
+    document.querySelectorAll<HTMLInputElement>('input[type="file"][data-tarea-id]').forEach((input) => {
+      input.addEventListener("change", async () => {
+        const tareaId = input.dataset.tareaId!;
+        const file = input.files?.[0];
+        if (!file) return;
+
+        const $boton = input.parentElement?.querySelector(".tarea__btn") as HTMLElement | null;
+        const $hint = input.parentElement?.querySelector(".tarea__hint") as HTMLElement | null;
+        const labelOriginal = $boton?.textContent ?? "Subir entrega";
+
+        try {
+          if ($boton) $boton.textContent = "Subiendo…";
+          if ($hint) $hint.textContent = "";
+
+          await subirEntrega(tareaId, file);
+
+          // Recargamos todo para que el bloque de la tarea pase a "entregada".
+          await cargar();
+        } catch (err) {
+          console.error("[upload]", err);
+          if ($boton) $boton.textContent = labelOriginal;
+          if ($hint) $hint.textContent = err instanceof Error ? err.message : String(err);
+          input.value = ""; // permite reintentar con el mismo archivo
+        }
+      });
+    });
+  }
+
+  /**
+   * Sube el archivo a Storage (bucket entregas-alumnos) y crea/actualiza
+   * el registro en la tabla entregas.
+   */
+  async function subirEntrega(tareaId: string, file: File) {
+    // Necesitamos el alumno_id para el path en Storage y para la RLS.
+    const { data: sesion } = await supabase.auth.getSession();
+    const alumnoId = sesion.session?.user.id;
+    if (!alumnoId) throw new Error("Sesión expirada. Volvé a iniciar sesión.");
+
+    // Path: alumno_id/tarea_id/nombre — la RLS de Storage exige que
+    // el primer segmento sea el uid del alumno.
+    const path = `${alumnoId}/${tareaId}/${file.name}`;
+
+    // 1. Subir a Storage con upsert (si ya existe, lo reemplaza).
+    const { error: errUpload } = await supabase.storage
+      .from("entregas-alumnos")
+      .upload(path, file, {
+        upsert: true,
+        contentType: file.type || "application/octet-stream",
+      });
+    if (errUpload) {
+      throw new Error(`No se pudo subir el archivo: ${errUpload.message}`);
+    }
+
+    // 2. Insertar (o actualizar) el registro en entregas.
+    // Como hay UNIQUE(tarea_id, alumno_id), upsert ON CONFLICT mantiene una sola entrega por alumno-tarea.
+    const { error: errInsert } = await supabase
+      .from("entregas")
+      .upsert(
+        {
+          tarea_id: tareaId,
+          alumno_id: alumnoId,
+          storage_path: path,
+          archivo_nombre: file.name,
+          enviada_en: new Date().toISOString(),
+          // Si la entrega vuelve a subirse, reseteamos la corrección.
+          nota: null,
+          comentario: null,
+          corregida_en: null,
+          corregida_por: null,
+        },
+        { onConflict: "tarea_id,alumno_id" }
+      );
+    if (errInsert) {
+      throw new Error(`No se pudo registrar la entrega: ${errInsert.message}`);
+    }
   }
 
   function renderModulo(m: ModuloRow, entregas: EntregaRow[]): string {
@@ -273,18 +358,26 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             <input type="file" data-tarea-id="${tareaId}" />
             <span class="tarea__btn">Subir entrega</span>
           </label>
-          <p class="tarea__hint">La subida real la conectamos en la próxima sesión.</p>
+          <p class="tarea__hint"></p>
         </div>
       `;
     }
     if (estado === "entregada") {
       return `
         <p class="tarea__nota">
-          Tu entrega está en camino. Vas a recibir una devolución por mail cuando esté corregida.
+          Ya enviaste tu entrega <strong>${escape(entrega?.archivo_nombre ?? "")}</strong>.
+          Vas a recibir una devolución cuando esté corregida.
         </p>
+        <div class="tarea__accion">
+          <label class="tarea__upload">
+            <input type="file" data-tarea-id="${tareaId}" />
+            <span class="tarea__btn tarea__btn--secundario">Reemplazar archivo</span>
+          </label>
+          <p class="tarea__hint"></p>
+        </div>
       `;
     }
-    // corregida
+    // corregida — el alumno ya no puede modificarla.
     return `
       <div class="tarea__devolucion">
         <p class="tarea__devolucion-nota"><strong>Nota:</strong> ${escape(entrega?.nota ?? "")}</p>
@@ -501,11 +594,21 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     transition: background 0.15s ease;
   }
   :global(.tarea__btn:hover) { background: var(--color-accent-dark); }
+  :global(.tarea__btn--secundario) {
+    background: transparent !important;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+  }
+  :global(.tarea__btn--secundario:hover) {
+    background: var(--color-bg) !important;
+    color: var(--color-ink);
+  }
   :global(.tarea__hint) {
     margin: 0.5rem 0 0;
     font-size: 0.82rem;
-    color: var(--color-ink-muted);
-    font-style: italic;
+    color: var(--color-accent);
+    font-weight: 500;
+    min-height: 1em;
   }
 
   :global(.tarea__nota) {
