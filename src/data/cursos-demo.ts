@@ -1,29 +1,118 @@
 /*
-  Datos FALSOS de cursos / alumno para la maqueta del aula.
+  Datos FALSOS para la maqueta del aula.
   ---
-  Mientras no haya backend, las páginas privadas leen de acá.
-  Cuando conectemos Supabase, esto se reemplaza por consultas reales
-  pero la forma del objeto va a ser parecida — por eso conviene
-  mantener nombres de campos claros.
+  Cuando conectemos Supabase, esto se reemplaza por consultas reales.
+  Los nombres de campos están pensados para que el cambio sea suave.
+
+  ESTRUCTURA:
+  · alumnoDemo / alumnosDemo  → alumnos del aula
+  · profeDemo / profesDemo    → profesores
+  · cursosDemo                → cursos con módulos, archivos y tareas
+  · entregasDemo              → entregas que hay que corregir
+  · transferenciasDemo        → transferencias pendientes de confirmar (admin)
 */
 
-export interface ArchivoModulo {
-  /** Texto que ve el alumno. */
+// ─── Alumnos ──────────────────────────────────────────────────────────
+
+export interface Alumno {
+  id: string;
   nombre: string;
-  /** Tamaño aproximado, sólo para mostrar. */
+  email: string;
+  /** Fecha en formato libre, solo para mostrar. */
+  inscripto: string;
+  /** Estado de pago. */
+  pago: "pagado" | "pendiente";
+  /** Slugs de los cursos en los que está inscripto. */
+  cursos: string[];
+}
+
+// Alumno principal para la vista de "Mis cursos".
+export const alumnoDemo: Alumno = {
+  id: "a-001",
+  nombre: "Sofía Méndez",
+  email: "sofia.mendez@ejemplo.com",
+  inscripto: "30 de julio de 2026",
+  pago: "pagado",
+  cursos: ["coaching-vocacional-agosto-2026", "taller-identidad-y-proposito"],
+};
+
+// Lista para la vista de admin.
+export const alumnosDemo: Alumno[] = [
+  alumnoDemo,
+  {
+    id: "a-002",
+    nombre: "Mateo Aguirre",
+    email: "mateo.aguirre@ejemplo.com",
+    inscripto: "2 de agosto de 2026",
+    pago: "pagado",
+    cursos: ["coaching-vocacional-agosto-2026"],
+  },
+  {
+    id: "a-003",
+    nombre: "Camila Rossi",
+    email: "camila.rossi@ejemplo.com",
+    inscripto: "5 de agosto de 2026",
+    pago: "pagado",
+    cursos: ["coaching-vocacional-agosto-2026"],
+  },
+  {
+    id: "a-004",
+    nombre: "Joaquín Bravo",
+    email: "joaquin.bravo@ejemplo.com",
+    inscripto: "8 de agosto de 2026",
+    pago: "pendiente",
+    cursos: [],
+  },
+  {
+    id: "a-005",
+    nombre: "Lucía Pérez",
+    email: "lucia.perez@ejemplo.com",
+    inscripto: "9 de agosto de 2026",
+    pago: "pendiente",
+    cursos: [],
+  },
+];
+
+// ─── Profesores ──────────────────────────────────────────────────────
+
+export interface Profesor {
+  id: string;
+  nombre: string;
+  email: string;
+  /** Slugs de los cursos que enseña. */
+  cursos: string[];
+}
+
+export const profeDemo: Profesor = {
+  id: "p-001",
+  nombre: "Julia Vargas",
+  email: "julia@vocationallab.com",
+  cursos: ["coaching-vocacional-agosto-2026"],
+};
+
+export const profesDemo: Profesor[] = [
+  profeDemo,
+  {
+    id: "p-002",
+    nombre: "Laura Pires",
+    email: "laura@vocationallab.com",
+    cursos: ["coaching-vocacional-agosto-2026", "taller-identidad-y-proposito"],
+  },
+];
+
+// ─── Cursos / Módulos / Archivos / Tareas ────────────────────────────
+
+export interface ArchivoModulo {
+  nombre: string;
   peso: string;
-  /** Tipo: pdf, video, audio, link. Sólo afecta el ícono. */
   tipo: "pdf" | "video" | "audio" | "link";
 }
 
 export interface TareaModulo {
   titulo: string;
   consigna: string;
-  /** Fecha que ve el alumno. Formato libre por ahora. */
   fechaEntrega: string;
-  /** Estado de la entrega del alumno. */
   estado: "pendiente" | "entregada" | "corregida";
-  /** Si está corregida, devolución del profe. */
   devolucion?: { nota: string; comentario: string };
 }
 
@@ -36,26 +125,15 @@ export interface Modulo {
 }
 
 export interface Curso {
-  /** Identificador para la URL: /aula/curso/[slug]. */
   slug: string;
   titulo: string;
   resumen: string;
-  /** Nombre(s) del/los profe(s). */
   profesor: string;
-  /** Texto libre para mostrar el período del curso. */
   periodo: string;
-  /** Progreso 0-100 que muestra la barra. */
   progreso: number;
   modulos: Modulo[];
 }
 
-// Alumno de prueba — placeholder hasta que haya auth real.
-export const alumnoDemo = {
-  nombre: "Sofía Méndez",
-  email: "sofia.mendez@ejemplo.com",
-};
-
-// Catálogo de cursos a los que está inscripto el alumno demo.
 export const cursosDemo: Curso[] = [
   {
     slug: "coaching-vocacional-agosto-2026",
@@ -148,3 +226,112 @@ export const cursosDemo: Curso[] = [
 export function obtenerCurso(slug: string): Curso | undefined {
   return cursosDemo.find((c) => c.slug === slug);
 }
+
+export function obtenerAlumno(id: string): Alumno | undefined {
+  return alumnosDemo.find((a) => a.id === id);
+}
+
+// ─── Entregas (lo que el profe tiene que corregir) ───────────────────
+
+export interface Entrega {
+  id: string;
+  alumnoId: string;
+  cursoSlug: string;
+  moduloNumero: number;
+  /** Archivo que subió el alumno. */
+  archivo: string;
+  /** Fecha en que el alumno la subió. */
+  enviadaEl: string;
+  estado: "pendiente" | "corregida";
+  /** Si ya fue corregida, la devolución. */
+  devolucion?: { nota: string; comentario: string };
+}
+
+export const entregasDemo: Entrega[] = [
+  {
+    id: "e-001",
+    alumnoId: "a-001",
+    cursoSlug: "coaching-vocacional-agosto-2026",
+    moduloNumero: 2,
+    archivo: "mapa-fortalezas-sofia.pdf",
+    enviadaEl: "28 de agosto",
+    estado: "pendiente",
+  },
+  {
+    id: "e-002",
+    alumnoId: "a-002",
+    cursoSlug: "coaching-vocacional-agosto-2026",
+    moduloNumero: 2,
+    archivo: "fortalezas-mateo.jpg",
+    enviadaEl: "27 de agosto",
+    estado: "pendiente",
+  },
+  {
+    id: "e-003",
+    alumnoId: "a-003",
+    cursoSlug: "coaching-vocacional-agosto-2026",
+    moduloNumero: 1,
+    archivo: "carta-futuro-camila.pdf",
+    enviadaEl: "14 de agosto",
+    estado: "corregida",
+    devolucion: {
+      nota: "Muy bien",
+      comentario: "Cami, hermosa carta. Me encantó la metáfora del faro.",
+    },
+  },
+  {
+    id: "e-004",
+    alumnoId: "a-001",
+    cursoSlug: "coaching-vocacional-agosto-2026",
+    moduloNumero: 1,
+    archivo: "carta-futuro-sofia.pdf",
+    enviadaEl: "14 de agosto",
+    estado: "corregida",
+    devolucion: {
+      nota: "Excelente",
+      comentario:
+        "Sofi, qué hermosa apertura. Me quedo con la imagen del 'mapa propio'.",
+    },
+  },
+];
+
+export function obtenerEntrega(id: string): Entrega | undefined {
+  return entregasDemo.find((e) => e.id === id);
+}
+
+export function entregasPendientes(): Entrega[] {
+  return entregasDemo.filter((e) => e.estado === "pendiente");
+}
+
+// ─── Transferencias (lo que el admin ve para confirmar pagos) ────────
+
+export interface Transferencia {
+  id: string;
+  alumnoEmail: string;
+  alumnoNombre: string;
+  monto: string;
+  fecha: string;
+  curso: string;
+  estado: "pendiente" | "confirmada";
+}
+
+export const transferenciasDemo: Transferencia[] = [
+  {
+    id: "t-001",
+    alumnoEmail: "joaquin.bravo@ejemplo.com",
+    alumnoNombre: "Joaquín Bravo",
+    monto: "$ 95.000",
+    fecha: "8 de agosto",
+    curso: "Coaching Vocacional · Agosto 2026",
+    estado: "pendiente",
+  },
+  {
+    id: "t-002",
+    alumnoEmail: "lucia.perez@ejemplo.com",
+    alumnoNombre: "Lucía Pérez",
+    monto: "$ 95.000",
+    fecha: "9 de agosto",
+    curso: "Coaching Vocacional · Agosto 2026",
+    estado: "pendiente",
+  },
+];

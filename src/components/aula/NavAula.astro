@@ -2,34 +2,72 @@
 /*
   Barra de navegación del AULA (área privada).
   ---
-  Diferente de la del sitio público:
-   · Logo "VL" linkeado a /aula/mis-cursos (la "home" del aula).
-   · Links: Mis cursos / Mi perfil / Cerrar sesión.
-   · En mobile colapsa a hamburguesa con panel lateral.
+  · Logo "VL" linkeado a la "home" según el rol.
+  · Links cambian según rol (alumno / profe / admin).
+  · En mobile colapsa a hamburguesa con panel lateral.
 
   Por ahora "Cerrar sesión" redirige a /aula/login.
   Cuando integremos Supabase, ese link va a llamar al signOut() de verdad.
 */
 
-const { ruta } = { ruta: Astro.url.pathname };
+interface Props {
+  /** Define qué links mostrar. Default: "alumno". */
+  rol?: "alumno" | "profe" | "admin";
+}
+
+const { rol = "alumno" } = Astro.props;
+const ruta = Astro.url.pathname;
 
 // Marcamos el link activo según la ruta actual.
-function activo(target: string) {
-  return ruta.startsWith(target) ? "is-active" : "";
+function activo(...targets: string[]) {
+  return targets.some((t) => ruta.startsWith(t)) ? "is-active" : "";
 }
+
+// Definimos los links según el rol.
+const homePorRol = {
+  alumno: "/aula/mis-cursos",
+  profe: "/aula/profe",
+  admin: "/aula/admin",
+};
+
+const etiquetaPorRol = {
+  alumno: "Vocational Lab · Aula",
+  profe: "Vocational Lab · Profe",
+  admin: "Vocational Lab · Admin",
+};
+
+const linksPorRol = {
+  alumno: [
+    { href: "/aula/mis-cursos", label: "Mis cursos", match: ["/aula/mis-cursos", "/aula/curso"] },
+    { href: "/aula/perfil", label: "Mi perfil", match: ["/aula/perfil"] },
+  ],
+  profe: [
+    { href: "/aula/profe", label: "Dashboard", match: ["/aula/profe"] },
+    { href: "/aula/profe/entregas", label: "Entregas", match: ["/aula/profe/entregas"] },
+  ],
+  admin: [
+    { href: "/aula/admin", label: "Dashboard", match: ["/aula/admin"] },
+    { href: "/aula/admin/alumnos", label: "Alumnos", match: ["/aula/admin/alumnos"] },
+  ],
+};
+
+const links = linksPorRol[rol];
+const home = homePorRol[rol];
+const etiqueta = etiquetaPorRol[rol];
 ---
 
-<header class="navaula">
+<header class={`navaula navaula--${rol}`}>
   <div class="navaula__inner container">
-    <a href="/aula/mis-cursos" class="navaula__brand">
+    <a href={home} class="navaula__brand">
       <span class="navaula__brand-mark">VL</span>
-      <span class="navaula__brand-name">Vocational Lab · Aula</span>
+      <span class="navaula__brand-name">{etiqueta}</span>
     </a>
 
     {/* Links de desktop */}
     <nav class="navaula__links" aria-label="Navegación del aula">
-      <a href="/aula/mis-cursos" class={activo("/aula/mis-cursos") + " " + activo("/aula/curso")}>Mis cursos</a>
-      <a href="/aula/perfil" class={activo("/aula/perfil")}>Mi perfil</a>
+      {links.map((l) => (
+        <a href={l.href} class={activo(...l.match)}>{l.label}</a>
+      ))}
       <a href="/aula/login" class="navaula__logout">Cerrar sesión</a>
     </nav>
 
@@ -74,8 +112,9 @@ function activo(target: string) {
   </div>
 
   <nav class="navaula__panel-links" aria-label="Navegación mobile del aula">
-    <a href="/aula/mis-cursos" data-aula-link>Mis cursos</a>
-    <a href="/aula/perfil" data-aula-link>Mi perfil</a>
+    {links.map((l) => (
+      <a href={l.href} data-aula-link>{l.label}</a>
+    ))}
     <a href="/aula/login" data-aula-link class="navaula__panel-logout">Cerrar sesión</a>
   </nav>
 </aside>
@@ -119,6 +158,15 @@ function activo(target: string) {
     color: var(--color-ink);
     font-size: 0.85rem;
     font-weight: 600;
+  }
+  /* Acento visual del logo según el rol — ayuda a saber dónde estás. */
+  .navaula--profe .navaula__brand-mark {
+    background: var(--color-deep);
+    color: var(--color-bg);
+  }
+  .navaula--admin .navaula__brand-mark {
+    background: var(--color-accent);
+    color: #fff;
   }
 
   .navaula__brand-name {

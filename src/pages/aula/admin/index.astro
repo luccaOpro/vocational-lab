@@ -1,0 +1,201 @@
+---
+/*
+  /aula/admin — dashboard del ADMIN (Lucca / equipo Vocational Lab).
+  ---
+  Muestra resumen del estado del aula:
+   · alumnos activos
+   · cursos
+   · transferencias por confirmar
+  El admin puede marcar una transferencia como confirmada → eso da
+  acceso al alumno en el aula. (Por ahora la acción es visual.)
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+import {
+  alumnosDemo,
+  cursosDemo,
+  transferenciasDemo,
+} from "../../../data/cursos-demo";
+
+const alumnosActivos = alumnosDemo.filter((a) => a.pago === "pagado").length;
+const pendientesPago = alumnosDemo.filter((a) => a.pago === "pendiente").length;
+const pendientesTransferencia = transferenciasDemo.filter((t) => t.estado === "pendiente");
+---
+
+<AulaLayout title="Admin · Aula Vocational Lab" rol="admin">
+  <main class="admin">
+    <div class="container">
+      <header class="admin__head">
+        <p class="admin__eyebrow">Admin</p>
+        <h1 class="admin__titulo">Panel general</h1>
+        <p class="admin__bajada">
+          {pendientesTransferencia.length > 0
+            ? `Tenés ${pendientesTransferencia.length} transferencia${pendientesTransferencia.length === 1 ? "" : "s"} por confirmar.`
+            : "No hay transferencias pendientes."}
+        </p>
+      </header>
+
+      {/* KPIs */}
+      <section class="kpis">
+        <article class="kpi">
+          <span class="kpi__numero">{alumnosActivos}</span>
+          <span class="kpi__label">Alumnos activos</span>
+        </article>
+        <article class="kpi">
+          <span class="kpi__numero">{cursosDemo.length}</span>
+          <span class="kpi__label">Cursos publicados</span>
+        </article>
+        <article class="kpi kpi--alerta">
+          <span class="kpi__numero">{pendientesPago}</span>
+          <span class="kpi__label">Pagos pendientes</span>
+        </article>
+      </section>
+
+      {/* Transferencias por confirmar */}
+      <section class="admin__seccion">
+        <div class="admin__seccion-head">
+          <h2 class="admin__seccion-titulo">Transferencias por confirmar</h2>
+          <a href="/aula/admin/alumnos" class="admin__seccion-link">Ver todos los alumnos →</a>
+        </div>
+
+        {pendientesTransferencia.length === 0 ? (
+          <p class="admin__vacio">Todo al día por acá.</p>
+        ) : (
+          <ul class="transfers">
+            {pendientesTransferencia.map((t) => (
+              <li class="transfer">
+                <div class="transfer__cuerpo">
+                  <span class="transfer__nombre">{t.alumnoNombre}</span>
+                  <span class="transfer__mail">{t.alumnoEmail}</span>
+                  <span class="transfer__meta">
+                    {t.curso} · {t.monto} · Recibida el {t.fecha}
+                  </span>
+                </div>
+                <div class="transfer__acciones">
+                  <button type="button" class="btn-ghost">Rechazar</button>
+                  <button type="button" class="btn-primary">Confirmar y activar</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  </main>
+</AulaLayout>
+
+<style>
+  .admin { flex: 1; padding: clamp(2.5rem, 6vw, 4rem) 0 5rem; }
+
+  .admin__head { max-width: 720px; margin-bottom: 2.5rem; }
+  .admin__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .admin__titulo {
+    font-size: clamp(2rem, 4.5vw, 2.6rem);
+    margin: 0 0 0.6rem;
+  }
+  .admin__bajada { color: var(--color-ink-soft); margin: 0; font-size: 1.05rem; }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 3rem;
+  }
+  .kpi {
+    padding: 1.4rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .kpi--alerta { border-left: 3px solid var(--color-accent); }
+  .kpi__numero {
+    font-family: var(--font-serif);
+    font-size: 2.4rem;
+    line-height: 1;
+    color: var(--color-ink);
+  }
+  .kpi--alerta .kpi__numero { color: var(--color-accent); }
+  .kpi__label {
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .admin__seccion { margin-bottom: 3rem; }
+  .admin__seccion-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .admin__seccion-titulo { font-size: 1.3rem; margin: 0; }
+  .admin__seccion-link {
+    font-size: 0.9rem;
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+  .admin__vacio { color: var(--color-ink-soft); font-style: italic; margin: 0; }
+
+  /* Transferencias */
+  .transfers { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+  .transfer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.3rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-md);
+  }
+  .transfer__cuerpo { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+  .transfer__nombre { font-weight: 500; }
+  .transfer__mail { font-size: 0.88rem; color: var(--color-ink-muted); }
+  .transfer__meta { font-size: 0.85rem; color: var(--color-ink-soft); }
+  .transfer__acciones { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .btn-primary, .btn-ghost {
+    padding: 0.55rem 1rem;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--color-accent);
+    color: #fff;
+    border: 1px solid var(--color-accent);
+  }
+  .btn-primary:hover { background: var(--color-accent-dark); border-color: var(--color-accent-dark); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+  }
+  .btn-ghost:hover { background: var(--color-bg); color: var(--color-ink); }
+
+  @media (max-width: 700px) {
+    .transfer { flex-direction: column; align-items: flex-start; }
+    .transfer__acciones { width: 100%; }
+    .transfer__acciones button { flex: 1; }
+  }
+</style>
