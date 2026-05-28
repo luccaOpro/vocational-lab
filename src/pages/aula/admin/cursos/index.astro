@@ -1,0 +1,262 @@
+---
+/*
+  /aula/admin/cursos — listado de TODOS los cursos (publicados y borradores).
+  Permite crear nuevo curso o editar uno existente.
+*/
+
+import AulaLayout from "../../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Cursos · Admin · Vocational Lab" rol="admin">
+  <main class="cursos-admin">
+    <div class="container">
+      <a href="/aula/admin" class="cursos-admin__volver">← Volver al panel</a>
+
+      <header class="cursos-admin__head">
+        <div>
+          <p class="cursos-admin__eyebrow">Admin</p>
+          <h1 class="cursos-admin__titulo">Cursos</h1>
+          <p class="cursos-admin__bajada" id="cursos-bajada">Cargando…</p>
+        </div>
+        <a href="/aula/admin/cursos/editor" class="cursos-admin__nuevo">+ Crear curso</a>
+      </header>
+
+      <div id="cursos-loader" class="cursos-admin__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando cursos…</span>
+        </div>
+      </div>
+
+      <div id="cursos-grid" hidden></div>
+
+      <p id="cursos-error" class="cursos-admin__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../../lib/supabase";
+  import { requireRol } from "../../../../lib/auth-guard";
+  import { traducirError } from "../../../../lib/ui";
+
+  const $loader = document.getElementById("cursos-loader") as HTMLElement;
+  const $grid = document.getElementById("cursos-grid") as HTMLElement;
+  const $bajada = document.getElementById("cursos-bajada")!;
+  const $errorBox = document.getElementById("cursos-error") as HTMLElement;
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  type CursoRow = {
+    id: string;
+    slug: string;
+    titulo: string;
+    resumen: string | null;
+    periodo: string | null;
+    publicado: boolean;
+    creado_en: string;
+    inscripciones: { count: number }[];
+  };
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    // Traemos los cursos + el conteo de inscripciones activas.
+    const { data, error } = await supabase
+      .from("cursos")
+      .select(`
+        id, slug, titulo, resumen, periodo, publicado, creado_en,
+        inscripciones(count)
+      `)
+      .order("creado_en", { ascending: false });
+
+    if (error) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error: ${traducirError(error)}`;
+      return;
+    }
+
+    const cursos = (data ?? []) as unknown as CursoRow[];
+    const total = cursos.length;
+    const pub = cursos.filter((c) => c.publicado).length;
+
+    $bajada.textContent = total === 0
+      ? "Todavía no hay cursos."
+      : `${total} curso${total === 1 ? "" : "s"} · ${pub} publicado${pub === 1 ? "" : "s"}`;
+
+    if (total === 0) {
+      $grid.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📚</span>
+          <h3 class="empty-state__titulo">Sin cursos cargados</h3>
+          <p class="empty-state__bajada">Empezá creando el primer curso del aula.</p>
+          <a href="/aula/admin/cursos/editor" class="empty-state__cta">+ Crear curso</a>
+        </div>
+      `;
+    } else {
+      $grid.innerHTML = `<div class="cursos-admin__grid">${cursos.map(renderCard).join("")}</div>`;
+    }
+
+    $loader.hidden = true;
+    $grid.hidden = false;
+  }
+
+  function renderCard(c: CursoRow): string {
+    const inscriptos = c.inscripciones?.[0]?.count ?? 0;
+    const estadoLabel = c.publicado ? "Publicado" : "Borrador";
+    const estadoClase = c.publicado ? "curso-card__estado--pub" : "curso-card__estado--bor";
+    return `
+      <a href="/aula/admin/cursos/editor?id=${encodeURIComponent(c.id)}" class="curso-card">
+        <div class="curso-card__head">
+          <span class="curso-card__periodo">${esc(c.periodo) || "Sin periodo"}</span>
+          <span class="curso-card__estado ${estadoClase}">${estadoLabel}</span>
+        </div>
+        <h2 class="curso-card__titulo">${esc(c.titulo)}</h2>
+        <p class="curso-card__resumen">${esc(c.resumen)}</p>
+        <div class="curso-card__pie">
+          <span class="curso-card__meta">${inscriptos} inscripto${inscriptos === 1 ? "" : "s"}</span>
+          <span class="curso-card__cta">Editar →</span>
+        </div>
+      </a>
+    `;
+  }
+
+  cargar().catch((err) => {
+    console.error("[cursos-admin]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .cursos-admin { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .cursos-admin__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .cursos-admin__volver:hover { color: var(--color-ink); }
+
+  .cursos-admin__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+    flex-wrap: wrap;
+  }
+  .cursos-admin__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .cursos-admin__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.4rem; }
+  .cursos-admin__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .cursos-admin__nuevo {
+    padding: 0.75rem 1.2rem;
+    background: var(--color-accent);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+  .cursos-admin__nuevo:hover { background: var(--color-accent-dark); }
+
+  .cursos-admin__loader { padding: 1.5rem 0; color: var(--color-ink-soft); }
+  .cursos-admin__error { color: var(--color-accent); padding: 1rem 0; }
+
+  :global(.cursos-admin__grid) {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem;
+  }
+
+  :global(.curso-card) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    color: var(--color-ink);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  :global(.curso-card:hover) {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px rgba(19, 27, 61, 0.08);
+    border-color: var(--color-accent);
+  }
+
+  :global(.curso-card__head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    gap: 0.6rem;
+  }
+  :global(.curso-card__estado) {
+    padding: 0.25rem 0.55rem;
+    border-radius: 99px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-size: 0.72rem;
+  }
+  :global(.curso-card__estado--pub) {
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+  }
+  :global(.curso-card__estado--bor) {
+    background: rgba(123, 130, 157, 0.12);
+    color: var(--color-ink-muted);
+  }
+
+  :global(.curso-card__titulo) {
+    font-size: 1.25rem;
+    margin: 0;
+    line-height: 1.2;
+  }
+  :global(.curso-card__resumen) {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.93rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  :global(.curso-card__pie) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.7rem;
+    border-top: 1px solid var(--color-line);
+    font-size: 0.88rem;
+  }
+  :global(.curso-card__meta) { color: var(--color-ink-muted); }
+  :global(.curso-card__cta) { color: var(--color-accent); font-weight: 500; }
+</style>

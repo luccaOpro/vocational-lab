@@ -1,0 +1,441 @@
+---
+/*
+  /aula/admin/cursos/editor — crear o editar un curso.
+  Sin ?id: crea uno nuevo.
+  Con ?id=UUID: carga el curso y permite editar / borrar.
+*/
+
+import AulaLayout from "../../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Editor de curso · Admin · Vocational Lab" rol="admin">
+  <main class="editor">
+    <div class="container">
+      <a href="/aula/admin/cursos" class="editor__volver">← Volver a cursos</a>
+
+      <div id="editor-loader" class="editor__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando…</span>
+        </div>
+      </div>
+
+      <div id="editor-contenido" hidden>
+        <header class="editor__head">
+          <p class="editor__eyebrow" id="editor-eyebrow">Cursos</p>
+          <h1 class="editor__titulo" id="editor-titulo">Nuevo curso</h1>
+        </header>
+
+        <form id="curso-form" class="form-curso">
+          <label class="form-curso__label">
+            <span>Título del curso *</span>
+            <input
+              type="text"
+              name="titulo"
+              required
+              minlength="3"
+              placeholder="Ej: Coaching Vocacional · Edición Agosto 2026"
+            />
+          </label>
+
+          <label class="form-curso__label">
+            <span>
+              URL del curso (slug)
+              <small class="form-curso__hint">— se autogenera del título; podés ajustarlo</small>
+            </span>
+            <div class="form-curso__slug">
+              <span class="form-curso__slug-prefix">/aula/curso?slug=</span>
+              <input
+                type="text"
+                name="slug"
+                required
+                pattern="[a-z0-9\-]+"
+                placeholder="coaching-vocacional-agosto-2026"
+              />
+            </div>
+            <small class="form-curso__error" id="slug-error" hidden></small>
+          </label>
+
+          <label class="form-curso__label">
+            <span>Resumen *</span>
+            <textarea
+              name="resumen"
+              rows="3"
+              required
+              placeholder="Una bajada corta para mostrar en la card del curso."
+            ></textarea>
+          </label>
+
+          <label class="form-curso__label">
+            <span>Período</span>
+            <input
+              type="text"
+              name="periodo"
+              placeholder="Ej: Agosto – Octubre 2026"
+            />
+          </label>
+
+          <label class="form-curso__label form-curso__label--check">
+            <input type="checkbox" name="publicado" />
+            <span>
+              <strong>Publicar el curso</strong>
+              <small class="form-curso__hint">Si está sin tildar, queda como borrador y los alumnos no lo ven.</small>
+            </span>
+          </label>
+
+          <div class="form-curso__acciones">
+            <button type="submit" id="submit-curso" class="form-curso__submit">Crear curso</button>
+            <button type="button" id="borrar-curso" class="form-curso__danger" hidden>Borrar curso</button>
+          </div>
+        </form>
+      </div>
+
+      <p id="editor-error" class="editor__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../../lib/supabase";
+  import { requireRol } from "../../../../lib/auth-guard";
+  import { showToast, confirmModal, traducirError } from "../../../../lib/ui";
+
+  const $loader = document.getElementById("editor-loader") as HTMLElement;
+  const $contenido = document.getElementById("editor-contenido") as HTMLElement;
+  const $errorBox = document.getElementById("editor-error") as HTMLElement;
+  const $titulo = document.getElementById("editor-titulo")!;
+  const $form = document.getElementById("curso-form") as HTMLFormElement;
+  const $submit = document.getElementById("submit-curso") as HTMLButtonElement;
+  const $borrar = document.getElementById("borrar-curso") as HTMLButtonElement;
+  const $slugError = document.getElementById("slug-error") as HTMLElement;
+
+  let modoEdicion = false;
+  let cursoId: string | null = null;
+
+  /** Convierte "Hola Mundo · Edición 2026!" → "hola-mundo-edicion-2026". */
+  function slugify(s: string): string {
+    return s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")     // saca acentos
+      .replace(/[^a-z0-9\s-]/g, "")        // saca caracteres especiales
+      .trim()
+      .replace(/\s+/g, "-")                // espacios → guiones
+      .replace(/-+/g, "-");                // guiones múltiples → uno
+  }
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    cursoId = new URLSearchParams(window.location.search).get("id");
+    modoEdicion = !!cursoId;
+
+    if (modoEdicion) {
+      $titulo.textContent = "Editar curso";
+      $submit.textContent = "Guardar cambios";
+      $borrar.hidden = false;
+
+      const { data: curso, error } = await supabase
+        .from("cursos")
+        .select("titulo, slug, resumen, periodo, publicado")
+        .eq("id", cursoId!)
+        .maybeSingle();
+
+      if (error || !curso) {
+        $loader.hidden = true;
+        $errorBox.hidden = false;
+        $errorBox.textContent = error
+          ? `Error al cargar el curso: ${traducirError(error)}`
+          : "No encontramos ese curso.";
+        return;
+      }
+
+      ($form.elements.namedItem("titulo") as HTMLInputElement).value = curso.titulo;
+      ($form.elements.namedItem("slug") as HTMLInputElement).value = curso.slug;
+      ($form.elements.namedItem("resumen") as HTMLTextAreaElement).value = curso.resumen ?? "";
+      ($form.elements.namedItem("periodo") as HTMLInputElement).value = curso.periodo ?? "";
+      ($form.elements.namedItem("publicado") as HTMLInputElement).checked = !!curso.publicado;
+    }
+
+    enchufarSlugAuto();
+    enchufarSubmit();
+    enchufarBorrar();
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  /** Auto-llena el slug a medida que el usuario escribe el título, salvo
+   *  que el usuario haya editado el slug manualmente. */
+  function enchufarSlugAuto() {
+    const $tit = $form.elements.namedItem("titulo") as HTMLInputElement;
+    const $slug = $form.elements.namedItem("slug") as HTMLInputElement;
+    let slugEditado = modoEdicion; // si estamos editando, no piso el slug
+
+    $slug.addEventListener("input", () => { slugEditado = true; });
+
+    $tit.addEventListener("input", () => {
+      if (!slugEditado) $slug.value = slugify($tit.value);
+    });
+  }
+
+  function enchufarSubmit() {
+    $form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $slugError.hidden = true;
+
+      const fd = new FormData($form);
+      const titulo = String(fd.get("titulo")).trim();
+      const slug = String(fd.get("slug")).trim();
+      const resumen = String(fd.get("resumen")).trim();
+      const periodo = String(fd.get("periodo")).trim();
+      const publicado = fd.get("publicado") === "on";
+
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        $slugError.textContent = "El slug solo puede tener letras minúsculas, números y guiones.";
+        $slugError.hidden = false;
+        return;
+      }
+
+      $submit.disabled = true;
+      $submit.textContent = modoEdicion ? "Guardando…" : "Creando…";
+
+      const payload = { titulo, slug, resumen, periodo: periodo || null, publicado };
+
+      const { error } = modoEdicion
+        ? await supabase.from("cursos").update(payload).eq("id", cursoId!)
+        : await supabase.from("cursos").insert(payload);
+
+      $submit.disabled = false;
+      $submit.textContent = modoEdicion ? "Guardar cambios" : "Crear curso";
+
+      if (error) {
+        showToast(traducirError(error), "error");
+        return;
+      }
+
+      showToast(modoEdicion ? "Curso actualizado." : "Curso creado.");
+      window.location.href = "/aula/admin/cursos";
+    });
+  }
+
+  function enchufarBorrar() {
+    $borrar.addEventListener("click", async () => {
+      const tituloActual = ($form.elements.namedItem("titulo") as HTMLInputElement).value;
+      const ok = await confirmModal({
+        titulo: "Borrar curso",
+        mensaje: `¿Seguro que querés borrar "${tituloActual}"? También se borran sus módulos, tareas e inscripciones. Esta acción no se puede deshacer.`,
+        confirmLabel: "Borrar definitivamente",
+        danger: true,
+      });
+      if (!ok) return;
+
+      $borrar.disabled = true;
+      $borrar.textContent = "Borrando…";
+
+      const { error } = await supabase.from("cursos").delete().eq("id", cursoId!);
+
+      if (error) {
+        showToast(traducirError(error), "error");
+        $borrar.disabled = false;
+        $borrar.textContent = "Borrar curso";
+        return;
+      }
+
+      showToast("Curso borrado.");
+      window.location.href = "/aula/admin/cursos";
+    });
+  }
+
+  cargar().catch((err) => {
+    console.error("[editor-curso]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .editor { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .editor__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .editor__volver:hover { color: var(--color-ink); }
+
+  .editor__loader { padding: 1.5rem 0; color: var(--color-ink-soft); }
+  .editor__error { color: var(--color-accent); padding: 1rem 0; }
+
+  .editor__head { margin-bottom: 2rem; }
+  .editor__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .editor__titulo {
+    font-size: clamp(1.8rem, 4vw, 2.2rem);
+    margin: 0;
+  }
+
+  .form-curso {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .form-curso__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .form-curso__hint {
+    color: var(--color-ink-muted);
+    font-weight: 400;
+    font-size: 0.78rem;
+  }
+  .form-curso__error {
+    color: var(--color-accent);
+    font-weight: 400;
+    font-size: 0.82rem;
+  }
+
+  .form-curso__label input[type="text"],
+  .form-curso__label textarea {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    resize: vertical;
+    width: 100%;
+  }
+  .form-curso__label input:focus,
+  .form-curso__label textarea:focus {
+    outline: none;
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+
+  /* Slug con prefijo gris */
+  .form-curso__slug {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    overflow: hidden;
+  }
+  .form-curso__slug:focus-within {
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+  .form-curso__slug-prefix {
+    padding: 0.7rem 0.7rem 0.7rem 0.9rem;
+    background: var(--color-surface);
+    border-right: 1px solid var(--color-line);
+    color: var(--color-ink-muted);
+    font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    font-weight: 400;
+  }
+  .form-curso__slug input {
+    flex: 1;
+    border: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    font-family: ui-monospace, "Cascadia Code", Menlo, monospace;
+    font-size: 0.92rem;
+    min-width: 0;
+  }
+  @media (max-width: 540px) {
+    .form-curso__slug { flex-direction: column; }
+    .form-curso__slug-prefix {
+      border-right: 0;
+      border-bottom: 1px solid var(--color-line);
+      font-size: 0.78rem;
+    }
+  }
+
+  /* Checkbox de publicado */
+  .form-curso__label--check {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .form-curso__label--check input { margin-top: 0.2rem; }
+  .form-curso__label--check span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: var(--color-ink);
+  }
+  .form-curso__label--check strong { font-weight: 500; }
+
+  /* Acciones */
+  .form-curso__acciones {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .form-curso__submit {
+    padding: 0.85rem 1.4rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-deep);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .form-curso__submit:hover:not(:disabled) { background: #1a2c64; }
+  .form-curso__submit:disabled { opacity: 0.7; cursor: wait; }
+
+  .form-curso__danger {
+    padding: 0.75rem 1.2rem;
+    background: transparent;
+    color: var(--color-accent);
+    border: 1px solid rgba(216, 85, 42, 0.4);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .form-curso__danger:hover:not(:disabled) {
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .form-curso__danger:disabled { opacity: 0.6; cursor: wait; }
+</style>
