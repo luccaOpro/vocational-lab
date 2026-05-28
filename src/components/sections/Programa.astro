@@ -60,14 +60,11 @@ const llevas = [
       </p>
     </header>
 
-    <!-- Placeholder del mapa visual del viaje.
-         Cuando llegue Mapa_del_Viaje_v2.png, lo reemplazamos por una <img>. -->
-    <figure class="programa__mapa" aria-label="Mapa visual del viaje (pendiente)">
-      <div class="programa__mapa-placeholder">
-        <span>Mapa del viaje</span>
-        <small>Imagen central — pendiente de integración</small>
-      </div>
-    </figure>
+    <!-- Cuando llegue la imagen final del mapa del viaje, agregar acá:
+         <figure class="programa__mapa">
+           <Image src={mapaImg} alt="Mapa visual del viaje" />
+         </figure>
+    -->
 
     <ol class="etapas" data-stagger>
       {etapas.map((e) => (
@@ -110,38 +107,6 @@ const llevas = [
     color: var(--color-ink-soft);
     font-size: 1.1rem;
     max-width: 60ch;
-  }
-
-  /* Placeholder del mapa — se va a reemplazar por <img src="..." /> */
-  .programa__mapa {
-    margin: 3rem 0 4rem;
-  }
-  .programa__mapa-placeholder {
-    display: grid;
-    place-items: center;
-    gap: 0.4rem;
-    aspect-ratio: 16 / 7;
-    border: 1px dashed var(--color-line);
-    border-radius: var(--radius-md);
-    color: var(--color-ink-muted);
-    background:
-      repeating-linear-gradient(
-        135deg,
-        transparent,
-        transparent 14px,
-        rgba(0,0,0,0.02) 14px,
-        rgba(0,0,0,0.02) 28px
-      );
-  }
-  .programa__mapa-placeholder span {
-    font-family: var(--font-serif);
-    font-size: 1.4rem;
-    color: var(--color-ink-soft);
-  }
-  .programa__mapa-placeholder small {
-    font-size: 0.8rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   /* Lista de etapas */
