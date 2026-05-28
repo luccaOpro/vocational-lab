@@ -105,6 +105,25 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           </div>
         </section>
 
+        <section id="seccion-alumnos" class="seccion-extra" hidden>
+          <h2 class="seccion-extra__titulo">Alumnos inscriptos</h2>
+          <p class="seccion-extra__bajada">Quiénes tienen acceso al curso y aparecen en "Mis cursos".</p>
+
+          <ul id="alumnos-lista" class="profes-lista"></ul>
+
+          <div class="agregar-profe">
+            <label for="alumno-disponible" class="agregar-profe__label">Inscribir alumno:</label>
+            <select id="alumno-disponible" class="agregar-profe__select">
+              <option value="">— Elegí un alumno —</option>
+            </select>
+            <button type="button" id="agregar-alumno-btn" class="agregar-profe__btn">+ Inscribir</button>
+          </div>
+          <p class="seccion-extra__nota">
+            Si el alumno todavía no se registró en el aula, decile que entre a
+            <code>/aula/login</code> y use "Crear cuenta". Después aparece acá para inscribirlo.
+          </p>
+        </section>
+
         <section id="seccion-contenido" class="seccion-extra" hidden>
           <h2 class="seccion-extra__titulo">Contenido del curso</h2>
           <p class="seccion-extra__bajada">Acá administrás los módulos, archivos y tareas.</p>
@@ -187,10 +206,11 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     if (modoEdicion) {
       // Mostramos secciones extra que solo aplican a cursos existentes.
       document.getElementById("seccion-profes")!.hidden = false;
+      document.getElementById("seccion-alumnos")!.hidden = false;
       document.getElementById("seccion-contenido")!.hidden = false;
       (document.getElementById("link-contenido") as HTMLAnchorElement).href =
         `/aula/admin/cursos/contenido?id=${encodeURIComponent(cursoId!)}`;
-      await cargarProfes();
+      await Promise.all([cargarProfes(), cargarAlumnos()]);
     }
 
     $loader.hidden = true;
@@ -299,6 +319,119 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     }
     showToast("Profe quitado del curso.");
     await cargarProfes();
+  }
+
+  // ============ Gestión de alumnos inscriptos ============
+  type InscripcionRow = {
+    id: string;
+    activo: boolean;
+    profiles: ProfileMini | null;
+  };
+
+  async function cargarAlumnos() {
+    const $lista = document.getElementById("alumnos-lista")!;
+    const $select = document.getElementById("alumno-disponible") as HTMLSelectElement;
+
+    const [resTodos, resInscriptos] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, nombre, email, rol")
+        .eq("rol", "alumno")
+        .order("nombre"),
+      supabase
+        .from("inscripciones")
+        .select("id, activo, profiles!inscripciones_alumno_id_fkey(id, nombre, email, rol)")
+        .eq("curso_id", cursoId!),
+    ]);
+
+    if (resTodos.error || resInscriptos.error) {
+      $lista.innerHTML = `<li class="profes-lista__error">Error al cargar alumnos: ${
+        traducirError(resTodos.error ?? resInscriptos.error)
+      }</li>`;
+      return;
+    }
+
+    const inscripciones = ((resInscriptos.data ?? []) as unknown as InscripcionRow[])
+      .filter((i) => !!i.profiles);
+    const inscriptosIds = new Set(inscripciones.map((i) => i.profiles!.id));
+    const todosAlumnos = (resTodos.data ?? []) as ProfileMini[];
+
+    if (inscripciones.length === 0) {
+      $lista.innerHTML = `<li class="profes-lista__vacio">Ningún alumno inscripto todavía.</li>`;
+    } else {
+      $lista.innerHTML = inscripciones.map((i) => {
+        const a = i.profiles!;
+        const badgeClase = i.activo ? "estado-badge--activo" : "estado-badge--pendiente";
+        const badgeTexto = i.activo ? "Activo" : "Pendiente";
+        return `
+          <li class="profe-item">
+            <div class="profe-item__avatar profe-item__avatar--alumno">${esc(iniciales(a.nombre))}</div>
+            <div class="profe-item__cuerpo">
+              <span class="profe-item__nombre">
+                ${esc(a.nombre)}
+                <span class="estado-badge ${badgeClase}">${badgeTexto}</span>
+              </span>
+              <span class="profe-item__mail">${esc(a.email)}</span>
+            </div>
+            <button type="button" class="profe-item__quitar" data-inscripcion-id="${esc(i.id)}" data-nombre="${esc(a.nombre)}" aria-label="Desinscribir a ${esc(a.nombre)}">×</button>
+          </li>
+        `;
+      }).join("");
+
+      $lista.querySelectorAll<HTMLButtonElement>(".profe-item__quitar").forEach((btn) => {
+        btn.addEventListener("click", () => desinscribirAlumno(btn.dataset.inscripcionId!, btn.dataset.nombre!));
+      });
+    }
+
+    // Select de alumnos no inscriptos.
+    const disponibles = todosAlumnos.filter((a) => !inscriptosIds.has(a.id));
+    $select.innerHTML = disponibles.length === 0
+      ? `<option value="">— No hay más alumnos para inscribir —</option>`
+      : `<option value="">— Elegí un alumno —</option>` +
+        disponibles.map((a) => `<option value="${esc(a.id)}">${esc(a.nombre)} (${esc(a.email)})</option>`).join("");
+    $select.disabled = disponibles.length === 0;
+
+    const $btn = document.getElementById("agregar-alumno-btn") as HTMLButtonElement;
+    $btn.onclick = async () => {
+      const aid = $select.value;
+      if (!aid) {
+        showToast("Elegí un alumno primero.", "info");
+        return;
+      }
+      $btn.disabled = true;
+      $btn.textContent = "Inscribiendo…";
+      const { error } = await supabase
+        .from("inscripciones")
+        .insert({ curso_id: cursoId!, alumno_id: aid, activo: true });
+      $btn.disabled = false;
+      $btn.textContent = "+ Inscribir";
+      if (error) {
+        showToast(traducirError(error), "error");
+        return;
+      }
+      showToast("Alumno inscripto.");
+      await cargarAlumnos();
+    };
+  }
+
+  async function desinscribirAlumno(inscripcionId: string, nombre: string) {
+    const ok = await confirmModal({
+      titulo: "Desinscribir alumno",
+      mensaje: `${nombre} va a perder el acceso a este curso y sus entregas. Esta acción no se puede deshacer. ¿Continuar?`,
+      confirmLabel: "Desinscribir",
+      danger: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("inscripciones")
+      .delete()
+      .eq("id", inscripcionId);
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Alumno desinscripto.");
+    await cargarAlumnos();
   }
 
   function esc(s: string | null | undefined) {
@@ -642,6 +775,46 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   }
   .profe-item__avatar--profe { background: var(--color-deep); }
   .profe-item__avatar--admin { background: var(--color-accent); }
+  .profe-item__avatar--alumno { background: var(--color-gold); color: var(--color-ink); }
+
+  /* Badge de estado (activo / pendiente) en la lista de alumnos. */
+  .estado-badge {
+    display: inline-block;
+    margin-left: 0.4rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+  .estado-badge--activo {
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+  }
+  .estado-badge--pendiente {
+    background: rgba(123, 130, 157, 0.12);
+    color: var(--color-ink-muted);
+  }
+
+  /* Nota informativa al pie de una sección extra. */
+  .seccion-extra__nota {
+    margin: 1rem 0 0;
+    padding: 0.7rem 0.9rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-muted);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .seccion-extra__nota code {
+    background: #fff;
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid var(--color-line);
+    font-size: 0.78rem;
+    color: var(--color-ink);
+  }
   .profe-item__cuerpo {
     display: flex;
     flex-direction: column;
