@@ -37,6 +37,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../../lib/supabase";
+  import { requireSession } from "../../../lib/auth-guard";
 
   const $loader = document.getElementById("curso-loader") as HTMLElement;
   const $contenido = document.getElementById("curso-contenido") as HTMLElement;
@@ -84,8 +85,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     numero: number;
     titulo: string;
     descripcion: string | null;
-    archivos_modulo: ArchivoRow[];
-    tareas: TareaRow[];
+    archivos_modulo: ArchivoRow[] | null;
+    // Por la restricción unique en modulo_id, Supabase puede devolver
+    // tareas como objeto único o como array. Aceptamos las dos formas.
+    tareas: TareaRow | TareaRow[] | null;
   };
   type EntregaRow = {
     id: string;
@@ -122,13 +125,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   async function cargar() {
-    // 1. Guard de sesión.
-    const { data: sesion } = await supabase.auth.getSession();
-    if (!sesion.session) {
-      window.location.href = "/aula/login";
-      return;
-    }
-    const userId = sesion.session.user.id;
+    // 1. Guard de sesión + profile.
+    const auth = await requireSession();
+    if (!auth) return;
+    const userId = auth.session.user.id;
 
     // 2. Slug del querystring.
     const slug = new URLSearchParams(window.location.search).get("slug");
@@ -170,7 +170,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }
 
     // 5. Entregas del alumno actual para las tareas de este curso.
-    const tareaIds = (modulos ?? []).flatMap((m: ModuloRow) => (m.tareas ?? []).map((t) => t.id));
+    const tareaIds = (modulos ?? []).flatMap((m: ModuloRow) => {
+      const t = m.tareas;
+      if (!t) return [];
+      return Array.isArray(t) ? t.map((x) => x.id) : [t.id];
+    });
     let entregas: EntregaRow[] = [];
     if (tareaIds.length > 0) {
       const { data: entregasData, error: errEntregas } = await supabase
@@ -199,7 +203,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   function renderModulo(m: ModuloRow, entregas: EntregaRow[]): string {
-    const tarea = m.tareas?.[0];
+    // tareas puede venir como objeto único, array, o null.
+    const tarea: TareaRow | undefined = Array.isArray(m.tareas)
+      ? m.tareas[0]
+      : m.tareas ?? undefined;
     const entrega = tarea ? entregas.find((e) => e.tarea_id === tarea.id) : undefined;
     const estado = estadoEntrega(entrega);
 
@@ -288,7 +295,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     `;
   }
 
-  cargar();
+  cargar().catch((err) => {
+    console.error("[curso] Error inesperado:", err);
+    mostrarError(`Error inesperado: ${err instanceof Error ? err.message : String(err)}`);
+  });
 </script>
 
 <style>

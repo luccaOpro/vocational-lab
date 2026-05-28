@@ -49,17 +49,38 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../lib/supabase";
+  import { homePorRol, type Rol } from "../../lib/auth-guard";
 
   const $form = document.getElementById("login-form") as HTMLFormElement;
   const $error = document.getElementById("login-error") as HTMLElement;
   const $submit = document.getElementById("login-submit") as HTMLButtonElement;
   const $recover = document.getElementById("login-recover") as HTMLAnchorElement;
 
-  // Si ya hay sesión activa, redirigimos directo a "mis cursos".
+  /**
+   * Lee el rol del user logueado y lo manda al home de su rol.
+   * Si no se puede leer el rol, fallback a /aula/mis-cursos.
+   */
+  async function redirigirSegunRol(userId: string) {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("rol")
+      .eq("id", userId)
+      .single();
+
+    if (error || !profile) {
+      console.error("[login] No se pudo leer el rol, fallback a mis-cursos:", error);
+      window.location.href = "/aula/mis-cursos";
+      return;
+    }
+    const destino = homePorRol[profile.rol as Rol] ?? "/aula/mis-cursos";
+    window.location.href = destino;
+  }
+
+  // Si ya hay sesión activa, mandamos directo al home del rol.
   (async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session) {
-      window.location.href = "/aula/mis-cursos";
+      await redirigirSegunRol(data.session.user.id);
     }
   })();
 
@@ -83,7 +104,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     const email = String(formData.get("mail"));
     const password = String(formData.get("pass"));
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       // Traducimos algunos errores comunes al español.
@@ -98,8 +119,13 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       return;
     }
 
-    // Login OK → mis cursos.
-    window.location.href = "/aula/mis-cursos";
+    // Login OK → redirigimos según el rol del user.
+    if (data.user) {
+      await redirigirSegunRol(data.user.id);
+    } else {
+      // Fallback raro (no debería pasar).
+      window.location.href = "/aula/mis-cursos";
+    }
   });
 
   // "Olvidé mi contraseña" — envía un mail de recuperación.

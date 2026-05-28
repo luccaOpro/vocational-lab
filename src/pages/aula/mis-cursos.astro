@@ -45,6 +45,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../lib/supabase";
+  import { requireSession } from "../../lib/auth-guard";
 
   const $loader = document.getElementById("cursos-loader")!;
   const $contenido = document.getElementById("cursos-contenido") as HTMLElement;
@@ -53,26 +54,13 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   const $vacio = document.getElementById("cursos-vacio") as HTMLElement;
 
   async function cargar() {
-    // 1. Chequeo de sesión — sin sesión, no se accede al aula.
-    const { data: sesion } = await supabase.auth.getSession();
-    if (!sesion.session) {
-      window.location.href = "/aula/login";
-      return;
-    }
+    // 1. Sesión + profile (redirige a login si no hay sesión).
+    const auth = await requireSession();
+    if (!auth) return;
 
-    // 2. Profile (para el saludo y para saber el rol).
-    const { data: profile, error: errProfile } = await supabase
-      .from("profiles")
-      .select("nombre, rol")
-      .eq("id", sesion.session.user.id)
-      .single();
+    const { profile } = auth;
 
-    if (errProfile) {
-      $loader.textContent = `Error al cargar tu perfil: ${errProfile.message}`;
-      return;
-    }
-
-    // 3. Cursos visibles para este user (RLS los filtra).
+    // 2. Cursos visibles para este user (RLS los filtra).
     const { data: cursos, error: errCursos } = await supabase
       .from("cursos")
       .select("id, slug, titulo, resumen, periodo, publicado")
