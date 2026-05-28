@@ -17,24 +17,29 @@
     {/* Links visibles en desktop */}
     <nav class="nav__links" aria-label="Navegación principal">
       <a href="#caminos">Programas</a>
-      <a href="#programa">El proceso</a>
+      <a href="#programa">Proceso</a>
       <a href="#equipo">Equipo</a>
       <a href="#contacto" class="nav__cta">Hablemos</a>
     </nav>
 
-    {/* Botón hamburguesa — visible solo en mobile */}
-    <button
-      class="nav__burger"
-      type="button"
-      aria-label="Abrir menú"
-      aria-expanded="false"
-      aria-controls="mobile-menu"
-      data-menu-toggle
-    >
-      <span class="nav__burger-bar"></span>
-      <span class="nav__burger-bar"></span>
-      <span class="nav__burger-bar"></span>
-    </button>
+    {/* Acciones de la derecha en mobile: CTA Hablemos + hamburguesa.
+        Se muestran sólo en el breakpoint mobile (≤720px). */}
+    <div class="nav__mobile-actions">
+      <a href="#contacto" class="nav__cta-mobile">Hablemos</a>
+
+      <button
+        class="nav__burger"
+        type="button"
+        aria-label="Abrir menú"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        data-menu-toggle
+      >
+        <span class="nav__burger-bar"></span>
+        <span class="nav__burger-bar"></span>
+        <span class="nav__burger-bar"></span>
+      </button>
+    </div>
   </div>
 </header>
 
@@ -64,7 +69,7 @@
 
   <nav class="nav__panel-links" aria-label="Navegación mobile">
     <a href="#caminos" data-menu-link>Programas</a>
-    <a href="#programa" data-menu-link>El proceso</a>
+    <a href="#programa" data-menu-link>Proceso</a>
     <a href="#equipo" data-menu-link>Equipo</a>
     <a href="#contacto" data-menu-link class="nav__panel-cta">Hablemos</a>
   </nav>
@@ -135,9 +140,33 @@
   }
   .nav__cta:hover { background: var(--color-accent-dark); }
 
+  /* ===== Acciones mobile (CTA + hamburguesa) ===== */
+  /* En desktop el contenedor es invisible — los links inline se encargan. */
+  .nav__mobile-actions {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  /* CTA "Hablemos" — visible sólo en mobile, al lado del hamburguesa. */
+  .nav__cta-mobile {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-accent);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background 0.15s ease;
+  }
+  .nav__cta-mobile:hover { background: var(--color-accent-dark); }
+
   /* ===== Botón hamburguesa ===== */
   .nav__burger {
-    display: none; /* oculto en desktop */
+    display: inline-flex;
     flex-direction: column;
     justify-content: center;
     gap: 5px;
@@ -275,8 +304,8 @@
   @media (max-width: 720px) {
     /* Esconder los links inline del nav superior */
     .nav__links { display: none; }
-    /* Mostrar el botón hamburguesa */
-    .nav__burger { display: inline-flex; }
+    /* Mostrar el bloque mobile (CTA Hablemos + hamburguesa) */
+    .nav__mobile-actions { display: inline-flex; }
     /* Reservamos el espacio del brand-name */
     .nav__brand-name { display: none; }
   }

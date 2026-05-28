@@ -2,18 +2,23 @@
 /*
   SECCIÓN 7 · EL EQUIPO
   Julia Vargas y Laura Pires + nota sobre la comunidad.
-  Las fotos van como placeholders hasta que el usuario las pase.
 */
+
+import { Image } from "astro:assets";
+import juliaFoto from "../../assets/equipo/julia.jpeg";
+import lauraFoto from "../../assets/equipo/laura.jpeg";
 
 const personas = [
   {
     nombre: "Julia Vargas",
+    foto: juliaFoto,
     bio: "Licenciada en Relaciones del Trabajo y Magíster en Políticas Laborales (Università di Bologna). Más de dos décadas construyendo equipos, culturas y programas de aprendizaje en organizaciones globales. Docente universitaria, coach ontológica y especialista en futuro del trabajo — acompañando a personas y organizaciones a tomar las riendas de su transformación laboral.",
     cita:
       "Toda mi carrera tuvo un hilo conductor: identificar en cada persona la chispa que le hace brillar los ojos. Vocational Lab es la forma de hacer eso abierto, para todos.",
   },
   {
     nombre: "Laura Pires",
+    foto: lauraFoto,
     bio: "Psicóloga sistémica especializada en familia y juventud, con foco en desarrollo de identidad y orientación vocacional. Treinta años acompañando — como clínica, como docente, como directora de escuelas y como consultora en desarrollo de líderes. Colabora con Argentina Cibersegura, ONG enfocada en ciudadanía digital y construcción de identidad en entornos digitales. Integra en cada proceso su mirada psicológica profunda con el conocimiento del mundo organizacional, la educación y las artes — porque acompañar a alguien en la construcción de su futuro es, también, un acto creativo.",
     cita:
       "Vocational Lab me permite ofrecer todo ese recorrido a personas en un momento clave de su vida — y acompañarlas hacia el despliegue de su mayor potencial.",
@@ -31,8 +36,14 @@ const personas = [
     <div class="equipo__personas" data-stagger>
       {personas.map((p) => (
         <article class="persona">
-          <div class="persona__foto" aria-label={`Foto de ${p.nombre} (pendiente)`}>
-            <span>{p.nombre.split(" ").map(n => n[0]).join("")}</span>
+          <div class="persona__foto">
+            <Image
+              src={p.foto}
+              alt={`Foto de ${p.nombre}`}
+              width={440}
+              height={440}
+              loading="lazy"
+            />
           </div>
           <div class="persona__cuerpo">
             <h3 class="persona__nombre">{p.nombre}</h3>
@@ -78,22 +89,24 @@ const personas = [
     }
   }
 
-  /* Placeholder de foto cuadrada con iniciales en su interior. */
+  /* Foto cuadrada con la imagen recortada al cuadro. */
   .persona__foto {
     width: 100%;
     aspect-ratio: 1;
     border-radius: var(--radius-md);
+    overflow: hidden;
     background: var(--color-surface);
-    border: 1px dashed var(--color-line);
-    display: grid;
-    place-items: center;
-    font-family: var(--font-serif);
-    font-size: 2.4rem;
-    color: var(--color-ink-muted);
+  }
+  .persona__foto :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
   }
   @media (max-width: 760px) {
     .persona__foto {
-      max-width: 200px;
+      max-width: 240px;
     }
   }
 
