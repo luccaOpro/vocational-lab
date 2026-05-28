@@ -1,0 +1,201 @@
+---
+/*
+  /aula/profe/entregas — lista TODAS las entregas (pendientes + corregidas).
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Entregas · Profe · Vocational Lab" rol="profe">
+  <main class="entregasp">
+    <div class="container">
+      <div id="entregas-loader" class="entregasp__loader">Cargando entregas…</div>
+
+      <div id="entregas-contenido" hidden>
+        <header class="entregasp__head">
+          <p class="entregasp__eyebrow">Profe</p>
+          <h1 class="entregasp__titulo">Entregas</h1>
+          <p class="entregasp__bajada" id="entregas-bajada"></p>
+        </header>
+
+        <section class="entregasp__seccion">
+          <h2 class="entregasp__seccion-titulo">Pendientes de corregir</h2>
+          <div id="lista-pendientes"></div>
+        </section>
+
+        <section class="entregasp__seccion">
+          <h2 class="entregasp__seccion-titulo">Ya corregidas</h2>
+          <div id="lista-corregidas"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireSession } from "../../../lib/auth-guard";
+
+  const $loader = document.getElementById("entregas-loader") as HTMLElement;
+  const $contenido = document.getElementById("entregas-contenido") as HTMLElement;
+  const $bajada = document.getElementById("entregas-bajada")!;
+  const $pendientes = document.getElementById("lista-pendientes")!;
+  const $corregidas = document.getElementById("lista-corregidas")!;
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  type AlumnoRow = { id: string; nombre: string };
+  type ModuloRow = { numero: number; cursos: { titulo: string } | null };
+  type TareaRow = { id: string; titulo: string; modulos: ModuloRow | null };
+  type EntregaRow = {
+    id: string;
+    enviada_en: string;
+    archivo_nombre: string;
+    nota: string | null;
+    corregida_en: string | null;
+    profiles: AlumnoRow | null;
+    tareas: TareaRow | null;
+  };
+
+  function formatoFecha(iso: string) {
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+    } catch {
+      return iso;
+    }
+  }
+
+  async function cargar() {
+    const auth = await requireSession();
+    if (!auth) return;
+
+    const { data: entregas, error } = await supabase
+      .from("entregas")
+      .select(`
+        id, enviada_en, archivo_nombre, nota, corregida_en,
+        profiles!entregas_alumno_id_fkey (id, nombre),
+        tareas (id, titulo, modulos (numero, cursos (titulo)))
+      `)
+      .order("enviada_en", { ascending: false });
+    if (error) {
+      $loader.textContent = `Error: ${error.message}`;
+      return;
+    }
+
+    const lista = (entregas as unknown as EntregaRow[]) ?? [];
+    const pend = lista.filter((e) => !e.corregida_en);
+    const corr = lista.filter((e) => !!e.corregida_en);
+
+    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${corr.length} corregida${corr.length === 1 ? "" : "s"}`;
+
+    $pendientes.innerHTML = pend.length === 0
+      ? `<p class="entregasp__vacio">Nada pendiente. 🎯</p>`
+      : `<ul class="lista">${pend.map((e) => renderItem(e, "pendiente")).join("")}</ul>`;
+
+    $corregidas.innerHTML = corr.length === 0
+      ? `<p class="entregasp__vacio">Todavía no corregiste ninguna.</p>`
+      : `<ul class="lista">${corr.map((e) => renderItem(e, "corregida")).join("")}</ul>`;
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  function renderItem(e: EntregaRow, estado: "pendiente" | "corregida"): string {
+    const alumno = e.profiles?.nombre ?? "(alumno)";
+    const tarea = e.tareas;
+    const moduloNum = tarea?.modulos?.numero ?? "?";
+    const cursoTitulo = tarea?.modulos?.cursos?.titulo ?? "";
+    const claseExtra = estado === "corregida" ? " item--ok" : "";
+    const ctaClase = estado === "pendiente" ? "item__cta item__cta--primary" : "item__cta";
+    const ctaTexto = estado === "pendiente" ? "Corregir →" : "Ver →";
+    const meta = estado === "corregida" && e.nota
+      ? `${esc(cursoTitulo)} · Nota: <strong>${esc(e.nota)}</strong>`
+      : `${esc(cursoTitulo)} · Módulo ${moduloNum} · Entregada el ${esc(formatoFecha(e.enviada_en))}`;
+
+    return `
+      <li class="item${claseExtra}">
+        <div class="item__cuerpo">
+          <span class="item__alumno">${esc(alumno)}</span>
+          <span class="item__tarea">${esc(tarea?.titulo)}</span>
+          <span class="item__meta">${meta}</span>
+        </div>
+        <a href="/aula/profe/correccion?id=${encodeURIComponent(e.id)}" class="${ctaClase}">${ctaTexto}</a>
+      </li>
+    `;
+  }
+
+  cargar().catch((err) => {
+    console.error("[entregas]", err);
+    $loader.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .entregasp { flex: 1; padding: clamp(2.5rem, 6vw, 4rem) 0 5rem; }
+  .entregasp__loader { color: var(--color-ink-soft); font-style: italic; padding: 2rem 0; }
+
+  .entregasp__head { max-width: 720px; margin-bottom: 2.5rem; }
+  .entregasp__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-deep);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .entregasp__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.6rem; }
+  .entregasp__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .entregasp__seccion { margin-bottom: 3rem; }
+  .entregasp__seccion-titulo {
+    font-size: 1.25rem;
+    margin: 0 0 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .entregasp__vacio { color: var(--color-ink-soft); font-style: italic; margin: 0; }
+
+  :global(.lista) { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  :global(.item) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+  }
+  :global(.item--ok) { opacity: 0.75; }
+  :global(.item__cuerpo) { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+  :global(.item__alumno) { font-weight: 500; }
+  :global(.item__tarea) { font-size: 0.95rem; }
+  :global(.item__meta) { font-size: 0.82rem; color: var(--color-ink-muted); }
+  :global(.item__meta strong) { color: var(--color-ink); font-weight: 500; }
+
+  :global(.item__cta) {
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-deep);
+    border: 1px solid var(--color-line);
+    white-space: nowrap;
+  }
+  :global(.item__cta--primary) {
+    background: var(--color-deep);
+    color: #fff;
+    border-color: var(--color-deep);
+  }
+  :global(.item__cta:hover) { background: var(--color-bg); }
+  :global(.item__cta--primary:hover) { background: #1a2c64; }
+
+  @media (max-width: 600px) {
+    :global(.item) { flex-direction: column; align-items: flex-start; }
+    :global(.item__cta) { align-self: stretch; text-align: center; }
+  }
+</style>
