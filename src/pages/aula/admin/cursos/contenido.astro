@@ -1,0 +1,835 @@
+---
+/*
+  /aula/admin/cursos/contenido?id=X — gestión completa del contenido
+  de un curso: módulos, archivos y tareas.
+
+  Solo admin (las RLS también permiten al profe que enseña, pero la
+  UI por ahora está bajo /aula/admin).
+*/
+
+import AulaLayout from "../../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Contenido del curso · Admin · Vocational Lab" rol="admin">
+  <main class="contenido">
+    <div class="container">
+      <a id="volver-link" href="/aula/admin/cursos" class="contenido__volver">← Volver a cursos</a>
+
+      <div id="contenido-loader" class="contenido__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando…</span>
+        </div>
+      </div>
+
+      <div id="contenido-wrap" hidden>
+        <header class="contenido__head">
+          <p class="contenido__eyebrow">Contenido del curso</p>
+          <h1 class="contenido__titulo" id="curso-titulo"></h1>
+          <p class="contenido__meta" id="curso-meta"></p>
+          <div class="contenido__acciones">
+            <a id="ver-alumno-link" href="#" class="boton-ghost" target="_blank">Ver como alumno ↗</a>
+            <a id="editar-curso-link" href="#" class="boton-ghost">Editar datos del curso</a>
+          </div>
+        </header>
+
+        <section>
+          <header class="contenido__seccion-head">
+            <h2 class="contenido__seccion-titulo">Módulos</h2>
+            <span class="contenido__seccion-meta" id="modulos-count"></span>
+          </header>
+
+          <div id="modulos-lista" class="modulos-lista"></div>
+
+          <button type="button" id="agregar-modulo-btn" class="boton-primario boton-primario--full">
+            + Agregar módulo
+          </button>
+        </section>
+      </div>
+
+      <p id="contenido-error" class="contenido__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../../lib/supabase";
+  import { requireRol } from "../../../../lib/auth-guard";
+  import { showToast, confirmModal, traducirError } from "../../../../lib/ui";
+
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB para material del profe
+
+  const $loader = document.getElementById("contenido-loader") as HTMLElement;
+  const $wrap = document.getElementById("contenido-wrap") as HTMLElement;
+  const $errorBox = document.getElementById("contenido-error") as HTMLElement;
+  const $titulo = document.getElementById("curso-titulo")!;
+  const $meta = document.getElementById("curso-meta")!;
+  const $modulos = document.getElementById("modulos-lista")!;
+  const $count = document.getElementById("modulos-count")!;
+
+  let cursoId: string = "";
+  let cursoSlug: string = "";
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function formatoFecha(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+
+  function formatoTamano(kb: number | null) {
+    if (!kb) return "";
+    if (kb >= 1024) return `${(kb / 1024).toFixed(1)} MB`;
+    return `${kb} KB`;
+  }
+
+  function iconoTipo(tipo: string) {
+    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : "↗";
+  }
+
+  function mostrarError(msg: string) {
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = msg;
+  }
+
+  type Archivo = { id: string; nombre: string; tipo: string; storage_path: string; peso_kb: number | null };
+  type Tarea = { id: string; titulo: string; consigna: string; fecha_entrega: string | null };
+  type Modulo = {
+    id: string;
+    numero: number;
+    titulo: string;
+    descripcion: string | null;
+    archivos_modulo: Archivo[] | null;
+    tareas: Tarea | Tarea[] | null;
+  };
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    cursoId = new URLSearchParams(window.location.search).get("id") ?? "";
+    if (!cursoId) {
+      mostrarError("Falta el parámetro 'id' en la URL.");
+      return;
+    }
+
+    // 1. Curso + módulos en una sola query.
+    const { data: curso, error: errCurso } = await supabase
+      .from("cursos")
+      .select("id, slug, titulo, periodo, publicado")
+      .eq("id", cursoId)
+      .maybeSingle();
+    if (errCurso || !curso) {
+      mostrarError(errCurso ? `Error: ${traducirError(errCurso)}` : "No encontramos ese curso.");
+      return;
+    }
+    cursoSlug = curso.slug;
+
+    const { data: modulos, error: errMods } = await supabase
+      .from("modulos")
+      .select(`
+        id, numero, titulo, descripcion,
+        archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
+        tareas (id, titulo, consigna, fecha_entrega)
+      `)
+      .eq("curso_id", cursoId)
+      .order("numero");
+    if (errMods) {
+      mostrarError(`Error al cargar módulos: ${traducirError(errMods)}`);
+      return;
+    }
+
+    // 2. Render.
+    $titulo.textContent = curso.titulo;
+    $meta.textContent = `${curso.periodo ?? "Sin periodo"} · ${curso.publicado ? "Publicado" : "Borrador"}`;
+    (document.getElementById("ver-alumno-link") as HTMLAnchorElement).href = `/aula/curso?slug=${encodeURIComponent(curso.slug)}`;
+    (document.getElementById("editar-curso-link") as HTMLAnchorElement).href = `/aula/admin/cursos/editor?id=${encodeURIComponent(curso.id)}`;
+
+    const mods = (modulos ?? []) as Modulo[];
+    $count.textContent = `${mods.length} módulo${mods.length === 1 ? "" : "s"}`;
+    $modulos.innerHTML = mods.length === 0
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📦</span>
+          <h3 class="empty-state__titulo">Sin módulos todavía</h3>
+          <p class="empty-state__bajada">Empezá agregando el primer módulo del curso.</p>
+        </div>`
+      : mods.map(renderModulo).join("");
+
+    enchufarAcciones(mods);
+    enchufarAgregarModulo(mods.length);
+
+    $loader.hidden = true;
+    $wrap.hidden = false;
+  }
+
+  // ============ Render ============
+  function renderModulo(m: Modulo): string {
+    const tarea: Tarea | undefined = Array.isArray(m.tareas) ? m.tareas[0] : m.tareas ?? undefined;
+    const archivos = m.archivos_modulo ?? [];
+    return `
+      <article class="modulo-card" data-modulo-id="${esc(m.id)}">
+        <details class="modulo-card__details">
+          <summary class="modulo-card__summary">
+            <span class="modulo-card__numero">${m.numero}</span>
+            <span class="modulo-card__titulo">${esc(m.titulo)}</span>
+            <span class="modulo-card__resumen">
+              ${archivos.length} archivo${archivos.length === 1 ? "" : "s"}${tarea ? " · 1 tarea" : ""}
+            </span>
+            <span class="modulo-card__chevron" aria-hidden="true">▾</span>
+          </summary>
+
+          <div class="modulo-card__cuerpo">
+            ${m.descripcion ? `<p class="modulo-card__descripcion">${esc(m.descripcion)}</p>` : ""}
+
+            <div class="bloque">
+              <h4 class="bloque__titulo">Material</h4>
+              <ul class="archivos-lista">
+                ${archivos.length === 0
+                  ? `<li class="archivos-vacio">Sin archivos cargados.</li>`
+                  : archivos.map((a) => `
+                    <li class="archivo">
+                      <span class="archivo__icono">${iconoTipo(a.tipo)}</span>
+                      <div class="archivo__cuerpo">
+                        <span class="archivo__nombre">${esc(a.nombre)}</span>
+                        <span class="archivo__meta">${esc(formatoTamano(a.peso_kb))}</span>
+                      </div>
+                      <button type="button" class="archivo__borrar" data-archivo-id="${esc(a.id)}" data-storage-path="${esc(a.storage_path)}" aria-label="Borrar ${esc(a.nombre)}">×</button>
+                    </li>
+                  `).join("")}
+              </ul>
+              <label class="bloque__upload">
+                <input type="file" data-modulo-id="${esc(m.id)}" />
+                <span class="bloque__upload-btn">+ Subir archivo</span>
+                <span class="bloque__upload-hint">Hasta 25 MB</span>
+              </label>
+            </div>
+
+            <div class="bloque">
+              <h4 class="bloque__titulo">Tarea</h4>
+              ${tarea
+                ? `
+                  <div class="tarea-mini">
+                    <span class="tarea-mini__titulo">${esc(tarea.titulo)}</span>
+                    <p class="tarea-mini__consigna">${esc(tarea.consigna)}</p>
+                    <span class="tarea-mini__fecha">Entrega: ${esc(formatoFecha(tarea.fecha_entrega))}</span>
+                    <div class="tarea-mini__acciones">
+                      <button type="button" class="boton-ghost-mini" data-editar-tarea="${esc(tarea.id)}">Editar tarea</button>
+                      <button type="button" class="boton-danger-mini" data-borrar-tarea="${esc(tarea.id)}">Borrar tarea</button>
+                    </div>
+                  </div>
+                `
+                : `
+                  <button type="button" class="boton-primario-mini" data-agregar-tarea="${esc(m.id)}">+ Agregar tarea</button>
+                `}
+            </div>
+
+            <div class="modulo-card__pie">
+              <button type="button" class="boton-ghost-mini" data-editar-modulo="${esc(m.id)}">Editar módulo</button>
+              <button type="button" class="boton-danger-mini" data-borrar-modulo="${esc(m.id)}">Borrar módulo</button>
+            </div>
+          </div>
+        </details>
+      </article>
+    `;
+  }
+
+  // ============ Acciones ============
+  function enchufarAcciones(mods: Modulo[]) {
+    // Editar módulo
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-editar-modulo]").forEach((btn) => {
+      btn.addEventListener("click", () => editarModulo(btn.dataset.editarModulo!, mods));
+    });
+    // Borrar módulo
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-modulo]").forEach((btn) => {
+      btn.addEventListener("click", () => borrarModulo(btn.dataset.borrarModulo!));
+    });
+    // Subir archivo
+    $modulos.querySelectorAll<HTMLInputElement>('input[type="file"][data-modulo-id]').forEach((input) => {
+      input.addEventListener("change", () => subirArchivo(input));
+    });
+    // Borrar archivo
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-archivo-id]").forEach((btn) => {
+      btn.addEventListener("click", () => borrarArchivo(btn.dataset.archivoId!, btn.dataset.storagePath!));
+    });
+    // Agregar tarea
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-agregar-tarea]").forEach((btn) => {
+      btn.addEventListener("click", () => editarTarea(null, btn.dataset.agregarTarea!));
+    });
+    // Editar tarea
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-editar-tarea]").forEach((btn) => {
+      btn.addEventListener("click", () => editarTarea(btn.dataset.editarTarea!, null));
+    });
+    // Borrar tarea
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-tarea]").forEach((btn) => {
+      btn.addEventListener("click", () => borrarTarea(btn.dataset.borrarTarea!));
+    });
+  }
+
+  function enchufarAgregarModulo(cantActual: number) {
+    const $btn = document.getElementById("agregar-modulo-btn") as HTMLButtonElement;
+    $btn.onclick = () => editarModulo(null, [], cantActual + 1);
+  }
+
+  // ============ Módulos ============
+  async function editarModulo(id: string | null, mods: Modulo[], numeroSugerido?: number) {
+    const existente = id ? mods.find((m) => m.id === id) : null;
+    const tituloActual = existente?.titulo ?? "";
+    const descActual = existente?.descripcion ?? "";
+    const numero = existente?.numero ?? numeroSugerido ?? 1;
+
+    // Modal simple con prompt para nombre + descripción.
+    const nuevoTitulo = window.prompt(
+      `Título del módulo ${numero}:`,
+      tituloActual
+    );
+    if (nuevoTitulo === null) return;
+    if (nuevoTitulo.trim().length < 2) {
+      showToast("El título tiene que tener al menos 2 caracteres.", "error");
+      return;
+    }
+
+    const nuevaDesc = window.prompt(
+      "Descripción del módulo (puede quedar vacía):",
+      descActual ?? ""
+    );
+    if (nuevaDesc === null) return;
+
+    const payload = {
+      titulo: nuevoTitulo.trim(),
+      descripcion: nuevaDesc.trim() || null,
+    };
+
+    const { error } = existente
+      ? await supabase.from("modulos").update(payload).eq("id", existente.id)
+      : await supabase.from("modulos").insert({
+          ...payload,
+          curso_id: cursoId,
+          numero,
+        });
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast(existente ? "Módulo actualizado." : "Módulo creado.");
+    await cargar();
+  }
+
+  async function borrarModulo(id: string) {
+    const ok = await confirmModal({
+      titulo: "Borrar módulo",
+      mensaje: "Esto borra el módulo y todos sus archivos y tareas. Las entregas de los alumnos también se pierden. ¿Continuar?",
+      confirmLabel: "Borrar módulo",
+      danger: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase.from("modulos").delete().eq("id", id);
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Módulo borrado.");
+    await cargar();
+  }
+
+  // ============ Archivos ============
+  async function subirArchivo(input: HTMLInputElement) {
+    const moduloId = input.dataset.moduloId!;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`El archivo supera los 25 MB.`, "error");
+      input.value = "";
+      return;
+    }
+
+    // Detectamos tipo simple.
+    const tipo = file.type.startsWith("video/") ? "video"
+      : file.type.startsWith("audio/") ? "audio"
+      : file.type === "application/pdf" ? "pdf"
+      : "link";
+
+    const pesoKb = Math.round(file.size / 1024);
+    const path = `${cursoId}/${moduloId}/${file.name}`;
+
+    const $btn = input.parentElement?.querySelector(".bloque__upload-btn") as HTMLElement | null;
+    const labelOrig = $btn?.textContent ?? "+ Subir archivo";
+    if ($btn) $btn.textContent = "Subiendo…";
+
+    const { error: errUpload } = await supabase.storage
+      .from("material-cursos")
+      .upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+    if (errUpload) {
+      if ($btn) $btn.textContent = labelOrig;
+      showToast(`No se pudo subir: ${traducirError(errUpload)}`, "error");
+      input.value = "";
+      return;
+    }
+
+    const { error: errInsert } = await supabase
+      .from("archivos_modulo")
+      .insert({
+        modulo_id: moduloId,
+        nombre: file.name,
+        tipo,
+        storage_path: path,
+        peso_kb: pesoKb,
+      });
+
+    if ($btn) $btn.textContent = labelOrig;
+
+    if (errInsert) {
+      showToast(`Subido pero no registrado: ${traducirError(errInsert)}`, "error");
+      return;
+    }
+
+    showToast("Archivo subido.");
+    await cargar();
+  }
+
+  async function borrarArchivo(id: string, storagePath: string) {
+    const ok = await confirmModal({
+      titulo: "Borrar archivo",
+      mensaje: "¿Borrar este archivo del material? Esta acción no se puede deshacer.",
+      confirmLabel: "Borrar",
+      danger: true,
+    });
+    if (!ok) return;
+    // Primero el archivo del Storage, después el registro.
+    await supabase.storage.from("material-cursos").remove([storagePath]);
+    const { error } = await supabase.from("archivos_modulo").delete().eq("id", id);
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Archivo borrado.");
+    await cargar();
+  }
+
+  // ============ Tareas ============
+  async function editarTarea(tareaId: string | null, moduloId: string | null) {
+    let existente: any = null;
+    if (tareaId) {
+      const { data } = await supabase.from("tareas").select("titulo, consigna, fecha_entrega, modulo_id").eq("id", tareaId).maybeSingle();
+      existente = data;
+      moduloId = data?.modulo_id ?? null;
+    }
+    if (!moduloId) {
+      showToast("No se pudo identificar el módulo.", "error");
+      return;
+    }
+
+    const nuevoTitulo = window.prompt("Título de la tarea:", existente?.titulo ?? "");
+    if (nuevoTitulo === null) return;
+    if (nuevoTitulo.trim().length < 2) {
+      showToast("El título tiene que tener al menos 2 caracteres.", "error");
+      return;
+    }
+
+    const nuevaConsigna = window.prompt("Consigna (lo que el alumno tiene que hacer):", existente?.consigna ?? "");
+    if (nuevaConsigna === null) return;
+
+    const fechaActual = existente?.fecha_entrega
+      ? new Date(existente.fecha_entrega).toISOString().slice(0, 10)
+      : "";
+    const nuevaFecha = window.prompt(
+      "Fecha de entrega (YYYY-MM-DD, dejá vacío si no aplica):",
+      fechaActual
+    );
+    if (nuevaFecha === null) return;
+
+    const payload = {
+      titulo: nuevoTitulo.trim(),
+      consigna: nuevaConsigna.trim(),
+      fecha_entrega: nuevaFecha.trim() || null,
+    };
+
+    const { error } = tareaId
+      ? await supabase.from("tareas").update(payload).eq("id", tareaId)
+      : await supabase.from("tareas").insert({ ...payload, modulo_id: moduloId });
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast(tareaId ? "Tarea actualizada." : "Tarea creada.");
+    await cargar();
+  }
+
+  async function borrarTarea(tareaId: string) {
+    const ok = await confirmModal({
+      titulo: "Borrar tarea",
+      mensaje: "También se borran las entregas de los alumnos. ¿Continuar?",
+      confirmLabel: "Borrar tarea",
+      danger: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase.from("tareas").delete().eq("id", tareaId);
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Tarea borrada.");
+    await cargar();
+  }
+
+  cargar().catch((err) => {
+    console.error("[contenido-curso]", err);
+    mostrarError(`Error inesperado: ${err instanceof Error ? err.message : String(err)}`);
+  });
+</script>
+
+<style>
+  .contenido { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .contenido__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .contenido__volver:hover { color: var(--color-ink); }
+
+  .contenido__loader { padding: 1.5rem 0; }
+  .contenido__error { color: var(--color-accent); padding: 1rem 0; }
+
+  .contenido__head {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .contenido__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .contenido__titulo { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 0 0 0.4rem; }
+  .contenido__meta { color: var(--color-ink-soft); margin: 0 0 1.3rem; }
+  .contenido__acciones {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .contenido__seccion-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.2rem;
+  }
+  .contenido__seccion-titulo { font-size: 1.3rem; margin: 0; }
+  .contenido__seccion-meta {
+    color: var(--color-ink-muted);
+    font-size: 0.88rem;
+  }
+
+  /* ============ Lista de módulos ============ */
+  .modulos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-bottom: 1.5rem;
+  }
+
+  :global(.modulo-card) {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  :global(.modulo-card__details) {}
+  :global(.modulo-card__summary) {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 1rem 1.2rem;
+    cursor: pointer;
+    list-style: none;
+    transition: background 0.15s ease;
+  }
+  :global(.modulo-card__summary::-webkit-details-marker) { display: none; }
+  :global(.modulo-card__summary:hover) { background: var(--color-bg); }
+  :global(.modulo-card__numero) {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    color: #fff;
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+  :global(.modulo-card__titulo) {
+    font-weight: 500;
+    color: var(--color-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.modulo-card__resumen) {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+  :global(.modulo-card__chevron) {
+    color: var(--color-ink-muted);
+    transition: transform 0.2s ease;
+  }
+  :global(.modulo-card__details[open] .modulo-card__chevron) {
+    transform: rotate(-180deg);
+  }
+
+  :global(.modulo-card__cuerpo) {
+    padding: 0 1.2rem 1.2rem;
+    border-top: 1px solid var(--color-line);
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+  :global(.modulo-card__descripcion) {
+    margin: 1.2rem 0 0;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+
+  /* Bloques (Material / Tarea) */
+  :global(.bloque) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+  :global(.bloque__titulo) {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin: 0;
+  }
+
+  /* Archivos */
+  :global(.archivos-lista) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  :global(.archivos-vacio) {
+    padding: 0.7rem 0.9rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-muted);
+    font-size: 0.88rem;
+    font-style: italic;
+  }
+  :global(.archivo) {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+  }
+  :global(.archivo__icono) {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-size: 0.95rem;
+  }
+  :global(.archivo__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.archivo__nombre) {
+    font-size: 0.92rem;
+    color: var(--color-ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.archivo__meta) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+  }
+  :global(.archivo__borrar) {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  :global(.archivo__borrar:hover) {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  :global(.bloque__upload) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    cursor: pointer;
+  }
+  :global(.bloque__upload input) { display: none; }
+  :global(.bloque__upload-btn) {
+    padding: 0.5rem 0.95rem;
+    background: var(--color-deep);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+  }
+  :global(.bloque__upload:hover .bloque__upload-btn) { background: #1a2c64; }
+  :global(.bloque__upload-hint) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* Tarea */
+  :global(.tarea-mini) {
+    padding: 0.9rem 1rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--color-gold);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  :global(.tarea-mini__titulo) { font-weight: 500; }
+  :global(.tarea-mini__consigna) {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.9rem;
+  }
+  :global(.tarea-mini__fecha) {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+  }
+  :global(.tarea-mini__acciones) {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+  }
+
+  :global(.modulo-card__pie) {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    border-top: 1px solid var(--color-line);
+    padding-top: 1rem;
+  }
+
+  /* Botones genéricos */
+  .boton-ghost,
+  :global(.boton-ghost) {
+    display: inline-block;
+    padding: 0.6rem 1rem;
+    background: transparent;
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+  }
+  .boton-ghost:hover { background: var(--color-bg); }
+
+  .boton-primario {
+    padding: 0.85rem 1.4rem;
+    background: var(--color-deep);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .boton-primario:hover { background: #1a2c64; }
+  .boton-primario--full {
+    width: 100%;
+    max-width: 320px;
+    margin: 0 auto;
+    display: block;
+  }
+
+  :global(.boton-primario-mini) {
+    padding: 0.5rem 0.95rem;
+    background: var(--color-deep);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  :global(.boton-primario-mini:hover) { background: #1a2c64; }
+
+  :global(.boton-ghost-mini) {
+    padding: 0.45rem 0.8rem;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  :global(.boton-ghost-mini:hover) {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+
+  :global(.boton-danger-mini) {
+    padding: 0.45rem 0.8rem;
+    background: transparent;
+    color: var(--color-accent);
+    border: 1px solid rgba(216, 85, 42, 0.35);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  :global(.boton-danger-mini:hover) {
+    background: var(--color-accent);
+    color: #fff;
+  }
+</style>

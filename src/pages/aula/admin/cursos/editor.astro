@@ -88,6 +88,28 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
             <button type="button" id="borrar-curso" class="form-curso__danger" hidden>Borrar curso</button>
           </div>
         </form>
+
+        {/* ── Solo en modo edición: gestión de profes + acceso a contenido ── */}
+        <section id="seccion-profes" class="seccion-extra" hidden>
+          <h2 class="seccion-extra__titulo">Profesores asignados</h2>
+          <p class="seccion-extra__bajada">Quiénes pueden corregir entregas y subir material en este curso.</p>
+
+          <ul id="profes-lista" class="profes-lista"></ul>
+
+          <div class="agregar-profe">
+            <label for="profe-disponible" class="agregar-profe__label">Agregar profe:</label>
+            <select id="profe-disponible" class="agregar-profe__select">
+              <option value="">— Elegí un profe —</option>
+            </select>
+            <button type="button" id="agregar-profe-btn" class="agregar-profe__btn">+ Agregar</button>
+          </div>
+        </section>
+
+        <section id="seccion-contenido" class="seccion-extra" hidden>
+          <h2 class="seccion-extra__titulo">Contenido del curso</h2>
+          <p class="seccion-extra__bajada">Acá administrás los módulos, archivos y tareas.</p>
+          <a id="link-contenido" href="#" class="contenido-link">Ir a gestionar contenido →</a>
+        </section>
       </div>
 
       <p id="editor-error" class="editor__error" hidden></p>
@@ -162,8 +184,131 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     enchufarSubmit();
     enchufarBorrar();
 
+    if (modoEdicion) {
+      // Mostramos secciones extra que solo aplican a cursos existentes.
+      document.getElementById("seccion-profes")!.hidden = false;
+      document.getElementById("seccion-contenido")!.hidden = false;
+      (document.getElementById("link-contenido") as HTMLAnchorElement).href =
+        `/aula/admin/cursos/contenido?id=${encodeURIComponent(cursoId!)}`;
+      await cargarProfes();
+    }
+
     $loader.hidden = true;
     $contenido.hidden = false;
+  }
+
+  // ============ Gestión de profes ============
+  type ProfileMini = { id: string; nombre: string; email: string; rol: string };
+
+  async function cargarProfes() {
+    const $lista = document.getElementById("profes-lista")!;
+    const $select = document.getElementById("profe-disponible") as HTMLSelectElement;
+
+    // Profes/admins disponibles + los ya asignados al curso.
+    const [resPosibles, resAsignados] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, nombre, email, rol")
+        .in("rol", ["profe", "admin"])
+        .order("nombre"),
+      supabase
+        .from("cursos_profesores")
+        .select("profesor_id, profiles!cursos_profesores_profesor_id_fkey(id, nombre, email, rol)")
+        .eq("curso_id", cursoId!),
+    ]);
+
+    if (resPosibles.error || resAsignados.error) {
+      $lista.innerHTML = `<li class="profes-lista__error">Error al cargar profes: ${
+        traducirError(resPosibles.error ?? resAsignados.error)
+      }</li>`;
+      return;
+    }
+
+    const asignados = (resAsignados.data ?? []).map(
+      (r: any) => r.profiles as ProfileMini
+    ).filter(Boolean);
+    const asignadosIds = new Set(asignados.map((p) => p.id));
+    const posibles = (resPosibles.data ?? []) as ProfileMini[];
+
+    // Render lista de asignados.
+    if (asignados.length === 0) {
+      $lista.innerHTML = `<li class="profes-lista__vacio">Ningún profe asignado todavía.</li>`;
+    } else {
+      $lista.innerHTML = asignados.map((p) => `
+        <li class="profe-item">
+          <div class="profe-item__avatar profe-item__avatar--${esc(p.rol)}">${esc(iniciales(p.nombre))}</div>
+          <div class="profe-item__cuerpo">
+            <span class="profe-item__nombre">${esc(p.nombre)}</span>
+            <span class="profe-item__mail">${esc(p.email)}</span>
+          </div>
+          <button type="button" class="profe-item__quitar" data-profe-id="${esc(p.id)}" aria-label="Quitar a ${esc(p.nombre)}">×</button>
+        </li>
+      `).join("");
+      $lista.querySelectorAll<HTMLButtonElement>(".profe-item__quitar").forEach((btn) => {
+        btn.addEventListener("click", () => quitarProfe(btn.dataset.profeId!));
+      });
+    }
+
+    // Render select con los NO asignados.
+    const disponibles = posibles.filter((p) => !asignadosIds.has(p.id));
+    $select.innerHTML = disponibles.length === 0
+      ? `<option value="">— Sin más profes disponibles —</option>`
+      : `<option value="">— Elegí un profe —</option>` +
+        disponibles.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)} (${esc(p.email)})</option>`).join("");
+    $select.disabled = disponibles.length === 0;
+
+    const $btn = document.getElementById("agregar-profe-btn") as HTMLButtonElement;
+    $btn.onclick = async () => {
+      const pid = $select.value;
+      if (!pid) {
+        showToast("Elegí un profe primero.", "info");
+        return;
+      }
+      $btn.disabled = true;
+      $btn.textContent = "Agregando…";
+      const { error } = await supabase
+        .from("cursos_profesores")
+        .insert({ curso_id: cursoId!, profesor_id: pid });
+      $btn.disabled = false;
+      $btn.textContent = "+ Agregar";
+      if (error) {
+        showToast(traducirError(error), "error");
+        return;
+      }
+      showToast("Profe agregado.");
+      await cargarProfes();
+    };
+  }
+
+  async function quitarProfe(profeId: string) {
+    const ok = await confirmModal({
+      titulo: "Quitar profe",
+      mensaje: "¿Sacarlo como profe de este curso? No se borra del sistema, solo se desvincula.",
+      confirmLabel: "Quitar",
+      danger: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("cursos_profesores")
+      .delete()
+      .eq("curso_id", cursoId!)
+      .eq("profesor_id", profeId);
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Profe quitado del curso.");
+    await cargarProfes();
+  }
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function iniciales(nombre: string) {
+    return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   }
 
   /** Auto-llena el slug a medida que el usuario escribe el título, salvo
@@ -438,4 +583,145 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     color: #fff;
   }
   .form-curso__danger:disabled { opacity: 0.6; cursor: wait; }
+
+  /* ============ Secciones extra (profes + contenido) ============ */
+  .seccion-extra {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 720px;
+    margin-top: 1.5rem;
+  }
+  .seccion-extra__titulo { font-size: 1.15rem; margin: 0 0 0.4rem; }
+  .seccion-extra__bajada {
+    margin: 0 0 1.2rem;
+    color: var(--color-ink-soft);
+    font-size: 0.92rem;
+  }
+
+  .profes-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .profes-lista__vacio,
+  .profes-lista__error {
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-muted);
+    font-style: italic;
+    font-size: 0.92rem;
+    text-align: center;
+  }
+  .profes-lista__error { color: var(--color-accent); }
+
+  .profe-item {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+  }
+  .profe-item__avatar {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  .profe-item__avatar--profe { background: var(--color-deep); }
+  .profe-item__avatar--admin { background: var(--color-accent); }
+  .profe-item__cuerpo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .profe-item__nombre { font-weight: 500; font-size: 0.95rem; }
+  .profe-item__mail {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .profe-item__quitar {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+  .profe-item__quitar:hover {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  .agregar-profe {
+    display: flex;
+    gap: 0.6rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .agregar-profe__label {
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .agregar-profe__select {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-family: inherit;
+    font-size: 0.92rem;
+    color: var(--color-ink);
+  }
+  .agregar-profe__btn {
+    padding: 0.55rem 1rem;
+    background: var(--color-deep);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .agregar-profe__btn:hover:not(:disabled) { background: #1a2c64; }
+  .agregar-profe__btn:disabled { opacity: 0.6; cursor: wait; }
+
+  .contenido-link {
+    display: inline-block;
+    padding: 0.7rem 1.2rem;
+    background: var(--color-deep);
+    color: #fff;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+  }
+  .contenido-link:hover { background: #1a2c64; }
 </style>
