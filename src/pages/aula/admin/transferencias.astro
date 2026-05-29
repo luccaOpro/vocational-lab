@@ -1,0 +1,624 @@
+---
+/*
+  /aula/admin/transferencias — bandeja de cobros.
+  ---
+  El admin carga manualmente las transferencias que recibe. Al confirmar
+  una transferencia:
+    · Se marca como "confirmada".
+    · Si el alumno ya tiene cuenta → se le crea la inscripción al curso.
+    · Si todavía no tiene cuenta → cuando se registre con ese mail, el
+      trigger handle_new_user le crea automáticamente las inscripciones
+      (ver docs/sql/03-auto-inscripcion-por-transferencia.sql).
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Transferencias · Admin · Vocational Lab" rol="admin">
+  <main class="transfers">
+    <div class="container">
+      <a href="/aula/admin" class="transfers__volver">← Volver al panel</a>
+
+      <header class="transfers__head">
+        <div>
+          <p class="transfers__eyebrow">Admin</p>
+          <h1 class="transfers__titulo">Transferencias</h1>
+          <p class="transfers__bajada" id="transfers-bajada">Cargando…</p>
+        </div>
+        <button type="button" id="cargar-btn" class="transfers__nuevo">+ Cargar transferencia</button>
+      </header>
+
+      <div id="transfers-loader" class="transfers__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando transferencias…</span>
+        </div>
+      </div>
+
+      <div id="transfers-contenido" hidden>
+        <section class="transfers__seccion">
+          <h2 class="transfers__seccion-titulo">Pendientes de confirmar</h2>
+          <div id="lista-pendientes"></div>
+        </section>
+
+        <section class="transfers__seccion">
+          <h2 class="transfers__seccion-titulo">Historial</h2>
+          <div id="lista-historial"></div>
+        </section>
+      </div>
+
+      <p id="transfers-error" class="transfers__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireRol } from "../../../lib/auth-guard";
+  import { showToast, confirmModal, formModal, traducirError } from "../../../lib/ui";
+
+  const $loader = document.getElementById("transfers-loader") as HTMLElement;
+  const $contenido = document.getElementById("transfers-contenido") as HTMLElement;
+  const $bajada = document.getElementById("transfers-bajada")!;
+  const $errorBox = document.getElementById("transfers-error") as HTMLElement;
+  const $pendientes = document.getElementById("lista-pendientes")!;
+  const $historial = document.getElementById("lista-historial")!;
+
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function formatoFecha(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
+
+  type CursoMini = { id: string; titulo: string };
+  type Transfer = {
+    id: string;
+    alumno_nombre: string;
+    alumno_email: string;
+    monto: string | null;
+    curso_id: string | null;
+    recibida_en: string | null;
+    estado: "pendiente" | "confirmada" | "rechazada";
+    confirmada_en: string | null;
+    cursos: CursoMini | null;
+  };
+
+  let adminUserId: string | null = null;
+  let cursosCache: CursoMini[] = [];
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+    adminUserId = auth.session.user.id;
+
+    const [resTransfers, resCursos] = await Promise.all([
+      supabase
+        .from("transferencias")
+        .select("id, alumno_nombre, alumno_email, monto, curso_id, recibida_en, estado, confirmada_en, cursos(id, titulo)")
+        .order("recibida_en", { ascending: false, nullsFirst: false }),
+      supabase
+        .from("cursos")
+        .select("id, titulo")
+        .order("titulo"),
+    ]);
+
+    if (resTransfers.error) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error: ${traducirError(resTransfers.error)}`;
+      return;
+    }
+    if (resCursos.error) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error al cargar cursos: ${traducirError(resCursos.error)}`;
+      return;
+    }
+
+    cursosCache = (resCursos.data ?? []) as CursoMini[];
+    const transfers = (resTransfers.data ?? []) as unknown as Transfer[];
+    const pend = transfers.filter((t) => t.estado === "pendiente");
+    const hist = transfers.filter((t) => t.estado !== "pendiente");
+
+    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${hist.length} en el historial`;
+
+    $pendientes.innerHTML = pend.length === 0
+      ? `<div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📥</span>
+          <h3 class="empty-state__titulo">Sin transferencias pendientes</h3>
+          <p class="empty-state__bajada">Cuando carguen una, va a aparecer acá para confirmar.</p>
+        </div>`
+      : `<ul class="lista-transfers">${pend.map(renderPendiente).join("")}</ul>`;
+
+    $historial.innerHTML = hist.length === 0
+      ? `<p class="transfers__vacio">Sin historial todavía.</p>`
+      : `<ul class="lista-transfers lista-transfers--hist">${hist.map(renderHistorial).join("")}</ul>`;
+
+    enchufarAcciones();
+
+    $loader.hidden = true;
+    $contenido.hidden = false;
+  }
+
+  function renderPendiente(t: Transfer): string {
+    const curso = t.cursos?.titulo ?? "(sin curso asociado)";
+    return `
+      <li class="transfer-card" data-transfer-id="${esc(t.id)}">
+        <div class="transfer-card__head">
+          <div>
+            <span class="transfer-card__nombre">${esc(t.alumno_nombre)}</span>
+            <span class="transfer-card__mail">${esc(t.alumno_email)}</span>
+          </div>
+          <span class="transfer-card__monto">${esc(t.monto) || "—"}</span>
+        </div>
+        <div class="transfer-card__meta">
+          <span><strong>Curso:</strong> ${esc(curso)}</span>
+          <span><strong>Recibida:</strong> ${esc(formatoFecha(t.recibida_en))}</span>
+        </div>
+        <div class="transfer-card__acciones">
+          <button type="button" class="boton-ghost-mini" data-rechazar="${esc(t.id)}">Rechazar</button>
+          <button type="button" class="boton-primario-mini" data-confirmar="${esc(t.id)}">Confirmar y activar acceso</button>
+        </div>
+      </li>
+    `;
+  }
+
+  function renderHistorial(t: Transfer): string {
+    const curso = t.cursos?.titulo ?? "—";
+    const estadoLabel = t.estado === "confirmada" ? "Confirmada" : "Rechazada";
+    const estadoClase = t.estado === "confirmada" ? "is-ok" : "is-rechazada";
+    return `
+      <li class="transfer-row ${estadoClase}">
+        <div class="transfer-row__cuerpo">
+          <span class="transfer-row__nombre">${esc(t.alumno_nombre)}</span>
+          <span class="transfer-row__mail">${esc(t.alumno_email)}</span>
+          <span class="transfer-row__meta">${esc(curso)} · ${esc(t.monto) || "—"} · ${esc(formatoFecha(t.recibida_en))}</span>
+        </div>
+        <span class="transfer-row__badge">${estadoLabel}</span>
+      </li>
+    `;
+  }
+
+  function enchufarAcciones() {
+    document.querySelectorAll<HTMLButtonElement>("[data-confirmar]").forEach((btn) => {
+      btn.addEventListener("click", () => confirmarTransfer(btn.dataset.confirmar!, btn));
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-rechazar]").forEach((btn) => {
+      btn.addEventListener("click", () => rechazarTransfer(btn.dataset.rechazar!, btn));
+    });
+
+    const $btnCargar = document.getElementById("cargar-btn") as HTMLButtonElement;
+    $btnCargar.onclick = cargarNuevaTransfer;
+  }
+
+  // ============ Acciones ============
+
+  async function cargarNuevaTransfer() {
+    if (cursosCache.length === 0) {
+      showToast("Primero creá un curso para asociar la transferencia.", "info");
+      return;
+    }
+
+    const result = await formModal({
+      titulo: "Cargar nueva transferencia",
+      mensaje: "Datos de la transferencia recibida. Después la confirmás cuando esté todo OK.",
+      campos: [
+        {
+          name: "alumno_nombre",
+          label: "Nombre del alumno",
+          type: "text",
+          required: true,
+          minLength: 2,
+          placeholder: "Como aparece en la transferencia",
+        },
+        {
+          name: "alumno_email",
+          label: "Mail del alumno",
+          type: "email",
+          required: true,
+          placeholder: "el mail con el que va a entrar al aula",
+        },
+        {
+          name: "monto",
+          label: "Monto",
+          type: "text",
+          placeholder: "Ej: $ 95.000",
+        },
+        {
+          name: "recibida_en",
+          label: "Fecha de la transferencia",
+          type: "date",
+          required: true,
+        },
+        // El curso se elige en un select aparte abajo.
+      ],
+      confirmLabel: "Cargar",
+    });
+
+    if (!result) return;
+
+    // Pedimos el curso en un segundo paso (el formModal no soporta select dinámico).
+    const curso = await elegirCurso();
+    if (!curso) return;
+
+    const { error } = await supabase.from("transferencias").insert({
+      alumno_nombre: result.alumno_nombre,
+      alumno_email: result.alumno_email.toLowerCase(),
+      monto: result.monto || null,
+      curso_id: curso,
+      recibida_en: result.recibida_en,
+      estado: "pendiente",
+    });
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+
+    showToast("Transferencia cargada como pendiente.");
+    await cargar();
+  }
+
+  /**
+   * Modal simple para elegir un curso de la cache.
+   * Usamos un confirmModal con una lista HTML adentro porque
+   * formModal no soporta selects custom todavía.
+   */
+  async function elegirCurso(): Promise<string | null> {
+    // Hacemos un modal con select usando confirmModal y reemplazando el mensaje por HTML.
+    return new Promise((resolve) => {
+      const modal = document.getElementById("modal-confirm")!;
+      const $titulo = document.getElementById("modal-confirm-titulo")!;
+      const $mensaje = document.getElementById("modal-confirm-mensaje") as HTMLElement;
+      const $btnOk = document.getElementById("modal-confirm-ok") as HTMLButtonElement;
+      const $btnCancel = document.getElementById("modal-confirm-cancel") as HTMLButtonElement;
+      const $backdrop = modal.querySelector("[data-modal-backdrop]") as HTMLElement;
+
+      $titulo.textContent = "¿A qué curso se inscribe?";
+      const opts = cursosCache.map((c) => `<option value="${esc(c.id)}">${esc(c.titulo)}</option>`).join("");
+      $mensaje.innerHTML = `
+        <select id="curso-elegir" style="width:100%; padding:0.7rem 0.9rem; font-family:inherit; font-size:1rem; border:1px solid var(--color-line); border-radius:var(--radius-sm); background:#fff; color:var(--color-ink);">
+          ${opts}
+        </select>
+      `;
+      $mensaje.hidden = false;
+      $btnOk.textContent = "Cargar";
+      $btnCancel.textContent = "Cancelar";
+      $btnOk.className = "modal__btn modal__btn--primary";
+
+      modal.hidden = false;
+      document.body.classList.add("modal-open");
+      void modal.offsetWidth;
+      modal.classList.add("modal--visible");
+
+      const cleanup = (val: string | null) => {
+        modal.classList.remove("modal--visible");
+        setTimeout(() => {
+          modal.hidden = true;
+          document.body.classList.remove("modal-open");
+          $mensaje.innerHTML = "";
+        }, 200);
+        $btnOk.removeEventListener("click", onOk);
+        $btnCancel.removeEventListener("click", onCancel);
+        $backdrop.removeEventListener("click", onCancel);
+        document.removeEventListener("keydown", onEsc);
+        resolve(val);
+      };
+      const onOk = () => {
+        const sel = document.getElementById("curso-elegir") as HTMLSelectElement;
+        cleanup(sel?.value ?? null);
+      };
+      const onCancel = () => cleanup(null);
+      const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") cleanup(null); };
+
+      $btnOk.addEventListener("click", onOk);
+      $btnCancel.addEventListener("click", onCancel);
+      $backdrop.addEventListener("click", onCancel);
+      document.addEventListener("keydown", onEsc);
+    });
+  }
+
+  async function confirmarTransfer(id: string, btn: HTMLButtonElement) {
+    btn.disabled = true;
+    btn.textContent = "Confirmando…";
+
+    // 1) Marcar la transferencia como confirmada.
+    const { data: transferActualizada, error: errUpdate } = await supabase
+      .from("transferencias")
+      .update({
+        estado: "confirmada",
+        confirmada_por: adminUserId,
+        confirmada_en: new Date().toISOString(),
+      })
+      .eq("id", id)
+      .select("alumno_email, curso_id")
+      .single();
+
+    if (errUpdate || !transferActualizada) {
+      showToast(traducirError(errUpdate ?? "No se pudo actualizar la transferencia."), "error");
+      btn.disabled = false;
+      btn.textContent = "Confirmar y activar acceso";
+      return;
+    }
+
+    // 2) Buscar al alumno por mail. Si ya existe, le creamos la inscripción.
+    if (transferActualizada.curso_id) {
+      const { data: alumno } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", transferActualizada.alumno_email)
+        .eq("rol", "alumno")
+        .maybeSingle();
+
+      if (alumno) {
+        const { error: errInsc } = await supabase
+          .from("inscripciones")
+          .upsert(
+            { alumno_id: alumno.id, curso_id: transferActualizada.curso_id, activo: true },
+            { onConflict: "alumno_id,curso_id" }
+          );
+        if (errInsc) {
+          showToast(`Confirmada pero no se pudo inscribir: ${traducirError(errInsc)}`, "error");
+          await cargar();
+          return;
+        }
+        showToast("Transferencia confirmada · alumno inscripto.");
+      } else {
+        showToast("Confirmada. El alumno se inscribirá automáticamente cuando cree su cuenta.");
+      }
+    } else {
+      showToast("Transferencia confirmada.");
+    }
+
+    await cargar();
+  }
+
+  async function rechazarTransfer(id: string, btn: HTMLButtonElement) {
+    const ok = await confirmModal({
+      titulo: "Rechazar transferencia",
+      mensaje: "Va a quedar marcada como rechazada en el historial. ¿Continuar?",
+      confirmLabel: "Rechazar",
+      danger: true,
+    });
+    if (!ok) return;
+
+    btn.disabled = true;
+    btn.textContent = "Rechazando…";
+
+    const { error } = await supabase
+      .from("transferencias")
+      .update({ estado: "rechazada" })
+      .eq("id", id);
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      btn.disabled = false;
+      btn.textContent = "Rechazar";
+      return;
+    }
+
+    showToast("Transferencia rechazada.");
+    await cargar();
+  }
+
+  cargar().catch((err) => {
+    console.error("[transferencias]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .transfers { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .transfers__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .transfers__volver:hover { color: var(--color-ink); }
+
+  .transfers__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+    flex-wrap: wrap;
+  }
+  .transfers__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .transfers__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.4rem; }
+  .transfers__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .transfers__nuevo {
+    padding: 0.75rem 1.2rem;
+    background: var(--color-accent);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+  .transfers__nuevo:hover { background: var(--color-accent-dark); }
+
+  .transfers__loader { padding: 1.5rem 0; }
+  .transfers__error { color: var(--color-accent); padding: 1rem 0; }
+
+  .transfers__seccion { margin-bottom: 2.5rem; }
+  .transfers__seccion-titulo {
+    font-size: 1.2rem;
+    margin: 0 0 1rem;
+  }
+  .transfers__vacio {
+    color: var(--color-ink-muted);
+    font-style: italic;
+    margin: 0;
+  }
+
+  /* ============ Cards de transferencias pendientes ============ */
+  :global(.lista-transfers) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+
+  :global(.transfer-card) {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: 1.2rem 1.3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  :global(.transfer-card__head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  :global(.transfer-card__nombre) {
+    display: block;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  :global(.transfer-card__mail) {
+    display: block;
+    color: var(--color-ink-muted);
+    font-size: 0.88rem;
+    margin-top: 0.1rem;
+  }
+  :global(.transfer-card__monto) {
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    color: var(--color-accent);
+    white-space: nowrap;
+  }
+  :global(.transfer-card__meta) {
+    display: flex;
+    gap: 1.2rem;
+    color: var(--color-ink-soft);
+    font-size: 0.92rem;
+    flex-wrap: wrap;
+  }
+  :global(.transfer-card__meta strong) {
+    color: var(--color-ink);
+    font-weight: 500;
+  }
+  :global(.transfer-card__acciones) {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+  }
+
+  /* ============ Historial compacto ============ */
+  :global(.lista-transfers--hist) {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  :global(.transfer-row) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  :global(.transfer-row:last-child) { border-bottom: 0; }
+  :global(.transfer-row__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+  }
+  :global(.transfer-row__nombre) { font-weight: 500; }
+  :global(.transfer-row__mail) {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+  }
+  :global(.transfer-row__meta) {
+    font-size: 0.82rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.transfer-row__badge) {
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  :global(.transfer-row.is-ok .transfer-row__badge) {
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+  }
+  :global(.transfer-row.is-rechazada .transfer-row__badge) {
+    background: rgba(216, 85, 42, 0.12);
+    color: var(--color-accent);
+  }
+
+  /* Botones reutilizados (mismos estilos que en contenido del curso) */
+  :global(.boton-primario-mini) {
+    padding: 0.55rem 1.1rem;
+    background: var(--color-deep);
+    color: #fff;
+    border: 0;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  :global(.boton-primario-mini:hover:not(:disabled)) { background: #1a2c64; }
+  :global(.boton-primario-mini:disabled) { opacity: 0.7; cursor: wait; }
+
+  :global(.boton-ghost-mini) {
+    padding: 0.5rem 0.95rem;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  :global(.boton-ghost-mini:hover:not(:disabled)) {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+  :global(.boton-ghost-mini:disabled) { opacity: 0.6; cursor: wait; }
+</style>
