@@ -41,6 +41,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           <div id="lista-pendientes"></div>
         </section>
 
+        <section class="transfers__seccion" id="seccion-sin-curso" hidden>
+          <h2 class="transfers__seccion-titulo">Alumnos registrados sin curso</h2>
+          <p class="transfers__seccion-bajada">
+            Se registraron en el aula pero todavía no tienen ningún curso activo.
+            Pueden ser alumnos que pagaron y todavía no les cargaste la transferencia,
+            o gente que entró por curiosidad.
+          </p>
+          <div id="lista-sin-curso"></div>
+        </section>
+
         <section class="transfers__seccion">
           <h2 class="transfers__seccion-titulo">Historial</h2>
           <div id="lista-historial"></div>
@@ -79,6 +89,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }
   }
 
+  function iniciales(nombre: string) {
+    return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  }
+
   type CursoMini = { id: string; titulo: string };
   type Transfer = {
     id: string;
@@ -100,7 +114,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (!auth) return;
     adminUserId = auth.session.user.id;
 
-    const [resTransfers, resCursos] = await Promise.all([
+    const [resTransfers, resCursos, resAlumnosSinCurso] = await Promise.all([
       supabase
         .from("transferencias")
         .select("id, alumno_nombre, alumno_email, monto, curso_id, recibida_en, estado, confirmada_en, cursos(id, titulo)")
@@ -109,6 +123,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         .from("cursos")
         .select("id, titulo")
         .order("titulo"),
+      supabase
+        .from("profiles")
+        .select("id, nombre, email, creado_en, inscripciones(activo)")
+        .eq("rol", "alumno"),
     ]);
 
     if (resTransfers.error) {
@@ -129,7 +147,17 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const pend = transfers.filter((t) => t.estado === "pendiente");
     const hist = transfers.filter((t) => t.estado !== "pendiente");
 
-    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${hist.length} en el historial`;
+    // Filtramos: alumnos cuya lista de inscripciones está vacía o
+    // donde NINGUNA está activa.
+    type AlumnoConInscr = {
+      id: string; nombre: string; email: string; creado_en: string;
+      inscripciones: { activo: boolean }[] | null;
+    };
+    const sinCurso = ((resAlumnosSinCurso.data ?? []) as AlumnoConInscr[])
+      .filter((a) => !(a.inscripciones ?? []).some((i) => i.activo))
+      .sort((a, b) => (b.creado_en > a.creado_en ? 1 : -1));
+
+    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${sinCurso.length} alumno${sinCurso.length === 1 ? "" : "s"} sin curso · ${hist.length} en el historial`;
 
     $pendientes.innerHTML = pend.length === 0
       ? `<div class="empty-state">
@@ -142,6 +170,30 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $historial.innerHTML = hist.length === 0
       ? `<p class="transfers__vacio">Sin historial todavía.</p>`
       : `<ul class="lista-transfers lista-transfers--hist">${hist.map(renderHistorial).join("")}</ul>`;
+
+    // Sección de alumnos sin curso (oculta si no hay).
+    const $seccionSinCurso = document.getElementById("seccion-sin-curso") as HTMLElement;
+    const $listaSinCurso = document.getElementById("lista-sin-curso") as HTMLElement;
+    if (sinCurso.length === 0) {
+      $seccionSinCurso.hidden = true;
+    } else {
+      $seccionSinCurso.hidden = false;
+      $listaSinCurso.innerHTML = `
+        <ul class="lista-sin-curso">
+          ${sinCurso.map((a) => `
+            <li class="sin-curso-item">
+              <div class="sin-curso-item__avatar">${esc(iniciales(a.nombre))}</div>
+              <div class="sin-curso-item__cuerpo">
+                <span class="sin-curso-item__nombre">${esc(a.nombre)}</span>
+                <span class="sin-curso-item__mail">${esc(a.email)}</span>
+                <span class="sin-curso-item__fecha">Se registró el ${esc(formatoFecha(a.creado_en))}</span>
+              </div>
+              <button type="button" class="boton-primario-mini" data-inscribir-alumno="${esc(a.id)}" data-alumno-nombre="${esc(a.nombre)}">Inscribir a curso</button>
+            </li>
+          `).join("")}
+        </ul>
+      `;
+    }
 
     enchufarAcciones();
 
@@ -195,9 +247,43 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     document.querySelectorAll<HTMLButtonElement>("[data-rechazar]").forEach((btn) => {
       btn.addEventListener("click", () => rechazarTransfer(btn.dataset.rechazar!, btn));
     });
+    document.querySelectorAll<HTMLButtonElement>("[data-inscribir-alumno]").forEach((btn) => {
+      btn.addEventListener("click", () => inscribirAlumnoSinCurso(btn.dataset.inscribirAlumno!, btn.dataset.alumnoNombre!));
+    });
 
     const $btnCargar = document.getElementById("cargar-btn") as HTMLButtonElement;
     $btnCargar.onclick = cargarNuevaTransfer;
+  }
+
+  // Inscribir directamente a un alumno sin pasar por transferencia.
+  async function inscribirAlumnoSinCurso(alumnoId: string, alumnoNombre: string) {
+    if (cursosCache.length === 0) {
+      showToast("Primero creá un curso.", "info");
+      return;
+    }
+    const cursoId = await elegirCurso();
+    if (!cursoId) return;
+
+    const cursoTitulo = cursosCache.find((c) => c.id === cursoId)?.titulo ?? "el curso";
+    const ok = await confirmModal({
+      titulo: "Inscribir alumno",
+      mensaje: `¿Inscribir a ${alumnoNombre} a "${cursoTitulo}" sin cargar transferencia?`,
+      confirmLabel: "Inscribir",
+    });
+    if (!ok) return;
+
+    const { error } = await supabase
+      .from("inscripciones")
+      .upsert(
+        { alumno_id: alumnoId, curso_id: cursoId, activo: true },
+        { onConflict: "alumno_id,curso_id" }
+      );
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast(`${alumnoNombre} inscripto a "${cursoTitulo}".`);
+    await cargar();
   }
 
   // ============ Acciones ============
@@ -588,6 +674,76 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.transfer-row.is-rechazada .transfer-row__badge) {
     background: rgba(216, 85, 42, 0.12);
     color: var(--color-accent);
+  }
+
+  /* Sección de "alumnos sin curso" */
+  .transfers__seccion-bajada {
+    margin: 0 0 1rem;
+    color: var(--color-ink-soft);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 60ch;
+  }
+
+  :global(.lista-sin-curso) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+  :global(.sin-curso-item) {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.9rem 1.1rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  :global(.sin-curso-item:last-child) { border-bottom: 0; }
+  :global(.sin-curso-item__avatar) {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink);
+    font-size: 0.78rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  :global(.sin-curso-item__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    flex: 1;
+    min-width: 0;
+  }
+  :global(.sin-curso-item__nombre) {
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  :global(.sin-curso-item__mail) {
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+  }
+  :global(.sin-curso-item__fecha) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    font-style: italic;
+  }
+
+  @media (max-width: 540px) {
+    :global(.sin-curso-item) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+    :global(.sin-curso-item button) {
+      align-self: stretch;
+    }
   }
 
   /* Botones reutilizados (mismos estilos que en contenido del curso) */
