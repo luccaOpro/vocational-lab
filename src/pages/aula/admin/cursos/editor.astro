@@ -38,23 +38,9 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
             />
           </label>
 
-          <label class="form-curso__label">
-            <span>
-              URL del curso (slug)
-              <small class="form-curso__hint">— se autogenera del título; podés ajustarlo</small>
-            </span>
-            <div class="form-curso__slug">
-              <span class="form-curso__slug-prefix">/aula/curso?slug=</span>
-              <input
-                type="text"
-                name="slug"
-                required
-                pattern="[a-z0-9\-]+"
-                placeholder="coaching-vocacional-agosto-2026"
-              />
-            </div>
-            <small class="form-curso__error" id="slug-error" hidden></small>
-          </label>
+          {/* El slug (URL interna del curso) se genera automáticamente
+              del título al crear. No se cambia al editar para no romper
+              URLs ya compartidas. Lo manejamos del lado del JS. */}
 
           <label class="form-curso__label">
             <span>Resumen *</span>
@@ -106,21 +92,19 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
         </section>
 
         <section id="seccion-alumnos" class="seccion-extra" hidden>
-          <h2 class="seccion-extra__titulo">Alumnos inscriptos</h2>
-          <p class="seccion-extra__bajada">Quiénes tienen acceso al curso y aparecen en "Mis cursos".</p>
-
-          <ul id="alumnos-lista" class="profes-lista"></ul>
-
-          <div class="agregar-profe">
-            <label for="alumno-disponible" class="agregar-profe__label">Inscribir alumno:</label>
-            <select id="alumno-disponible" class="agregar-profe__select">
-              <option value="">— Elegí un alumno —</option>
-            </select>
-            <button type="button" id="agregar-alumno-btn" class="agregar-profe__btn">+ Inscribir</button>
+          <div class="seccion-extra__head">
+            <div>
+              <h2 class="seccion-extra__titulo">Alumnos inscriptos</h2>
+              <p class="seccion-extra__bajada" id="alumnos-bajada">Quiénes tienen acceso al curso.</p>
+            </div>
+            <button type="button" id="abrir-inscribir-btn" class="agregar-profe__btn">+ Inscribir alumnos</button>
           </div>
+
+          <div id="alumnos-grid" class="alumnos-grid"></div>
+
           <p class="seccion-extra__nota">
-            Si el alumno todavía no se registró en el aula, decile que entre a
-            <code>/aula/login</code> y use "Crear cuenta". Después aparece acá para inscribirlo.
+            Si un alumno no aparece en la lista para inscribir, todavía no se registró.
+            Decile que entre a <code>/aula/login</code> y elija "Crear una nueva cuenta".
           </p>
         </section>
 
@@ -148,10 +132,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   const $form = document.getElementById("curso-form") as HTMLFormElement;
   const $submit = document.getElementById("submit-curso") as HTMLButtonElement;
   const $borrar = document.getElementById("borrar-curso") as HTMLButtonElement;
-  const $slugError = document.getElementById("slug-error") as HTMLElement;
 
   let modoEdicion = false;
   let cursoId: string | null = null;
+  // Slug del curso en modo edición — no se modifica al editar el título
+  // para no romper URLs ya compartidas con los alumnos.
+  let slugActual: string | null = null;
 
   /** Convierte "Hola Mundo · Edición 2026!" → "hola-mundo-edicion-2026". */
   function slugify(s: string): string {
@@ -163,6 +149,22 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       .trim()
       .replace(/\s+/g, "-")                // espacios → guiones
       .replace(/-+/g, "-");                // guiones múltiples → uno
+  }
+
+  /** Garantiza que el slug sea único agregando -2, -3, ... si hace falta. */
+  async function generarSlugUnico(base: string): Promise<string> {
+    let slug = base;
+    let n = 1;
+    while (true) {
+      const { data } = await supabase
+        .from("cursos")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (!data) return slug;
+      n += 1;
+      slug = `${base}-${n}`;
+    }
   }
 
   async function cargar() {
@@ -193,13 +195,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       }
 
       ($form.elements.namedItem("titulo") as HTMLInputElement).value = curso.titulo;
-      ($form.elements.namedItem("slug") as HTMLInputElement).value = curso.slug;
       ($form.elements.namedItem("resumen") as HTMLTextAreaElement).value = curso.resumen ?? "";
       ($form.elements.namedItem("periodo") as HTMLInputElement).value = curso.periodo ?? "";
       ($form.elements.namedItem("publicado") as HTMLInputElement).checked = !!curso.publicado;
+      slugActual = curso.slug;
     }
 
-    enchufarSlugAuto();
     enchufarSubmit();
     enchufarBorrar();
 
@@ -329,8 +330,8 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   };
 
   async function cargarAlumnos() {
-    const $lista = document.getElementById("alumnos-lista")!;
-    const $select = document.getElementById("alumno-disponible") as HTMLSelectElement;
+    const $grid = document.getElementById("alumnos-grid")!;
+    const $bajada = document.getElementById("alumnos-bajada")!;
 
     const [resTodos, resInscriptos] = await Promise.all([
       supabase
@@ -345,9 +346,9 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     ]);
 
     if (resTodos.error || resInscriptos.error) {
-      $lista.innerHTML = `<li class="profes-lista__error">Error al cargar alumnos: ${
+      $grid.innerHTML = `<p class="alumnos-grid__error">Error al cargar alumnos: ${
         traducirError(resTodos.error ?? resInscriptos.error)
-      }</li>`;
+      }</p>`;
       return;
     }
 
@@ -355,63 +356,145 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       .filter((i) => !!i.profiles);
     const inscriptosIds = new Set(inscripciones.map((i) => i.profiles!.id));
     const todosAlumnos = (resTodos.data ?? []) as ProfileMini[];
+    const disponibles = todosAlumnos.filter((a) => !inscriptosIds.has(a.id));
 
-    if (inscripciones.length === 0) {
-      $lista.innerHTML = `<li class="profes-lista__vacio">Ningún alumno inscripto todavía.</li>`;
-    } else {
-      $lista.innerHTML = inscripciones.map((i) => {
-        const a = i.profiles!;
-        const badgeClase = i.activo ? "estado-badge--activo" : "estado-badge--pendiente";
-        const badgeTexto = i.activo ? "Activo" : "Pendiente";
-        return `
-          <li class="profe-item">
-            <div class="profe-item__avatar profe-item__avatar--alumno">${esc(iniciales(a.nombre))}</div>
-            <div class="profe-item__cuerpo">
-              <span class="profe-item__nombre">
-                ${esc(a.nombre)}
-                <span class="estado-badge ${badgeClase}">${badgeTexto}</span>
-              </span>
-              <span class="profe-item__mail">${esc(a.email)}</span>
+    // Bajada con conteo.
+    $bajada.textContent = inscripciones.length === 0
+      ? "Todavía no hay alumnos inscriptos."
+      : `${inscripciones.length} alumno${inscripciones.length === 1 ? "" : "s"} inscripto${inscripciones.length === 1 ? "" : "s"}.`;
+
+    // Grid de cards de inscriptos.
+    $grid.innerHTML = inscripciones.length === 0
+      ? `<p class="alumnos-grid__vacio">Aún no hay alumnos en este curso. Apretá "+ Inscribir alumnos" para sumar a quienes ya pagaron.</p>`
+      : inscripciones.map((i) => {
+          const a = i.profiles!;
+          return `
+            <article class="alumno-card">
+              <div class="alumno-card__avatar">${esc(iniciales(a.nombre))}</div>
+              <div class="alumno-card__cuerpo">
+                <span class="alumno-card__nombre">${esc(a.nombre)}</span>
+                <span class="alumno-card__mail">${esc(a.email)}</span>
+              </div>
+              <button type="button" class="alumno-card__quitar" data-inscripcion-id="${esc(i.id)}" data-nombre="${esc(a.nombre)}" aria-label="Desinscribir a ${esc(a.nombre)}">×</button>
+            </article>
+          `;
+        }).join("");
+
+    $grid.querySelectorAll<HTMLButtonElement>(".alumno-card__quitar").forEach((btn) => {
+      btn.addEventListener("click", () => desinscribirAlumno(btn.dataset.inscripcionId!, btn.dataset.nombre!));
+    });
+
+    // Botón de abrir modal de inscripción múltiple.
+    const $btnAbrir = document.getElementById("abrir-inscribir-btn") as HTMLButtonElement;
+    $btnAbrir.disabled = disponibles.length === 0;
+    $btnAbrir.title = disponibles.length === 0 ? "No hay más alumnos para inscribir" : "";
+    $btnAbrir.onclick = () => abrirModalInscribir(disponibles);
+  }
+
+  /** Modal con búsqueda + lista con checkboxes para inscribir varios alumnos a la vez. */
+  function abrirModalInscribir(disponibles: ProfileMini[]) {
+    const modal = document.getElementById("modal-confirm")!;
+    const $titulo = document.getElementById("modal-confirm-titulo")!;
+    const $mensaje = document.getElementById("modal-confirm-mensaje") as HTMLElement;
+    const $btnOk = document.getElementById("modal-confirm-ok") as HTMLButtonElement;
+    const $btnCancel = document.getElementById("modal-confirm-cancel") as HTMLButtonElement;
+    const $backdrop = modal.querySelector("[data-modal-backdrop]") as HTMLElement;
+
+    $titulo.textContent = "Inscribir alumnos";
+    $mensaje.hidden = false;
+    $mensaje.innerHTML = `
+      <input type="search" id="inscribir-buscar" placeholder="Buscar por nombre o mail…" class="multi-buscar" autocomplete="off" />
+      <div id="inscribir-lista" class="multi-lista">
+        ${disponibles.map((a) => `
+          <label class="multi-item">
+            <input type="checkbox" value="${esc(a.id)}" />
+            <div class="multi-item__avatar">${esc(iniciales(a.nombre))}</div>
+            <div class="multi-item__cuerpo">
+              <span class="multi-item__nombre">${esc(a.nombre)}</span>
+              <span class="multi-item__mail">${esc(a.email)}</span>
             </div>
-            <button type="button" class="profe-item__quitar" data-inscripcion-id="${esc(i.id)}" data-nombre="${esc(a.nombre)}" aria-label="Desinscribir a ${esc(a.nombre)}">×</button>
-          </li>
-        `;
-      }).join("");
+          </label>
+        `).join("")}
+      </div>
+      <p id="inscribir-conteo" class="multi-conteo">0 seleccionado/s</p>
+    `;
+    $btnCancel.textContent = "Cancelar";
+    $btnOk.textContent = "Inscribir";
+    $btnOk.className = "modal__btn modal__btn--primary";
+    $btnOk.disabled = true;
 
-      $lista.querySelectorAll<HTMLButtonElement>(".profe-item__quitar").forEach((btn) => {
-        btn.addEventListener("click", () => desinscribirAlumno(btn.dataset.inscripcionId!, btn.dataset.nombre!));
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    void modal.offsetWidth;
+    modal.classList.add("modal--visible");
+
+    const $buscar = document.getElementById("inscribir-buscar") as HTMLInputElement;
+    const $lista = document.getElementById("inscribir-lista") as HTMLElement;
+    const $conteo = document.getElementById("inscribir-conteo") as HTMLElement;
+
+    requestAnimationFrame(() => $buscar.focus());
+
+    // Filtro de búsqueda.
+    $buscar.addEventListener("input", () => {
+      const q = $buscar.value.trim().toLowerCase();
+      $lista.querySelectorAll<HTMLLabelElement>(".multi-item").forEach((item) => {
+        const text = item.textContent?.toLowerCase() ?? "";
+        item.style.display = text.includes(q) ? "" : "none";
       });
+    });
+
+    // Actualizar conteo cuando se marcan checkboxes.
+    function actualizarConteo() {
+      const checked = $lista.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
+      $conteo.textContent = `${checked.length} seleccionado${checked.length === 1 ? "" : "s"}`;
+      $btnOk.disabled = checked.length === 0;
+      $btnOk.textContent = checked.length === 0
+        ? "Inscribir"
+        : `Inscribir ${checked.length}`;
+    }
+    $lista.addEventListener("change", actualizarConteo);
+
+    function cleanup() {
+      modal.classList.remove("modal--visible");
+      setTimeout(() => {
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+        $mensaje.innerHTML = "";
+        $btnOk.disabled = false;
+      }, 200);
+      $btnOk.removeEventListener("click", onOk);
+      $btnCancel.removeEventListener("click", onCancel);
+      $backdrop.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onEsc);
     }
 
-    // Select de alumnos no inscriptos.
-    const disponibles = todosAlumnos.filter((a) => !inscriptosIds.has(a.id));
-    $select.innerHTML = disponibles.length === 0
-      ? `<option value="">— No hay más alumnos para inscribir —</option>`
-      : `<option value="">— Elegí un alumno —</option>` +
-        disponibles.map((a) => `<option value="${esc(a.id)}">${esc(a.nombre)} (${esc(a.email)})</option>`).join("");
-    $select.disabled = disponibles.length === 0;
+    async function onOk() {
+      const ids = Array.from($lista.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map((c) => c.value);
+      if (ids.length === 0) return;
 
-    const $btn = document.getElementById("agregar-alumno-btn") as HTMLButtonElement;
-    $btn.onclick = async () => {
-      const aid = $select.value;
-      if (!aid) {
-        showToast("Elegí un alumno primero.", "info");
-        return;
-      }
-      $btn.disabled = true;
-      $btn.textContent = "Inscribiendo…";
-      const { error } = await supabase
-        .from("inscripciones")
-        .insert({ curso_id: cursoId!, alumno_id: aid, activo: true });
-      $btn.disabled = false;
-      $btn.textContent = "+ Inscribir";
+      $btnOk.disabled = true;
+      $btnOk.textContent = "Inscribiendo…";
+
+      const rows = ids.map((id) => ({ curso_id: cursoId!, alumno_id: id, activo: true }));
+      const { error } = await supabase.from("inscripciones").insert(rows);
+
       if (error) {
         showToast(traducirError(error), "error");
+        $btnOk.disabled = false;
         return;
       }
-      showToast("Alumno inscripto.");
+
+      cleanup();
+      showToast(`${ids.length} alumno${ids.length === 1 ? "" : "s"} inscripto${ids.length === 1 ? "" : "s"}.`);
       await cargarAlumnos();
-    };
+    }
+    function onCancel() { cleanup(); }
+    function onEsc(e: KeyboardEvent) { if (e.key === "Escape") cleanup(); }
+
+    $btnOk.addEventListener("click", onOk);
+    $btnCancel.addEventListener("click", onCancel);
+    $backdrop.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onEsc);
   }
 
   async function desinscribirAlumno(inscripcionId: string, nombre: string) {
@@ -444,40 +527,28 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   }
 
-  /** Auto-llena el slug a medida que el usuario escribe el título, salvo
-   *  que el usuario haya editado el slug manualmente. */
-  function enchufarSlugAuto() {
-    const $tit = $form.elements.namedItem("titulo") as HTMLInputElement;
-    const $slug = $form.elements.namedItem("slug") as HTMLInputElement;
-    let slugEditado = modoEdicion; // si estamos editando, no piso el slug
-
-    $slug.addEventListener("input", () => { slugEditado = true; });
-
-    $tit.addEventListener("input", () => {
-      if (!slugEditado) $slug.value = slugify($tit.value);
-    });
-  }
-
   function enchufarSubmit() {
     $form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      $slugError.hidden = true;
 
       const fd = new FormData($form);
       const titulo = String(fd.get("titulo")).trim();
-      const slug = String(fd.get("slug")).trim();
       const resumen = String(fd.get("resumen")).trim();
       const periodo = String(fd.get("periodo")).trim();
       const publicado = fd.get("publicado") === "on";
 
-      if (!/^[a-z0-9-]+$/.test(slug)) {
-        $slugError.textContent = "El slug solo puede tener letras minúsculas, números y guiones.";
-        $slugError.hidden = false;
-        return;
-      }
-
       $submit.disabled = true;
       $submit.textContent = modoEdicion ? "Guardando…" : "Creando…";
+
+      // Al editar: NO cambiamos el slug (preservamos las URLs ya compartidas).
+      // Al crear: lo generamos del título y agregamos sufijo si hay colisión.
+      let slug: string;
+      if (modoEdicion) {
+        slug = slugActual ?? slugify(titulo);
+      } else {
+        const base = slugify(titulo) || "curso";
+        slug = await generarSlugUnico(base);
+      }
 
       const payload = { titulo, slug, resumen, periodo: periodo || null, publicado };
 
@@ -897,4 +968,181 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     transition: background 0.15s ease;
   }
   .contenido-link:hover { background: #1a2c64; }
+
+  /* ============ Sección alumnos inscriptos (nuevo formato grid) ============ */
+  .seccion-extra__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+  }
+  .seccion-extra__head .seccion-extra__titulo { margin-bottom: 0.3rem; }
+  .seccion-extra__head .seccion-extra__bajada { margin: 0; }
+
+  .alumnos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0.5rem;
+  }
+  .alumnos-grid__vacio {
+    padding: 1.5rem;
+    background: var(--color-bg);
+    border: 1px dashed var(--color-line);
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-muted);
+    font-style: italic;
+    text-align: center;
+    margin: 0;
+    grid-column: 1 / -1;
+  }
+  .alumnos-grid__error {
+    color: var(--color-accent);
+    padding: 1rem;
+  }
+
+  :global(.alumno-card) {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.7rem 0.85rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
+  }
+  :global(.alumno-card:hover) { background: #fff; }
+  :global(.alumno-card__avatar) {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink);
+    font-size: 0.85rem;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+  :global(.alumno-card__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  :global(.alumno-card__nombre) {
+    font-weight: 500;
+    color: var(--color-ink);
+    font-size: 0.92rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.alumno-card__mail) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.alumno-card__quitar) {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+  :global(.alumno-card__quitar:hover) {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  /* ============ Modal multi-select (búsqueda + checkboxes) ============ */
+  :global(.multi-buscar) {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    margin-bottom: 0.8rem;
+  }
+  :global(.multi-buscar:focus) {
+    outline: none;
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+
+  :global(.multi-lista) {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+  }
+  :global(.multi-item) {
+    display: grid;
+    grid-template-columns: auto 36px 1fr;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--color-line);
+    cursor: pointer;
+    transition: background 0.1s ease;
+  }
+  :global(.multi-item:last-child) { border-bottom: 0; }
+  :global(.multi-item:hover) { background: var(--color-bg); }
+  :global(.multi-item input[type="checkbox"]) {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-deep);
+    cursor: pointer;
+  }
+  :global(.multi-item__avatar) {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink);
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  :global(.multi-item__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  :global(.multi-item__nombre) {
+    font-weight: 500;
+    font-size: 0.92rem;
+  }
+  :global(.multi-item__mail) {
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.multi-conteo) {
+    margin: 0.7rem 0 0;
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+    text-align: right;
+  }
 </style>
