@@ -16,11 +16,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   <main class="login">
     <div class="login__card">
       <a href="/" class="login__brand" aria-label="Vocational Lab — Inicio">
-        <img src="/logo.svg" alt="" class="login__brand-logo" width="62" height="68" aria-hidden="true" />
-        <span class="login__brand-wordmark">
-          <span>Vocational</span>
-          <span>Lab</span>
-        </span>
+        <img src="/logo.svg" alt="Vocational Lab" class="login__brand-logo" width="80" height="88" />
       </a>
 
       {/* ============ MODO LOGIN ============ */}
@@ -283,38 +279,14 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   }
 
   .login__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
+    display: block;
     margin-bottom: 1.8rem;
+    line-height: 0;
   }
   .login__brand-logo {
     width: auto;
-    height: 60px;
+    height: 88px;
     display: block;
-    flex-shrink: 0;
-  }
-  .login__brand-wordmark {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    line-height: 1;
-  }
-  .login__brand-wordmark span:first-child {
-    font-family: var(--font-sans);
-    font-size: 0.6rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--color-ink-soft);
-    font-weight: 500;
-  }
-  .login__brand-wordmark span:last-child {
-    font-family: var(--font-sans);
-    font-size: 1.05rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-ink);
-    font-weight: 600;
   }
 
   .login__titulo { font-size: 1.9rem; margin: 0 0 0.5rem; }

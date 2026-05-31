@@ -11,13 +11,7 @@ const anio = new Date().getFullYear();
 <footer class="footer">
   <div class="footer__inner container">
     <div class="footer__brand">
-      <div class="footer__brand-lockup">
-        <img src="/logo-light.svg" alt="" class="footer__brand-logo" width="50" height="55" aria-hidden="true" />
-        <span class="footer__brand-wordmark">
-          <span>Vocational</span>
-          <span>Lab</span>
-        </span>
-      </div>
+      <img src="/logo-light.svg" alt="Vocational Lab" class="footer__brand-logo" width="55" height="60" />
       <span class="footer__tag">Donde futuro y vocación se encuentran.</span>
     </div>
 
@@ -48,39 +42,11 @@ const anio = new Date().getFullYear();
     gap: 1rem;
     flex-wrap: wrap;
   }
-  .footer__brand-lockup {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
   /* Ícono en el footer (fondo oscuro): usamos versión light. */
   .footer__brand-logo {
     width: auto;
-    height: 48px;
+    height: 60px;
     display: block;
-    flex-shrink: 0;
-  }
-  .footer__brand-wordmark {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    line-height: 1;
-  }
-  .footer__brand-wordmark span:first-child {
-    font-family: var(--font-sans);
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: rgba(242, 234, 215, 0.6);
-    font-weight: 500;
-  }
-  .footer__brand-wordmark span:last-child {
-    font-family: var(--font-sans);
-    font-size: 0.98rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #F2EAD7;
-    font-weight: 600;
   }
   .footer__tag {
     font-style: italic;

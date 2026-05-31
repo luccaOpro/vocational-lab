@@ -63,11 +63,7 @@ const etiqueta = etiquetaPorRol[rol];
 <header class={`navaula navaula--${rol}`}>
   <div class="navaula__inner container">
     <a href={home} class="navaula__brand" aria-label={etiqueta}>
-      <img src="/logo-light.svg" alt="" class="navaula__brand-logo" width="55" height="60" aria-hidden="true" />
-      <span class="navaula__brand-wordmark">
-        <span>Vocational</span>
-        <span>Lab</span>
-      </span>
+      <img src="/logo-light.svg" alt="Vocational Lab" class="navaula__brand-logo" width="55" height="60" />
     </a>
 
     {/* Links de desktop */}
@@ -154,39 +150,11 @@ const etiqueta = etiquetaPorRol[rol];
     line-height: 0;
   }
 
-  .navaula__brand {
-    gap: 0.5rem;
-  }
-
   /* Versión light del logo (ícono crema + cohete coral) para el fondo oscuro del aula. */
   .navaula__brand-logo {
     width: auto;
     height: 44px;
     display: block;
-    flex-shrink: 0;
-  }
-
-  .navaula__brand-wordmark {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    line-height: 1;
-  }
-  .navaula__brand-wordmark span:first-child {
-    font-family: var(--font-sans);
-    font-size: 0.58rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: rgba(242, 234, 215, 0.6);
-    font-weight: 500;
-  }
-  .navaula__brand-wordmark span:last-child {
-    font-family: var(--font-sans);
-    font-size: 0.98rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: #F2EAD7;
-    font-weight: 600;
   }
 
   /* Links desktop */

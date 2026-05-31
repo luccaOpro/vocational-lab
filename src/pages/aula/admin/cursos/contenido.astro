@@ -93,7 +93,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   }
 
   function iconoTipo(tipo: string) {
-    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : "↗";
+    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : tipo === "youtube" ? "▶" : "↗";
   }
 
   function mostrarError(msg: string) {
@@ -103,7 +103,15 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   }
 
   type Archivo = { id: string; nombre: string; tipo: string; storage_path: string; peso_kb: number | null };
-  type Tarea = { id: string; titulo: string; consigna: string; fecha_entrega: string | null };
+  type Tarea = {
+    id: string;
+    titulo: string;
+    consigna: string;
+    fecha_entrega: string | null;
+    video_url: string | null;
+    adjunto_path: string | null;
+    adjunto_nombre: string | null;
+  };
   type Modulo = {
     id: string;
     numero: number;
@@ -140,7 +148,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       .select(`
         id, numero, titulo, descripcion,
         archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
-        tareas (id, titulo, consigna, fecha_entrega)
+        tareas (id, titulo, consigna, fecha_entrega, video_url, adjunto_path, adjunto_nombre)
       `)
       .eq("curso_id", cursoId)
       .order("numero");
@@ -195,23 +203,38 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
               <h4 class="bloque__titulo">Material</h4>
               <ul class="archivos-lista">
                 ${archivos.length === 0
-                  ? `<li class="archivos-vacio">Sin archivos cargados.</li>`
-                  : archivos.map((a) => `
-                    <li class="archivo">
-                      <span class="archivo__icono">${iconoTipo(a.tipo)}</span>
-                      <div class="archivo__cuerpo">
-                        <span class="archivo__nombre">${esc(a.nombre)}</span>
-                        <span class="archivo__meta">${esc(formatoTamano(a.peso_kb))}</span>
-                      </div>
-                      <button type="button" class="archivo__borrar" data-archivo-id="${esc(a.id)}" data-storage-path="${esc(a.storage_path)}" aria-label="Borrar ${esc(a.nombre)}">×</button>
-                    </li>
-                  `).join("")}
+                  ? `<li class="archivos-vacio">Sin archivos ni videos cargados.</li>`
+                  : archivos.map((a) => a.tipo === "youtube"
+                    ? `
+                      <li class="archivo archivo--link">
+                        <span class="archivo__icono archivo__icono--yt">${iconoTipo(a.tipo)}</span>
+                        <div class="archivo__cuerpo">
+                          <a href="${esc(a.storage_path)}" target="_blank" rel="noopener" class="archivo__nombre archivo__nombre--link">${esc(a.nombre)}</a>
+                          <span class="archivo__meta">Video externo</span>
+                        </div>
+                        <button type="button" class="archivo__borrar" data-archivo-id="${esc(a.id)}" data-storage-path="${esc(a.storage_path)}" data-tipo="youtube" aria-label="Quitar ${esc(a.nombre)}">×</button>
+                      </li>
+                    `
+                    : `
+                      <li class="archivo">
+                        <span class="archivo__icono">${iconoTipo(a.tipo)}</span>
+                        <div class="archivo__cuerpo">
+                          <span class="archivo__nombre">${esc(a.nombre)}</span>
+                          <span class="archivo__meta">${esc(formatoTamano(a.peso_kb))}</span>
+                        </div>
+                        <button type="button" class="archivo__borrar" data-archivo-id="${esc(a.id)}" data-storage-path="${esc(a.storage_path)}" aria-label="Borrar ${esc(a.nombre)}">×</button>
+                      </li>
+                    `
+                  ).join("")}
               </ul>
-              <label class="bloque__upload">
-                <input type="file" data-modulo-id="${esc(m.id)}" />
-                <span class="bloque__upload-btn">+ Subir archivo</span>
-                <span class="bloque__upload-hint">Hasta 25 MB</span>
-              </label>
+              <div class="bloque__acciones">
+                <label class="bloque__upload">
+                  <input type="file" data-modulo-id="${esc(m.id)}" />
+                  <span class="bloque__upload-btn">+ Subir archivo</span>
+                  <span class="bloque__upload-hint">Hasta 25 MB</span>
+                </label>
+                <button type="button" class="bloque__link-btn" data-agregar-video="${esc(m.id)}">+ Agregar video</button>
+              </div>
             </div>
 
             <div class="bloque">
@@ -222,8 +245,29 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
                     <span class="tarea-mini__titulo">${esc(tarea.titulo)}</span>
                     <p class="tarea-mini__consigna">${esc(tarea.consigna)}</p>
                     <span class="tarea-mini__fecha">Entrega: ${esc(formatoFecha(tarea.fecha_entrega))}</span>
+
+                    ${tarea.video_url ? `
+                      <a href="${esc(tarea.video_url)}" target="_blank" rel="noopener" class="tarea-mini__video">
+                        <span class="tarea-mini__video-icono">▶</span>
+                        <span class="tarea-mini__video-label">Ver video de referencia</span>
+                      </a>
+                    ` : ""}
+
+                    ${tarea.adjunto_path ? `
+                      <div class="tarea-mini__adjunto">
+                        <span class="tarea-mini__adjunto-icono">📎</span>
+                        <span class="tarea-mini__adjunto-nombre">${esc(tarea.adjunto_nombre ?? "Adjunto")}</span>
+                        <button type="button" class="archivo__borrar" data-borrar-adjunto-tarea="${esc(tarea.id)}" data-adjunto-path="${esc(tarea.adjunto_path)}" aria-label="Borrar adjunto">×</button>
+                      </div>
+                    ` : `
+                      <label class="bloque__upload bloque__upload--mini">
+                        <input type="file" data-adjunto-tarea-id="${esc(tarea.id)}" />
+                        <span class="bloque__upload-btn">+ Adjunto</span>
+                      </label>
+                    `}
+
                     <div class="tarea-mini__acciones">
-                      <button type="button" class="boton-ghost-mini" data-editar-tarea="${esc(tarea.id)}">Editar tarea</button>
+                      <button type="button" class="boton-ghost-mini" data-editar-tarea="${esc(tarea.id)}">Editar</button>
                       <button type="button" class="boton-danger-mini" data-borrar-tarea="${esc(tarea.id)}">Borrar tarea</button>
                     </div>
                   </div>
@@ -272,6 +316,18 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     // Borrar tarea
     $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-tarea]").forEach((btn) => {
       btn.addEventListener("click", () => borrarTarea(btn.dataset.borrarTarea!));
+    });
+    // Agregar video a módulo
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-agregar-video]").forEach((btn) => {
+      btn.addEventListener("click", () => agregarVideoModulo(btn.dataset.agregarVideo!));
+    });
+    // Subir adjunto a tarea
+    $modulos.querySelectorAll<HTMLInputElement>('input[type="file"][data-adjunto-tarea-id]').forEach((input) => {
+      input.addEventListener("change", () => subirAdjuntoTarea(input));
+    });
+    // Borrar adjunto de tarea
+    $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-adjunto-tarea]").forEach((btn) => {
+      btn.addEventListener("click", () => borrarAdjuntoTarea(btn.dataset.borrarAdjuntoTarea!, btn.dataset.adjuntoPath!));
     });
   }
 
@@ -414,8 +470,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       danger: true,
     });
     if (!ok) return;
-    // Primero el archivo del Storage, después el registro.
-    await supabase.storage.from("material-cursos").remove([storagePath]);
+    // Los videos externos (YouTube, etc.) no tienen archivo en Storage.
+    if (!storagePath.startsWith("http")) {
+      await supabase.storage.from("material-cursos").remove([storagePath]);
+    }
     const { error } = await supabase.from("archivos_modulo").delete().eq("id", id);
     if (error) {
       showToast(traducirError(error), "error");
@@ -474,6 +532,14 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           value: fechaActual,
           hint: "Opcional. Si no la ponés, la tarea no tiene fecha límite.",
         },
+        {
+          name: "video_url",
+          label: "Video de referencia",
+          type: "text",
+          value: existente?.video_url ?? "",
+          placeholder: "https://www.youtube.com/watch?v=… (opcional)",
+          hint: "YouTube, Vimeo o cualquier URL de video. Se muestra al alumno junto a la consigna.",
+        },
       ],
       confirmLabel: existente ? "Guardar cambios" : "Crear tarea",
     });
@@ -484,6 +550,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       titulo: result.titulo,
       consigna: result.consigna,
       fecha_entrega: result.fecha_entrega || null,
+      video_url: result.video_url?.trim() || null,
     };
 
     const { error } = tareaId
@@ -512,6 +579,109 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       return;
     }
     showToast("Tarea borrada.");
+    await cargar();
+  }
+
+  // ============ Video externo en módulo ============
+  async function agregarVideoModulo(moduloId: string) {
+    const result = await formModal({
+      titulo: "Agregar video",
+      campos: [
+        {
+          name: "nombre",
+          label: "Nombre del video",
+          type: "text",
+          required: true,
+          placeholder: "Ej: Clase 1 — Introducción a la orientación vocacional",
+        },
+        {
+          name: "url",
+          label: "URL del video",
+          type: "text",
+          required: true,
+          placeholder: "https://www.youtube.com/watch?v=…",
+          hint: "YouTube, Vimeo o cualquier enlace de video.",
+        },
+      ],
+      confirmLabel: "Agregar",
+    });
+    if (!result) return;
+
+    const url = result.url.trim();
+    if (!url.startsWith("http")) {
+      showToast("La URL debe empezar con https://.", "error");
+      return;
+    }
+
+    const { error } = await supabase.from("archivos_modulo").insert({
+      modulo_id: moduloId,
+      nombre: result.nombre,
+      tipo: "youtube",
+      storage_path: url,
+      peso_kb: null,
+    });
+
+    if (error) { showToast(traducirError(error), "error"); return; }
+    showToast("Video agregado.");
+    await cargar();
+  }
+
+  // ============ Adjunto de tarea ============
+  async function subirAdjuntoTarea(input: HTMLInputElement) {
+    const tareaId = input.dataset.adjuntoTareaId!;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("El archivo supera los 25 MB.", "error");
+      input.value = "";
+      return;
+    }
+
+    const path = `${cursoId}/tareas/${tareaId}/${file.name}`;
+    const $btn = input.parentElement?.querySelector(".bloque__upload-btn") as HTMLElement | null;
+    const orig = $btn?.textContent ?? "+ Adjunto";
+    if ($btn) $btn.textContent = "Subiendo…";
+
+    const { error: errUpload } = await supabase.storage
+      .from("material-cursos")
+      .upload(path, file, { upsert: true, contentType: file.type || "application/octet-stream" });
+
+    if (errUpload) {
+      if ($btn) $btn.textContent = orig;
+      showToast(`No se pudo subir: ${traducirError(errUpload)}`, "error");
+      input.value = "";
+      return;
+    }
+
+    const { error: errUpdate } = await supabase
+      .from("tareas")
+      .update({ adjunto_path: path, adjunto_nombre: file.name })
+      .eq("id", tareaId);
+
+    if ($btn) $btn.textContent = orig;
+    if (errUpdate) { showToast(`Subido pero no registrado: ${traducirError(errUpdate)}`, "error"); return; }
+    showToast("Adjunto subido.");
+    await cargar();
+  }
+
+  async function borrarAdjuntoTarea(tareaId: string, storagePath: string) {
+    const ok = await confirmModal({
+      titulo: "Borrar adjunto",
+      mensaje: "¿Borrar el adjunto de esta tarea? No se puede deshacer.",
+      confirmLabel: "Borrar",
+      danger: true,
+    });
+    if (!ok) return;
+
+    await supabase.storage.from("material-cursos").remove([storagePath]);
+    const { error } = await supabase
+      .from("tareas")
+      .update({ adjunto_path: null, adjunto_nombre: null })
+      .eq("id", tareaId);
+
+    if (error) { showToast(traducirError(error), "error"); return; }
+    showToast("Adjunto borrado.");
     await cargar();
   }
 
@@ -725,12 +895,19 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     color: #fff;
   }
 
+  :global(.bloque__acciones) {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+  }
   :global(.bloque__upload) {
     display: inline-flex;
     align-items: center;
     gap: 0.7rem;
     cursor: pointer;
   }
+  :global(.bloque__upload--mini) { gap: 0; }
   :global(.bloque__upload input) { display: none; }
   :global(.bloque__upload-btn) {
     padding: 0.5rem 0.95rem;
@@ -741,11 +918,54 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     font-weight: 500;
     transition: background 0.15s ease;
   }
+  :global(.bloque__upload--mini .bloque__upload-btn) {
+    padding: 0.38rem 0.75rem;
+    font-size: 0.82rem;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+  }
   :global(.bloque__upload:hover .bloque__upload-btn) { background: #1a2c64; }
+  :global(.bloque__upload--mini:hover .bloque__upload-btn) {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
   :global(.bloque__upload-hint) {
     font-size: 0.78rem;
     color: var(--color-ink-muted);
   }
+  :global(.bloque__link-btn) {
+    padding: 0.5rem 0.95rem;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  :global(.bloque__link-btn:hover) {
+    background: var(--color-bg);
+    color: var(--color-ink);
+  }
+
+  /* Entradas de video externo en la lista de archivos */
+  :global(.archivo--link) { border-color: rgba(216, 85, 42, 0.2); }
+  :global(.archivo__icono--yt) {
+    background: rgba(216, 85, 42, 0.1);
+    color: var(--color-accent);
+    font-size: 0.8rem;
+  }
+  :global(.archivo__nombre--link) {
+    color: var(--color-accent);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.archivo__nombre--link:hover) { text-decoration: underline; }
 
   /* Tarea */
   :global(.tarea-mini) {
@@ -767,6 +987,42 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   :global(.tarea-mini__fecha) {
     font-size: 0.82rem;
     color: var(--color-ink-muted);
+  }
+  :global(.tarea-mini__video) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.65rem;
+    background: rgba(216, 85, 42, 0.07);
+    border: 1px solid rgba(216, 85, 42, 0.2);
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-accent);
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+    align-self: flex-start;
+  }
+  :global(.tarea-mini__video:hover) { background: rgba(216, 85, 42, 0.13); }
+  :global(.tarea-mini__video-icono) { font-size: 0.75rem; }
+  :global(.tarea-mini__adjunto) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.65rem;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    color: var(--color-ink-soft);
+    align-self: flex-start;
+  }
+  :global(.tarea-mini__adjunto-icono) { font-size: 0.85rem; }
+  :global(.tarea-mini__adjunto-nombre) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
   }
   :global(.tarea-mini__acciones) {
     display: flex;
