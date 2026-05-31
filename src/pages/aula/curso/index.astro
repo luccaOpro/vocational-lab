@@ -76,6 +76,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     id: string;
     nombre: string;
     tipo: "pdf" | "video" | "audio" | "link";
+    storage_path: string;
     peso_kb: number | null;
   };
   type TareaRow = {
@@ -164,7 +165,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .from("modulos")
       .select(`
         id, numero, titulo, descripcion,
-        archivos_modulo (id, nombre, tipo, peso_kb),
+        archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
         tareas (id, titulo, consigna, fecha_entrega)
       `)
       .eq("curso_id", curso.id)
@@ -214,6 +215,37 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $contenido.hidden = false;
 
     setupUploads();
+    setupDescargas();
+  }
+
+  /**
+   * Conecta cada botón "Descargar" para que genere una URL firmada
+   * temporal (60 s) y abra el archivo en una pestaña nueva.
+   */
+  function setupDescargas() {
+    document.querySelectorAll<HTMLButtonElement>("[data-descargar-path]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const path = btn.dataset.descargarPath!;
+        const original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Descargando…";
+
+        const { data, error } = await supabase.storage
+          .from("material-cursos")
+          .createSignedUrl(path, 60);
+
+        btn.disabled = false;
+        btn.textContent = original ?? "Descargar";
+
+        if (error || !data?.signedUrl) {
+          showToast(`No se pudo descargar: ${traducirError(error)}`, "error");
+          return;
+        }
+
+        // Abrir en pestaña nueva (el browser descarga o muestra según tipo).
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      });
+    });
   }
 
   /**
@@ -389,7 +421,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
               <span class="archivo__nombre">${escape(a.nombre)}</span>
               <span class="archivo__meta">${escape(formatoPeso(a.peso_kb))}</span>
             </div>
-            <a href="#" class="archivo__btn" data-archivo-id="${a.id}">Descargar</a>
+            <button type="button" class="archivo__btn" data-descargar-path="${escape(a.storage_path)}" data-descargar-nombre="${escape(a.nombre)}">Descargar</button>
           </li>
         `).join("")}
       </ul>

@@ -62,9 +62,9 @@ const etiqueta = etiquetaPorRol[rol];
 
 <header class={`navaula navaula--${rol}`}>
   <div class="navaula__inner container">
-    <a href={home} class="navaula__brand">
-      <span class="navaula__brand-mark">VL</span>
-      <span class="navaula__brand-name">{etiqueta}</span>
+    <a href={home} class="navaula__brand" aria-label={etiqueta}>
+      <img src="/logo.svg" alt="Vocational Lab" class="navaula__brand-logo" width="120" height="95" />
+      <span class="navaula__brand-rol">{rol === "alumno" ? "" : rol === "profe" ? "· Profe" : "· Admin"}</span>
     </a>
 
     {/* Links de desktop */}
@@ -147,36 +147,27 @@ const etiqueta = etiquetaPorRol[rol];
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
+    color: var(--color-bg);
+    line-height: 0;
+  }
+
+  /* El logo viene oscuro por default. Lo invertimos para que se vea
+     sobre el nav azul noche. */
+  .navaula__brand-logo {
+    width: auto;
+    height: 44px;
+    display: block;
+    filter: invert(1) brightness(2);
+  }
+
+  .navaula__brand-rol {
     font-family: var(--font-serif);
-    font-weight: 500;
-    color: var(--color-bg);
+    font-size: 0.95rem;
+    color: rgba(242, 234, 215, 0.85);
+    line-height: 1;
   }
-
-  .navaula__brand-mark {
-    display: inline-grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--color-gold);
-    color: var(--color-ink);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-  /* Acento visual del logo según el rol — ayuda a saber dónde estás. */
-  .navaula--profe .navaula__brand-mark {
-    background: var(--color-deep);
-    color: var(--color-bg);
-  }
-  .navaula--admin .navaula__brand-mark {
-    background: var(--color-accent);
-    color: #fff;
-  }
-
-  .navaula__brand-name {
-    font-size: 1rem;
-    color: var(--color-bg);
-  }
+  .navaula--profe .navaula__brand-rol { color: var(--color-gold); }
+  .navaula--admin .navaula__brand-rol { color: var(--color-accent); }
 
   /* Links desktop */
   .navaula__links {
@@ -334,7 +325,8 @@ const etiqueta = etiquetaPorRol[rol];
   @media (max-width: 720px) {
     .navaula__links { display: none; }
     .navaula__burger { display: inline-flex; }
-    .navaula__brand-name { display: none; }
+    .navaula__brand-logo { height: 36px; }
+    .navaula__brand-rol { display: none; }
   }
 
   :global(body.aula-menu-open) { overflow: hidden; }

@@ -9,9 +9,8 @@
 
 <header class="nav">
   <div class="nav__inner container">
-    <a href="#hero" class="nav__brand">
-      <span class="nav__brand-mark">VL</span>
-      <span class="nav__brand-name">Vocational Lab</span>
+    <a href="#hero" class="nav__brand" aria-label="Vocational Lab — Inicio">
+      <img src="/logo.svg" alt="Vocational Lab" class="nav__brand-logo" width="120" height="95" />
     </a>
 
     {/* Links visibles en desktop */}
@@ -98,26 +97,17 @@
   .nav__brand {
     display: inline-flex;
     align-items: center;
-    gap: 0.6rem;
-    font-family: var(--font-serif);
-    font-weight: 500;
+    line-height: 0;
   }
 
-  .nav__brand-mark {
-    display: inline-grid;
-    place-items: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--color-ink);
-    color: var(--color-bg);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0;
+  .nav__brand-logo {
+    width: auto;
+    height: 48px;
+    display: block;
   }
 
-  .nav__brand-name {
-    font-size: 1.05rem;
+  @media (max-width: 720px) {
+    .nav__brand-logo { height: 40px; }
   }
 
   /* Links del nav superior (desktop) */
@@ -321,8 +311,6 @@
     .nav__links { display: none; }
     /* Mostrar el bloque mobile (CTA Hablemos + hamburguesa) */
     .nav__mobile-actions { display: inline-flex; }
-    /* Reservamos el espacio del brand-name */
-    .nav__brand-name { display: none; }
   }
 
   /* Respeta usuarios que prefieren menos movimiento */

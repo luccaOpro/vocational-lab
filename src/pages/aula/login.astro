@@ -15,9 +15,8 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 <AulaLayout title="Ingresar al aula · Vocational Lab" nav={false}>
   <main class="login">
     <div class="login__card">
-      <a href="/" class="login__brand">
-        <span class="login__brand-mark">VL</span>
-        <span>Vocational Lab</span>
+      <a href="/" class="login__brand" aria-label="Vocational Lab — Inicio">
+        <img src="/logo.svg" alt="Vocational Lab" class="login__brand-logo" width="180" height="143" />
       </a>
 
       {/* ============ MODO LOGIN ============ */}
@@ -280,24 +279,14 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   }
 
   .login__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.55rem;
-    font-family: var(--font-serif);
-    font-size: 0.95rem;
-    color: var(--color-ink-soft);
+    display: block;
     margin-bottom: 1.8rem;
+    line-height: 0;
   }
-  .login__brand-mark {
-    display: inline-grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--color-ink);
-    color: var(--color-bg);
-    font-size: 0.75rem;
-    font-weight: 600;
+  .login__brand-logo {
+    width: auto;
+    height: 64px;
+    display: block;
   }
 
   .login__titulo { font-size: 1.9rem; margin: 0 0 0.5rem; }
