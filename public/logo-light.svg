@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Variante clara para fondos oscuros (footer, nav del aula). -->
 <svg id="Capa_1" data-name="Capa 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420.841 463.678">
   <defs>
     <style>
       .cls-1 { fill: #d8552a; }
-      .cls-2 { fill: #131b3d; }
+      .cls-2 { fill: #F2EAD7; }
     </style>
   </defs>
   <polygon class="cls-2" points="7.147 313.757 7.9 313.757 8.147 356.774 7.147 356.774 7.147 313.757"/>

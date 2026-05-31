@@ -77,18 +77,15 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
         {/* ── Solo en modo edición: gestión de profes + acceso a contenido ── */}
         <section id="seccion-profes" class="seccion-extra" hidden>
-          <h2 class="seccion-extra__titulo">Profesores asignados</h2>
-          <p class="seccion-extra__bajada">Quiénes pueden corregir entregas y subir material en este curso.</p>
-
-          <ul id="profes-lista" class="profes-lista"></ul>
-
-          <div class="agregar-profe">
-            <label for="profe-disponible" class="agregar-profe__label">Agregar profe:</label>
-            <select id="profe-disponible" class="agregar-profe__select">
-              <option value="">— Elegí un profe —</option>
-            </select>
-            <button type="button" id="agregar-profe-btn" class="agregar-profe__btn">+ Agregar</button>
+          <div class="seccion-extra__head">
+            <div>
+              <h2 class="seccion-extra__titulo">Profesores asignados</h2>
+              <p class="seccion-extra__bajada" id="profes-bajada">Quiénes pueden corregir entregas y subir material.</p>
+            </div>
+            <button type="button" id="abrir-asignar-profe-btn" class="agregar-profe__btn">+ Asignar profe</button>
           </div>
+
+          <div id="profes-grid" class="profes-grid"></div>
         </section>
 
         <section id="seccion-alumnos" class="seccion-extra" hidden>
@@ -102,10 +99,6 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
           <div id="alumnos-grid" class="alumnos-grid"></div>
 
-          <p class="seccion-extra__nota">
-            Si un alumno no aparece en la lista para inscribir, todavía no se registró.
-            Decile que entre a <code>/aula/login</code> y elija "Crear una nueva cuenta".
-          </p>
         </section>
 
         <section id="seccion-contenido" class="seccion-extra" hidden>
@@ -222,10 +215,9 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   type ProfileMini = { id: string; nombre: string; email: string; rol: string };
 
   async function cargarProfes() {
-    const $lista = document.getElementById("profes-lista")!;
-    const $select = document.getElementById("profe-disponible") as HTMLSelectElement;
+    const $grid = document.getElementById("profes-grid")!;
+    const $bajada = document.getElementById("profes-bajada")!;
 
-    // Profes/admins disponibles + los ya asignados al curso.
     const [resPosibles, resAsignados] = await Promise.all([
       supabase
         .from("profiles")
@@ -239,9 +231,9 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     ]);
 
     if (resPosibles.error || resAsignados.error) {
-      $lista.innerHTML = `<li class="profes-lista__error">Error al cargar profes: ${
+      $grid.innerHTML = `<p class="profes-grid__error">Error al cargar profes: ${
         traducirError(resPosibles.error ?? resAsignados.error)
-      }</li>`;
+      }</p>`;
       return;
     }
 
@@ -250,55 +242,33 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     ).filter(Boolean);
     const asignadosIds = new Set(asignados.map((p) => p.id));
     const posibles = (resPosibles.data ?? []) as ProfileMini[];
-
-    // Render lista de asignados.
-    if (asignados.length === 0) {
-      $lista.innerHTML = `<li class="profes-lista__vacio">Ningún profe asignado todavía.</li>`;
-    } else {
-      $lista.innerHTML = asignados.map((p) => `
-        <li class="profe-item">
-          <div class="profe-item__avatar profe-item__avatar--${esc(p.rol)}">${esc(iniciales(p.nombre))}</div>
-          <div class="profe-item__cuerpo">
-            <span class="profe-item__nombre">${esc(p.nombre)}</span>
-            <span class="profe-item__mail">${esc(p.email)}</span>
-          </div>
-          <button type="button" class="profe-item__quitar" data-profe-id="${esc(p.id)}" aria-label="Quitar a ${esc(p.nombre)}">×</button>
-        </li>
-      `).join("");
-      $lista.querySelectorAll<HTMLButtonElement>(".profe-item__quitar").forEach((btn) => {
-        btn.addEventListener("click", () => quitarProfe(btn.dataset.profeId!));
-      });
-    }
-
-    // Render select con los NO asignados.
     const disponibles = posibles.filter((p) => !asignadosIds.has(p.id));
-    $select.innerHTML = disponibles.length === 0
-      ? `<option value="">— Sin más profes disponibles —</option>`
-      : `<option value="">— Elegí un profe —</option>` +
-        disponibles.map((p) => `<option value="${esc(p.id)}">${esc(p.nombre)} (${esc(p.email)})</option>`).join("");
-    $select.disabled = disponibles.length === 0;
 
-    const $btn = document.getElementById("agregar-profe-btn") as HTMLButtonElement;
-    $btn.onclick = async () => {
-      const pid = $select.value;
-      if (!pid) {
-        showToast("Elegí un profe primero.", "info");
-        return;
-      }
-      $btn.disabled = true;
-      $btn.textContent = "Agregando…";
-      const { error } = await supabase
-        .from("cursos_profesores")
-        .insert({ curso_id: cursoId!, profesor_id: pid });
-      $btn.disabled = false;
-      $btn.textContent = "+ Agregar";
-      if (error) {
-        showToast(traducirError(error), "error");
-        return;
-      }
-      showToast("Profe agregado.");
-      await cargarProfes();
-    };
+    $bajada.textContent = asignados.length === 0
+      ? "Todavía no hay profes asignados."
+      : `${asignados.length} profe${asignados.length === 1 ? "" : "s"} asignado${asignados.length === 1 ? "" : "s"}.`;
+
+    $grid.innerHTML = asignados.length === 0
+      ? `<p class="profes-grid__vacio">Ningún profe asignado todavía.</p>`
+      : asignados.map((p) => `
+          <article class="profe-card">
+            <div class="profe-card__avatar profe-card__avatar--${esc(p.rol)}">${esc(iniciales(p.nombre))}</div>
+            <div class="profe-card__cuerpo">
+              <span class="profe-card__nombre">${esc(p.nombre)}</span>
+              <span class="profe-card__mail">${esc(p.email)}</span>
+            </div>
+            <button type="button" class="profe-card__quitar" data-profe-id="${esc(p.id)}" aria-label="Quitar a ${esc(p.nombre)}">×</button>
+          </article>
+        `).join("");
+
+    $grid.querySelectorAll<HTMLButtonElement>(".profe-card__quitar").forEach((btn) => {
+      btn.addEventListener("click", () => quitarProfe(btn.dataset.profeId!));
+    });
+
+    const $btnAbrir = document.getElementById("abrir-asignar-profe-btn") as HTMLButtonElement;
+    $btnAbrir.disabled = disponibles.length === 0;
+    $btnAbrir.title = disponibles.length === 0 ? "No hay más profes disponibles" : "";
+    $btnAbrir.onclick = () => abrirModalAsignarProfe(disponibles);
   }
 
   async function quitarProfe(profeId: string) {
@@ -320,6 +290,108 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     }
     showToast("Profe quitado del curso.");
     await cargarProfes();
+  }
+
+  /** Modal con búsqueda + checkboxes para asignar varios profes a la vez. */
+  function abrirModalAsignarProfe(disponibles: ProfileMini[]) {
+    const modal = document.getElementById("modal-confirm")!;
+    const $titulo = document.getElementById("modal-confirm-titulo")!;
+    const $mensaje = document.getElementById("modal-confirm-mensaje") as HTMLElement;
+    const $btnOk = document.getElementById("modal-confirm-ok") as HTMLButtonElement;
+    const $btnCancel = document.getElementById("modal-confirm-cancel") as HTMLButtonElement;
+    const $backdrop = modal.querySelector("[data-modal-backdrop]") as HTMLElement;
+
+    $titulo.textContent = "Asignar profes";
+    $mensaje.hidden = false;
+    $mensaje.innerHTML = `
+      <input type="search" id="asignar-buscar" placeholder="Buscar por nombre o mail…" class="multi-buscar" autocomplete="off" />
+      <div id="asignar-lista" class="multi-lista">
+        ${disponibles.map((p) => `
+          <label class="multi-item">
+            <input type="checkbox" value="${esc(p.id)}" />
+            <div class="multi-item__avatar multi-item__avatar--profe">${esc(iniciales(p.nombre))}</div>
+            <div class="multi-item__cuerpo">
+              <span class="multi-item__nombre">${esc(p.nombre)}</span>
+              <span class="multi-item__mail">${esc(p.email)}</span>
+            </div>
+          </label>
+        `).join("")}
+      </div>
+      <p id="asignar-conteo" class="multi-conteo">0 seleccionado/s</p>
+    `;
+    $btnCancel.textContent = "Cancelar";
+    $btnOk.textContent = "Asignar";
+    $btnOk.className = "modal__btn modal__btn--primary";
+    $btnOk.disabled = true;
+
+    modal.hidden = false;
+    document.body.classList.add("modal-open");
+    void modal.offsetWidth;
+    modal.classList.add("modal--visible");
+
+    const $buscar = document.getElementById("asignar-buscar") as HTMLInputElement;
+    const $lista = document.getElementById("asignar-lista") as HTMLElement;
+    const $conteo = document.getElementById("asignar-conteo") as HTMLElement;
+
+    requestAnimationFrame(() => $buscar.focus());
+
+    $buscar.addEventListener("input", () => {
+      const q = $buscar.value.trim().toLowerCase();
+      $lista.querySelectorAll<HTMLLabelElement>(".multi-item").forEach((item) => {
+        const text = item.textContent?.toLowerCase() ?? "";
+        item.style.display = text.includes(q) ? "" : "none";
+      });
+    });
+
+    function actualizarConteo() {
+      const checked = $lista.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked');
+      $conteo.textContent = `${checked.length} seleccionado${checked.length === 1 ? "" : "s"}`;
+      $btnOk.disabled = checked.length === 0;
+      $btnOk.textContent = checked.length === 0 ? "Asignar" : `Asignar ${checked.length}`;
+    }
+    $lista.addEventListener("change", actualizarConteo);
+
+    function cleanup() {
+      modal.classList.remove("modal--visible");
+      setTimeout(() => {
+        modal.hidden = true;
+        document.body.classList.remove("modal-open");
+        $mensaje.innerHTML = "";
+        $btnOk.disabled = false;
+      }, 200);
+      $btnOk.removeEventListener("click", onOk);
+      $btnCancel.removeEventListener("click", onCancel);
+      $backdrop.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onEsc);
+    }
+
+    async function onOk() {
+      const ids = Array.from($lista.querySelectorAll<HTMLInputElement>('input[type="checkbox"]:checked')).map((c) => c.value);
+      if (ids.length === 0) return;
+
+      $btnOk.disabled = true;
+      $btnOk.textContent = "Asignando…";
+
+      const rows = ids.map((id) => ({ curso_id: cursoId!, profesor_id: id }));
+      const { error } = await supabase.from("cursos_profesores").insert(rows);
+
+      if (error) {
+        showToast(traducirError(error), "error");
+        $btnOk.disabled = false;
+        return;
+      }
+
+      cleanup();
+      showToast(`${ids.length} profe${ids.length === 1 ? "" : "s"} asignado${ids.length === 1 ? "" : "s"}.`);
+      await cargarProfes();
+    }
+    function onCancel() { cleanup(); }
+    function onEsc(e: KeyboardEvent) { if (e.key === "Escape") cleanup(); }
+
+    $btnOk.addEventListener("click", onOk);
+    $btnCancel.addEventListener("click", onCancel);
+    $backdrop.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onEsc);
   }
 
   // ============ Gestión de alumnos inscriptos ============
@@ -365,7 +437,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
     // Grid de cards de inscriptos.
     $grid.innerHTML = inscripciones.length === 0
-      ? `<p class="alumnos-grid__vacio">Aún no hay alumnos en este curso. Apretá "+ Inscribir alumnos" para sumar a quienes ya pagaron.</p>`
+      ? `<p class="alumnos-grid__vacio">Aún no hay alumnos en este curso.</p>`
       : inscripciones.map((i) => {
           const a = i.profiles!;
           return `
@@ -609,7 +681,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   .editor { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
 
   .editor__volver {
-    display: inline-block;
+    display: block;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 0.9rem;
     color: var(--color-ink-soft);
     margin-bottom: 1.5rem;
@@ -619,7 +694,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   .editor__loader { padding: 1.5rem 0; color: var(--color-ink-soft); }
   .editor__error { color: var(--color-accent); padding: 1rem 0; }
 
-  .editor__head { margin-bottom: 2rem; }
+  .editor__head {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 2rem;
+  }
   .editor__eyebrow {
     font-size: 0.78rem;
     letter-spacing: 0.16em;
@@ -639,6 +719,8 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     border-radius: var(--radius-md);
     padding: 2rem;
     max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
@@ -796,6 +878,8 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     padding: 2rem;
     max-width: 720px;
     margin-top: 1.5rem;
+    margin-left: auto;
+    margin-right: auto;
   }
   .seccion-extra__titulo { font-size: 1.15rem; margin: 0 0 0.4rem; }
   .seccion-extra__bajada {
@@ -804,49 +888,95 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     font-size: 0.92rem;
   }
 
-  .profes-lista {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+  .profes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 0.5rem;
   }
-  .profes-lista__vacio,
-  .profes-lista__error {
-    padding: 1rem;
+  .profes-grid__vacio {
+    padding: 1.5rem;
     background: var(--color-bg);
+    border: 1px dashed var(--color-line);
     border-radius: var(--radius-sm);
     color: var(--color-ink-muted);
     font-style: italic;
-    font-size: 0.92rem;
     text-align: center;
+    margin: 0;
+    grid-column: 1 / -1;
   }
-  .profes-lista__error { color: var(--color-accent); }
+  .profes-grid__error {
+    color: var(--color-accent);
+    padding: 1rem;
+  }
+  .profe-item__avatar--alumno { background: var(--color-gold); color: var(--color-ink); }
 
-  .profe-item {
-    display: flex;
+  /* Cards de profes — mismo patrón que alumno-card pero con variantes de color por rol. */
+  :global(.profe-card) {
+    display: grid;
+    grid-template-columns: 40px 1fr auto;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.7rem 0.9rem;
+    padding: 0.7rem 0.85rem;
     background: var(--color-bg);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
+    transition: background 0.15s ease;
   }
-  .profe-item__avatar {
+  :global(.profe-card:hover) { background: #fff; }
+  :global(.profe-card__avatar) {
     display: grid;
     place-items: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     color: #fff;
-    font-size: 0.78rem;
+    font-size: 0.85rem;
     font-weight: 500;
     flex-shrink: 0;
   }
-  .profe-item__avatar--profe { background: var(--color-deep); }
-  .profe-item__avatar--admin { background: var(--color-accent); }
-  .profe-item__avatar--alumno { background: var(--color-gold); color: var(--color-ink); }
+  :global(.profe-card__avatar--profe) { background: var(--color-deep); }
+  :global(.profe-card__avatar--admin) { background: var(--color-accent); }
+  :global(.profe-card__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  :global(.profe-card__nombre) {
+    font-weight: 500;
+    color: var(--color-ink);
+    font-size: 0.92rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.profe-card__mail) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :global(.profe-card__quitar) {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+  :global(.profe-card__quitar:hover) {
+    background: var(--color-accent);
+    color: #fff;
+  }
 
   /* Badge de estado (activo / pendiente) en la lista de alumnos. */
   .estado-badge {
@@ -868,81 +998,6 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     color: var(--color-ink-muted);
   }
 
-  /* Nota informativa al pie de una sección extra. */
-  .seccion-extra__nota {
-    margin: 1rem 0 0;
-    padding: 0.7rem 0.9rem;
-    background: var(--color-bg);
-    border-radius: var(--radius-sm);
-    color: var(--color-ink-muted);
-    font-size: 0.82rem;
-    line-height: 1.5;
-  }
-  .seccion-extra__nota code {
-    background: #fff;
-    padding: 0.1rem 0.35rem;
-    border-radius: 4px;
-    border: 1px solid var(--color-line);
-    font-size: 0.78rem;
-    color: var(--color-ink);
-  }
-  .profe-item__cuerpo {
-    display: flex;
-    flex-direction: column;
-    gap: 0.1rem;
-    flex: 1;
-    min-width: 0;
-  }
-  .profe-item__nombre { font-weight: 500; font-size: 0.95rem; }
-  .profe-item__mail {
-    font-size: 0.82rem;
-    color: var(--color-ink-muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .profe-item__quitar {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: transparent;
-    color: var(--color-ink-muted);
-    border: 0;
-    font-size: 1.2rem;
-    line-height: 1;
-    cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease;
-    flex-shrink: 0;
-  }
-  .profe-item__quitar:hover {
-    background: var(--color-accent);
-    color: #fff;
-  }
-
-  .agregar-profe {
-    display: flex;
-    gap: 0.6rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-  .agregar-profe__label {
-    font-size: 0.85rem;
-    color: var(--color-ink-soft);
-    font-weight: 500;
-  }
-  .agregar-profe__select {
-    flex: 1;
-    min-width: 0;
-    padding: 0.55rem 0.7rem;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg);
-    font-family: inherit;
-    font-size: 0.92rem;
-    color: var(--color-ink);
-  }
   .agregar-profe__btn {
     padding: 0.55rem 1rem;
     background: var(--color-deep);
@@ -1121,6 +1176,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     color: var(--color-ink);
     font-size: 0.78rem;
     font-weight: 500;
+  }
+  :global(.multi-item__avatar--profe) {
+    background: var(--color-deep);
+    color: #fff;
   }
   :global(.multi-item__cuerpo) {
     display: flex;

@@ -10,7 +10,11 @@
 <header class="nav">
   <div class="nav__inner container">
     <a href="#hero" class="nav__brand" aria-label="Vocational Lab — Inicio">
-      <img src="/logo.svg" alt="Vocational Lab" class="nav__brand-logo" width="120" height="95" />
+      <img src="/logo.svg" alt="" class="nav__brand-logo" width="55" height="60" aria-hidden="true" />
+      <span class="nav__brand-wordmark">
+        <span>Vocational</span>
+        <span>Lab</span>
+      </span>
     </a>
 
     {/* Links visibles en desktop */}
@@ -97,17 +101,45 @@
   .nav__brand {
     display: inline-flex;
     align-items: center;
+    gap: 0.5rem;
     line-height: 0;
   }
 
   .nav__brand-logo {
     width: auto;
-    height: 48px;
+    height: 46px;
     display: block;
+    flex-shrink: 0;
+  }
+
+  .nav__brand-wordmark {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    line-height: 1;
+  }
+  .nav__brand-wordmark span:first-child {
+    font-family: var(--font-sans);
+    font-size: 0.58rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .nav__brand-wordmark span:last-child {
+    font-family: var(--font-sans);
+    font-size: 0.98rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    font-weight: 600;
   }
 
   @media (max-width: 720px) {
-    .nav__brand-logo { height: 40px; }
+    .nav__brand { gap: 0.45rem; }
+    .nav__brand-logo { height: 36px; }
+    .nav__brand-wordmark span:first-child { font-size: 0.54rem; }
+    .nav__brand-wordmark span:last-child { font-size: 0.88rem; }
   }
 
   /* Links del nav superior (desktop) */
