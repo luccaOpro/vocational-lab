@@ -1,0 +1,291 @@
+---
+/*
+  /aula/admin/configuracion — ajustes del sitio editables desde el admin.
+  Por ahora: popup de próxima edición.
+  Los valores se guardan en la tabla site_config de Supabase.
+*/
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Configuración · Admin · Vocational Lab" rol="admin">
+  <main class="config">
+    <div class="container">
+      <a href="/aula/admin" class="config__volver">← Volver al panel</a>
+
+      <div id="config-loader" class="config__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando…</span>
+        </div>
+      </div>
+
+      <div id="config-wrap" hidden>
+        <header class="config__head">
+          <p class="config__eyebrow">Admin</p>
+          <h1 class="config__titulo">Configuración del sitio</h1>
+        </header>
+
+        <!-- ── Popup de próxima edición ── -->
+        <section class="config-card">
+          <div class="config-card__head">
+            <div>
+              <h2 class="config-card__titulo">Popup de próxima edición</h2>
+              <p class="config-card__bajada">
+                Aparece en la página principal cuando el visitante hace scroll.
+                Los cambios se ven en el sitio de inmediato, sin redesplegar.
+              </p>
+            </div>
+            <a href="/" target="_blank" rel="noopener" class="config-card__preview">
+              Ver página →
+            </a>
+          </div>
+
+          <form id="popup-form" class="config-form">
+            <label class="config-form__label config-form__label--check">
+              <input type="checkbox" name="popup_activo" id="popup_activo" />
+              <span>
+                <strong>Mostrar popup</strong>
+                <small class="config-form__hint">Si está sin tildar, el popup no aparece en el sitio.</small>
+              </span>
+            </label>
+
+            <label class="config-form__label">
+              <span>Título <small class="config-form__hint">— se ve en naranja, arriba del texto principal</small></span>
+              <input type="text" name="popup_titulo" id="popup_titulo" placeholder="Próxima edición" />
+            </label>
+
+            <label class="config-form__label">
+              <span>Texto principal <small class="config-form__hint">— la fecha o descripción grande</small></span>
+              <input type="text" name="popup_fecha" id="popup_fecha" placeholder="Agosto 2026" />
+            </label>
+
+            <label class="config-form__label">
+              <span>Texto del botón</span>
+              <input type="text" name="popup_cta_texto" id="popup_cta_texto" placeholder="Reservá tu lugar →" />
+            </label>
+
+            <label class="config-form__label">
+              <span>URL del botón <small class="config-form__hint">— usá #contacto para ir a la sección de la home</small></span>
+              <input type="text" name="popup_cta_url" id="popup_cta_url" placeholder="#contacto" />
+            </label>
+
+            <div class="config-form__acciones">
+              <button type="submit" id="popup-submit" class="config-form__submit">Guardar cambios</button>
+            </div>
+          </form>
+        </section>
+      </div>
+
+      <p id="config-error" class="config__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireRol } from "../../../lib/auth-guard";
+  import { showToast, traducirError } from "../../../lib/ui";
+
+  const CLAVES = ["popup_activo", "popup_titulo", "popup_fecha", "popup_cta_texto", "popup_cta_url"] as const;
+  type Clave = typeof CLAVES[number];
+
+  const $loader = document.getElementById("config-loader") as HTMLElement;
+  const $wrap = document.getElementById("config-wrap") as HTMLElement;
+  const $error = document.getElementById("config-error") as HTMLElement;
+  const $form = document.getElementById("popup-form") as HTMLFormElement;
+  const $submit = document.getElementById("popup-submit") as HTMLButtonElement;
+
+  function campo<T extends HTMLElement = HTMLInputElement>(id: string) {
+    return document.getElementById(id) as T;
+  }
+
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    const { data, error } = await supabase
+      .from("site_config")
+      .select("clave, valor")
+      .in("clave", CLAVES as unknown as string[]);
+
+    if (error) {
+      $loader.hidden = true;
+      $error.hidden = false;
+      $error.textContent = `Error al cargar configuración: ${traducirError(error)}`;
+      return;
+    }
+
+    const config = Object.fromEntries((data ?? []).map((r) => [r.clave, r.valor])) as Record<Clave, string>;
+
+    campo("popup_activo").checked = config.popup_activo !== "false";
+    campo("popup_titulo").value  = config.popup_titulo  ?? "Próxima edición";
+    campo("popup_fecha").value   = config.popup_fecha   ?? "Agosto 2026";
+    campo("popup_cta_texto").value = config.popup_cta_texto ?? "Reservá tu lugar →";
+    campo("popup_cta_url").value   = config.popup_cta_url   ?? "#contacto";
+
+    $loader.hidden = true;
+    $wrap.hidden = false;
+  }
+
+  $form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $submit.disabled = true;
+    $submit.textContent = "Guardando…";
+
+    const fd = new FormData($form);
+    const rows = [
+      { clave: "popup_activo",    valor: fd.get("popup_activo") ? "true" : "false" },
+      { clave: "popup_titulo",    valor: String(fd.get("popup_titulo")).trim()   || "Próxima edición" },
+      { clave: "popup_fecha",     valor: String(fd.get("popup_fecha")).trim()    || "Agosto 2026" },
+      { clave: "popup_cta_texto", valor: String(fd.get("popup_cta_texto")).trim() || "Reservá tu lugar →" },
+      { clave: "popup_cta_url",   valor: String(fd.get("popup_cta_url")).trim()   || "#contacto" },
+    ];
+
+    const { error } = await supabase
+      .from("site_config")
+      .upsert(rows, { onConflict: "clave" });
+
+    $submit.disabled = false;
+    $submit.textContent = "Guardar cambios";
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+    showToast("Configuración guardada. Los cambios se ven en el sitio de inmediato.");
+  });
+
+  cargar();
+</script>
+
+<style>
+  .config { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .config__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .config__volver:hover { color: var(--color-ink); }
+
+  .config__loader { padding: 1.5rem 0; }
+  .config__error { color: var(--color-accent); padding: 1rem 0; }
+
+  .config__head { margin-bottom: 2rem; }
+  .config__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .config__titulo {
+    font-size: clamp(1.8rem, 4vw, 2.2rem);
+    margin: 0;
+  }
+
+  /* Card de configuración */
+  .config-card {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .config-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.8rem;
+    flex-wrap: wrap;
+  }
+  .config-card__titulo { font-size: 1.15rem; margin: 0 0 0.4rem; }
+  .config-card__bajada {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    max-width: 50ch;
+  }
+  .config-card__preview {
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .config-card__preview:hover { color: var(--color-ink); background: var(--color-bg); }
+
+  /* Formulario */
+  .config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .config-form__label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .config-form__hint {
+    color: var(--color-ink-muted);
+    font-weight: 400;
+  }
+  .config-form__label input[type="text"] {
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    width: 100%;
+  }
+  .config-form__label input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+  .config-form__label--check {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 1rem;
+    background: var(--color-bg);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .config-form__label--check input { margin-top: 0.2rem; }
+  .config-form__label--check span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: var(--color-ink);
+  }
+  .config-form__label--check strong { font-weight: 500; }
+  .config-form__acciones { margin-top: 0.5rem; }
+  .config-form__submit {
+    padding: 0.85rem 1.4rem;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-deep);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  .config-form__submit:hover:not(:disabled) { background: #1a2c64; }
+  .config-form__submit:disabled { opacity: 0.7; cursor: wait; }
+</style>

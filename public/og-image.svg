@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!-- Fondo azul noche -->
+  <rect width="1200" height="630" fill="#131b3d"/>
+
+  <!-- VL decorativo translúcido (fondo derecho) -->
+  <text x="700" y="620" font-family="Georgia, 'Times New Roman', serif"
+        font-size="580" fill="#1c2956" font-weight="700">VL</text>
+
+  <!-- Barra coral izquierda -->
+  <rect x="0" y="0" width="7" height="630" fill="#d8552a"/>
+
+  <!-- Eyebrow -->
+  <text x="80" y="205" font-family="Arial, Helvetica, sans-serif"
+        font-size="19" fill="#d8552a" letter-spacing="5" font-weight="600">ORIENTACIÓN VOCACIONAL</text>
+
+  <!-- Línea separadora -->
+  <rect x="80" y="225" width="72" height="2" fill="#d8552a"/>
+
+  <!-- Nombre de marca -->
+  <text x="80" y="345" font-family="Georgia, 'Times New Roman', serif"
+        font-size="104" fill="#F2EAD7" font-weight="400" letter-spacing="-1">Vocational</text>
+  <text x="80" y="460" font-family="Georgia, 'Times New Roman', serif"
+        font-size="104" fill="#F2EAD7" font-weight="400" letter-spacing="-1">Lab</text>
+
+  <!-- Tagline -->
+  <text x="80" y="525" font-family="Arial, Helvetica, sans-serif"
+        font-size="24" fill="rgba(242,234,215,0.52)">Donde futuro y vocación se encuentran.</text>
+</svg>

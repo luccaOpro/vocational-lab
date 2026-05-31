@@ -9,7 +9,8 @@
 
   PENDIENTES antes del lanzamiento:
     · Reemplazar SITE_URL con el dominio real una vez comprado.
-    · Agregar public/og-image.png (1200×630px) para el preview en redes.
+    · Convertir public/og-image.svg a PNG (1200×630px) para máxima
+      compatibilidad con Facebook. Herramienta gratuita: cloudconvert.com
 */
 
 import "../styles/global.css";
@@ -27,7 +28,7 @@ const {
 // ⚠️ Reemplazar con el dominio real antes de lanzar
 const SITE_URL = "https://vocationallab.com";
 const canonicalURL = new URL(Astro.url.pathname, SITE_URL).toString();
-const ogImage = `${SITE_URL}/og-image.png`;
+const ogImage = `${SITE_URL}/og-image.svg`;
 
 // Datos estructurados JSON-LD — le dice a Google qué es este sitio
 const jsonLd = {

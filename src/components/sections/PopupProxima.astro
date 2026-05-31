@@ -1,27 +1,61 @@
 ---
 /*
-  Pop-up flotante "Próxima edición — Agosto 2026".
-  Aparece abajo a la derecha al hacer scroll. Se puede cerrar.
-  Toda la lógica es vanilla JS, sin dependencias.
+  Pop-up flotante de próxima edición.
+  El contenido se carga desde la tabla site_config de Supabase,
+  con fallback a los valores hardcodeados si la carga falla.
+  Un admin puede editarlo desde /aula/admin/configuracion.
 */
 ---
 
 <aside id="popup-proxima" class="popup" hidden>
   <div class="popup__body">
-    <p class="popup__titulo">Próxima edición</p>
-    <p class="popup__sub">Agosto 2026</p>
-    <a href="#contacto" class="popup__cta">Reservá tu lugar →</a>
+    <p class="popup__titulo" id="popup-titulo">Próxima edición</p>
+    <p class="popup__sub" id="popup-sub">Agosto 2026</p>
+    <a href="#contacto" class="popup__cta" id="popup-cta">Reservá tu lugar →</a>
   </div>
   <button class="popup__close" type="button" aria-label="Cerrar aviso">×</button>
 </aside>
 
 <script>
-  // Mostramos el pop-up cuando el usuario ya hizo algo de scroll
-  // (que ya esté interesado en el contenido) y nunca antes lo cerró.
-  const KEY = "vl_popup_cerrado";
-  const popup = document.getElementById("popup-proxima");
+  const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL as string;
+  const SUPABASE_KEY = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY as string;
 
-  if (popup && !sessionStorage.getItem(KEY)) {
+  const DEFAULTS: Record<string, string> = {
+    popup_activo:    "true",
+    popup_titulo:    "Próxima edición",
+    popup_fecha:     "Agosto 2026",
+    popup_cta_texto: "Reservá tu lugar →",
+    popup_cta_url:   "#contacto",
+  };
+
+  const SESSION_KEY = "vl_popup_cerrado";
+  const popup = document.getElementById("popup-proxima") as HTMLElement | null;
+
+  async function initPopup() {
+    if (!popup || sessionStorage.getItem(SESSION_KEY)) return;
+
+    // Cargamos config desde Supabase; si falla usamos los defaults.
+    const config = { ...DEFAULTS };
+    try {
+      const claves = Object.keys(DEFAULTS).join(",");
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/site_config?select=clave,valor&clave=in.(${claves})`,
+        { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+      );
+      if (res.ok) {
+        const rows = (await res.json()) as { clave: string; valor: string }[];
+        rows.forEach((r) => { config[r.clave] = r.valor; });
+      }
+    } catch { /* fallback a defaults sin romper la página */ }
+
+    if (config.popup_activo === "false") return;
+
+    (document.getElementById("popup-titulo") as HTMLElement).textContent = config.popup_titulo;
+    (document.getElementById("popup-sub") as HTMLElement).textContent = config.popup_fecha;
+    const $cta = document.getElementById("popup-cta") as HTMLAnchorElement;
+    $cta.textContent = config.popup_cta_texto;
+    $cta.href = config.popup_cta_url;
+
     const onScroll = () => {
       if (window.scrollY > 400) {
         popup.hidden = false;
@@ -33,10 +67,12 @@
 
     popup.querySelector(".popup__close")?.addEventListener("click", () => {
       popup.classList.remove("popup--visible");
-      sessionStorage.setItem(KEY, "1");
-      setTimeout(() => (popup.hidden = true), 200);
+      sessionStorage.setItem(SESSION_KEY, "1");
+      setTimeout(() => { popup.hidden = true; }, 200);
     });
   }
+
+  initPopup();
 </script>
 
 <style>
@@ -97,10 +133,6 @@
   }
   .popup__close:hover { color: var(--color-bg); }
 
-  /* En mobile el pop-up pasa a ser una barra horizontal compacta
-     pegada al pie de pantalla (full width con márgenes). Esconde
-     el eyebrow "PRÓXIMA EDICIÓN" para ganar espacio, y muestra
-     "Agosto 2026" + CTA en una sola línea. */
   @media (max-width: 560px) {
     .popup {
       left: 0.75rem;
