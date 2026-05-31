@@ -27,6 +27,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           <p class="curso__resumen" id="curso-resumen"></p>
         </header>
 
+        <div id="curso-progreso" hidden class="curso__progreso-wrap"></div>
+
         <section id="curso-modulos" class="curso__modulos"></section>
       </div>
 
@@ -75,7 +77,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   type ArchivoRow = {
     id: string;
     nombre: string;
-    tipo: "pdf" | "video" | "audio" | "link";
+    tipo: "pdf" | "video" | "audio" | "link" | "youtube";
     storage_path: string;
     peso_kb: number | null;
   };
@@ -84,6 +86,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     titulo: string;
     consigna: string;
     fecha_entrega: string | null;
+    video_url: string | null;
+    adjunto_path: string | null;
+    adjunto_nombre: string | null;
   };
   type ModuloRow = {
     id: string;
@@ -99,6 +104,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     id: string;
     tarea_id: string;
     archivo_nombre: string;
+    enviada_en: string | null;
     nota: string | null;
     comentario: string | null;
     corregida_en: string | null;
@@ -121,7 +127,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   function iconoTipo(tipo: ArchivoRow["tipo"]) {
-    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : "↗";
+    return tipo === "pdf" ? "📄" : tipo === "video" ? "▶︎" : tipo === "audio" ? "♪" : tipo === "youtube" ? "▶" : "↗";
   }
 
   function estadoEntrega(entrega: EntregaRow | undefined) {
@@ -166,7 +172,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .select(`
         id, numero, titulo, descripcion,
         archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
-        tareas (id, titulo, consigna, fecha_entrega)
+        tareas (id, titulo, consigna, fecha_entrega, video_url, adjunto_path, adjunto_nombre)
       `)
       .eq("curso_id", curso.id)
       .order("numero");
@@ -186,7 +192,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (tareaIds.length > 0) {
       const { data: entregasData, error: errEntregas } = await supabase
         .from("entregas")
-        .select("id, tarea_id, archivo_nombre, nota, comentario, corregida_en")
+        .select("id, tarea_id, archivo_nombre, enviada_en, nota, comentario, corregida_en")
         .eq("alumno_id", userId)
         .in("tarea_id", tareaIds);
 
@@ -210,6 +216,37 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <p class="empty-state__bajada">Todavía no hay módulos cargados. Vas a verlos cuando el equipo los publique.</p>
       </div>
     `;
+
+    // Barra de progreso global del curso.
+    const totalTareas = (modulos as ModuloRow[]).filter((m) => {
+      const t = Array.isArray(m.tareas) ? m.tareas[0] : m.tareas;
+      return !!t;
+    }).length;
+    const entregadasCount = entregas.length;
+    const correcidasCount = entregas.filter((e) => !!e.corregida_en).length;
+
+    if (totalTareas > 0) {
+      const pct = Math.round((entregadasCount / totalTareas) * 100);
+      const $progreso = document.getElementById("curso-progreso") as HTMLElement;
+      $progreso.hidden = false;
+      $progreso.innerHTML = `
+        <div class="curso__progreso">
+          <div class="curso__progreso-info">
+            <span class="curso__progreso-texto">
+              ${entregadasCount} de ${totalTareas} tarea${totalTareas === 1 ? "" : "s"} entregada${entregadasCount === 1 ? "" : "s"}
+            </span>
+            ${correcidasCount > 0
+              ? `<span class="curso__progreso-corregidas">${correcidasCount} corregida${correcidasCount === 1 ? "" : "s"}</span>`
+              : ""}
+          </div>
+          <div class="curso__progreso-barra-wrap" role="progressbar"
+               aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"
+               aria-label="${pct}% completado">
+            <div class="curso__progreso-barra" style="width:${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }
 
     $loader.hidden = true;
     $contenido.hidden = false;
@@ -373,12 +410,22 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const entrega = tarea ? entregas.find((e) => e.tarea_id === tarea.id) : undefined;
     const estado = estadoEntrega(entrega);
 
+    const badgeMap: Record<string, { txt: string; cls: string }> = {
+      pendiente: { txt: "Pendiente",  cls: "pendiente" },
+      entregada: { txt: "Entregada",  cls: "entregada" },
+      corregida: { txt: "Corregida ✓", cls: "corregida" },
+    };
+    const badge = tarea ? badgeMap[estado] : null;
+
     return `
       <article class="modulo">
         <header class="modulo__head">
-          <span class="modulo__numero">Módulo ${m.numero}</span>
+          <div class="modulo__head-top">
+            <span class="modulo__numero">Módulo ${m.numero}</span>
+            ${badge ? `<span class="modulo__badge modulo__badge--${badge.cls}">${badge.txt}</span>` : ""}
+          </div>
           <h2 class="modulo__titulo">${escape(m.titulo)}</h2>
-          <p class="modulo__descripcion">${escape(m.descripcion)}</p>
+          ${m.descripcion ? `<p class="modulo__descripcion">${escape(m.descripcion)}</p>` : ""}
         </header>
 
         <div class="modulo__bloques">
@@ -396,9 +443,31 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
                   <span class="tarea__estado">${estadoLabels[estado]}</span>
                 </div>
                 <p class="tarea__consigna">${escape(tarea.consigna)}</p>
-                <p class="tarea__fecha">
-                  <strong>Entrega:</strong> ${escape(formatoFecha(tarea.fecha_entrega))}
-                </p>
+
+                ${tarea.video_url ? `
+                  <a href="${escape(tarea.video_url)}" target="_blank" rel="noopener noreferrer" class="tarea__video-ref">
+                    <span aria-hidden="true">▶</span>
+                    <span>Ver video de referencia</span>
+                  </a>
+                ` : ""}
+
+                ${tarea.adjunto_path ? `
+                  <div class="tarea__adjunto-ref">
+                    <span aria-hidden="true">📎</span>
+                    <button type="button" class="archivo__btn"
+                      data-descargar-path="${escape(tarea.adjunto_path)}"
+                      data-descargar-nombre="${escape(tarea.adjunto_nombre ?? 'adjunto')}">
+                      ${escape(tarea.adjunto_nombre ?? "Descargar adjunto")}
+                    </button>
+                  </div>
+                ` : ""}
+
+                ${tarea.fecha_entrega ? `
+                  <p class="tarea__fecha">
+                    <strong>Entrega:</strong> ${escape(formatoFecha(tarea.fecha_entrega))}
+                  </p>
+                ` : ""}
+
                 ${renderEstadoTarea(estado, entrega, tarea.id, tarea.titulo)}
               </div>
             </div>
@@ -414,16 +483,30 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }
     return `
       <ul class="archivos">
-        ${archivos.map((a) => `
-          <li class="archivo">
-            <span class="archivo__icono" aria-hidden="true">${iconoTipo(a.tipo)}</span>
-            <div class="archivo__cuerpo">
-              <span class="archivo__nombre">${escape(a.nombre)}</span>
-              <span class="archivo__meta">${escape(formatoPeso(a.peso_kb))}</span>
-            </div>
-            <button type="button" class="archivo__btn" data-descargar-path="${escape(a.storage_path)}" data-descargar-nombre="${escape(a.nombre)}">Descargar</button>
-          </li>
-        `).join("")}
+        ${archivos.map((a) => {
+          if (a.tipo === "youtube") {
+            return `
+              <li class="archivo">
+                <span class="archivo__icono archivo__icono--yt" aria-hidden="true">▶</span>
+                <div class="archivo__cuerpo">
+                  <span class="archivo__nombre">${escape(a.nombre)}</span>
+                  <span class="archivo__meta">Video</span>
+                </div>
+                <a href="${escape(a.storage_path)}" target="_blank" rel="noopener noreferrer" class="archivo__btn">Ver →</a>
+              </li>
+            `;
+          }
+          return `
+            <li class="archivo">
+              <span class="archivo__icono" aria-hidden="true">${iconoTipo(a.tipo)}</span>
+              <div class="archivo__cuerpo">
+                <span class="archivo__nombre">${escape(a.nombre)}</span>
+                <span class="archivo__meta">${escape(formatoPeso(a.peso_kb))}</span>
+              </div>
+              <button type="button" class="archivo__btn" data-descargar-path="${escape(a.storage_path)}" data-descargar-nombre="${escape(a.nombre)}">Descargar</button>
+            </li>
+          `;
+        }).join("")}
       </ul>
     `;
   }
@@ -442,11 +525,19 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       `;
     }
     if (estado === "entregada") {
+      const fechaEnvio = entrega?.enviada_en
+        ? new Date(entrega.enviada_en).toLocaleDateString("es-AR", { day: "numeric", month: "long" })
+        : null;
       return `
-        <p class="tarea__nota">
-          Ya enviaste tu entrega <strong>${escape(entrega?.archivo_nombre ?? "")}</strong>.
-          Vas a recibir una devolución cuando esté corregida.
-        </p>
+        <div class="tarea__entregada">
+          <span class="tarea__entregada-icono" aria-hidden="true">✓</span>
+          <div>
+            <p class="tarea__entregada-texto">
+              Entregaste <strong>${escape(entrega?.archivo_nombre ?? "")}</strong>${fechaEnvio ? ` el ${fechaEnvio}` : ""}.
+            </p>
+            <p class="tarea__entregada-hint">Vas a recibir una devolución cuando esté corregida.</p>
+          </div>
+        </div>
         <div class="tarea__accion">
           <label class="tarea__upload">
             <input type="file" data-tarea-id="${tareaId}" data-tarea-nombre="${nombreEsc}" data-es-reemplazo="true" />
@@ -520,6 +611,50 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     max-width: 60ch;
   }
 
+  /* Barra de progreso global del curso */
+  .curso__progreso-wrap {
+    margin-bottom: 2.5rem;
+  }
+  .curso__progreso {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .curso__progreso-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .curso__progreso-texto {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  .curso__progreso-corregidas {
+    font-size: 0.82rem;
+    color: #1a6b3e;
+    background: rgba(36, 130, 80, 0.1);
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+  }
+  .curso__progreso-barra-wrap {
+    height: 6px;
+    background: var(--color-line);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .curso__progreso-barra {
+    height: 100%;
+    background: var(--color-deep);
+    border-radius: 99px;
+    transition: width 0.5s ease;
+  }
+
   .curso__modulos {
     display: flex;
     flex-direction: column;
@@ -539,6 +674,32 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     padding: 2rem;
   }
   :global(.modulo__head) { margin-bottom: 1.8rem; }
+  :global(.modulo__head-top) {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-bottom: 0.6rem;
+  }
+  :global(.modulo__badge) {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  :global(.modulo__badge--pendiente) {
+    background: rgba(216, 85, 42, 0.1);
+    color: var(--color-accent);
+  }
+  :global(.modulo__badge--entregada) {
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+  }
+  :global(.modulo__badge--corregida) {
+    background: rgba(36, 130, 80, 0.12);
+    color: #1a6b3e;
+  }
   :global(.modulo__numero) {
     display: inline-block;
     font-size: 0.78rem;
@@ -548,7 +709,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     font-weight: 500;
     margin-bottom: 0.6rem;
   }
-  :global(.modulo__titulo) { font-size: 1.5rem; margin: 0 0 0.6rem; }
+  :global(.modulo__titulo) { font-size: 1.5rem; margin: 0 0 0.5rem; }
   :global(.modulo__descripcion) { color: var(--color-ink-soft); margin: 0; max-width: 60ch; }
 
   :global(.modulo__bloques) { display: grid; gap: 2rem; }
@@ -709,5 +870,67 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     font-style: italic;
     color: var(--color-ink);
     line-height: 1.5;
+  }
+
+  /* Video de referencia en tarea */
+  :global(.tarea__video-ref) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.38rem 0.75rem;
+    margin-bottom: 0.7rem;
+    background: rgba(216, 85, 42, 0.07);
+    border: 1px solid rgba(216, 85, 42, 0.22);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s ease;
+  }
+  :global(.tarea__video-ref:hover) { background: rgba(216, 85, 42, 0.13); }
+
+  /* Adjunto descargable de tarea */
+  :global(.tarea__adjunto-ref) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* Confirmación de entrega realizada */
+  :global(.tarea__entregada) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.7rem 0.9rem;
+    background: rgba(36, 58, 130, 0.06);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.8rem;
+  }
+  :global(.tarea__entregada-icono) {
+    color: var(--color-deep);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    flex-shrink: 0;
+  }
+  :global(.tarea__entregada-texto) {
+    margin: 0 0 0.2rem;
+    font-size: 0.9rem;
+    color: var(--color-ink);
+  }
+  :global(.tarea__entregada-hint) {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* Ícono de YouTube en lista de archivos */
+  :global(.archivo__icono--yt) {
+    background: rgba(216, 85, 42, 0.1) !important;
+    color: var(--color-accent);
+    font-size: 0.85rem;
   }
 </style>

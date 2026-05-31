@@ -62,15 +62,20 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   const $grid = document.getElementById("cursos-grid")!;
   const $vacio = document.getElementById("cursos-vacio") as HTMLElement;
 
+  function saludoSegunHora(nombre: string): string {
+    const h = new Date().getHours();
+    const momento = h < 13 ? "Buen día" : h < 20 ? "Buenas tardes" : "Buenas noches";
+    return `${momento}, ${nombre}.`;
+  }
+
   async function cargar() {
-    // 1. Sesión + profile (redirige a login si no hay sesión).
     const auth = await requireSession();
     if (!auth) return;
 
     const { profile } = auth;
     mostrarBannerSiPreview(profile);
 
-    // 2. Cursos visibles para este user (RLS los filtra).
+    // Cursos visibles (RLS filtra por inscripción).
     const { data: cursos, error: errCursos } = await supabase
       .from("cursos")
       .select("id, slug, titulo, resumen, periodo, publicado")
@@ -82,9 +87,8 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       return;
     }
 
-    // 4. Pintar.
     const primerNombre = profile.nombre.split(" ")[0];
-    $saludo.textContent = `Hola, ${primerNombre}.`;
+    $saludo.textContent = saludoSegunHora(primerNombre);
     $loader.hidden = true;
     $contenido.hidden = false;
 
@@ -93,20 +97,88 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       return;
     }
 
+    // Cantidad de cursos en la bajada.
+    const $bajada = document.getElementById("bajada")!;
+    $bajada.textContent = cursos.length === 1
+      ? "Este es tu curso activo."
+      : `Tenés ${cursos.length} cursos activos.`;
+
+    // Progreso por curso: tareas totales y entregadas.
+    const cursoIds = cursos.map((c: any) => c.id);
+    const progresoPorCurso: Record<string, { total: number; entregadas: number }> = {};
+    cursoIds.forEach((id: string) => { progresoPorCurso[id] = { total: 0, entregadas: 0 }; });
+
+    try {
+      // Todas las tareas de todos los cursos en una sola query.
+      const { data: tareasData } = await supabase
+        .from("tareas")
+        .select("id, modulos!inner(curso_id)")
+        .in("modulos.curso_id", cursoIds);
+
+      const tareasPorCurso: Record<string, string[]> = {};
+      (tareasData ?? []).forEach((t: any) => {
+        const cid = t.modulos?.curso_id;
+        if (cid) {
+          if (!tareasPorCurso[cid]) tareasPorCurso[cid] = [];
+          tareasPorCurso[cid].push(t.id);
+        }
+      });
+
+      const allIds = Object.values(tareasPorCurso).flat();
+      const entregadasSet = new Set<string>();
+
+      if (allIds.length > 0) {
+        const { data: entregasData } = await supabase
+          .from("entregas")
+          .select("tarea_id")
+          .eq("alumno_id", profile.id)
+          .in("tarea_id", allIds);
+        (entregasData ?? []).forEach((e: any) => entregadasSet.add(e.tarea_id));
+      }
+
+      for (const cid of cursoIds) {
+        const ids = tareasPorCurso[cid] ?? [];
+        progresoPorCurso[cid] = {
+          total: ids.length,
+          entregadas: ids.filter((id) => entregadasSet.has(id)).length,
+        };
+      }
+    } catch { /* progreso no crítico — las cards se muestran igual */ }
+
     $grid.innerHTML = cursos
-      .map(
-        (c) => `
-        <a href="/aula/curso?slug=${encodeURIComponent(c.slug)}" class="curso-card">
-          <div class="curso-card__head">
-            <span class="curso-card__periodo">${escape(c.periodo ?? "")}</span>
-            <span class="curso-card__estado">En curso</span>
+      .map((c: any) => {
+        const p = progresoPorCurso[c.id] ?? { total: 0, entregadas: 0 };
+        const pct = p.total > 0 ? Math.round((p.entregadas / p.total) * 100) : 0;
+        const completo = p.total > 0 && p.entregadas === p.total;
+
+        const estadoBadge = completo
+          ? `<span class="curso-card__estado curso-card__estado--completo">Completado ✓</span>`
+          : `<span class="curso-card__estado">En curso</span>`;
+
+        const progresoHTML = p.total > 0 ? `
+          <div class="curso-card__progreso">
+            <div class="curso-card__progreso-barra-wrap">
+              <div class="curso-card__progreso-barra" style="width:${pct}%"></div>
+            </div>
+            <span class="curso-card__progreso-texto">
+              ${p.entregadas} de ${p.total} tarea${p.total === 1 ? "" : "s"}
+            </span>
           </div>
-          <h2 class="curso-card__titulo">${escape(c.titulo)}</h2>
-          <p class="curso-card__resumen">${escape(c.resumen ?? "")}</p>
-          <span class="curso-card__entrar">Entrar al curso →</span>
-        </a>
-      `
-      )
+        ` : "";
+
+        return `
+          <a href="/aula/curso?slug=${encodeURIComponent(c.slug)}" class="curso-card">
+            <div class="curso-card__head">
+              <span class="curso-card__periodo">${escape(c.periodo ?? "")}</span>
+              ${estadoBadge}
+            </div>
+            <h2 class="curso-card__titulo">${escape(c.titulo)}</h2>
+            <p class="curso-card__resumen">${escape(c.resumen ?? "")}</p>
+            ${progresoHTML}
+            <span class="curso-card__entrar">Entrar al curso →</span>
+          </a>
+        `;
+      })
       .join("");
   }
 
@@ -219,6 +291,36 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     font-size: 0.95rem;
     line-height: 1.5;
   }
+  :global(.curso-card__estado--completo) {
+    background: rgba(36, 130, 80, 0.12);
+    color: #1a6b3e;
+  }
+
+  :global(.curso-card__progreso) {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.2rem;
+  }
+  :global(.curso-card__progreso-barra-wrap) {
+    flex: 1;
+    height: 4px;
+    background: var(--color-line);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  :global(.curso-card__progreso-barra) {
+    height: 100%;
+    background: var(--color-deep);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+  }
+  :global(.curso-card__progreso-texto) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+
   :global(.curso-card__entrar) {
     margin-top: 0.4rem;
     color: var(--color-accent);
