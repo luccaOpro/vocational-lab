@@ -10,26 +10,27 @@
 <header class="nav">
   <div class="nav__inner container">
     <a href="#hero" class="nav__brand" aria-label="Vocational Lab — Inicio">
-      <img src="/logo.svg" alt="" class="nav__brand-logo" width="55" height="60" aria-hidden="true" />
+      <img src="/logo.svg" alt="" class="nav__brand-logo" width="55" height="60" aria-hidden="true" loading="eager" decoding="async" fetchpriority="high" />
       <span class="nav__brand-wordmark">
         <span>Vocational</span>
         <span>Lab</span>
       </span>
     </a>
 
-    {/* Links visibles en desktop */}
+    {/* Links visibles en desktop.
+        El "Hablemos" no va acá: vive como CTA secundario en el Hero. */}
     <nav class="nav__links" aria-label="Navegación principal">
       <a href="#caminos">Programas</a>
       <a href="#programa">Proceso</a>
       <a href="#equipo">Equipo</a>
-      <a href="/aula/login" class="nav__aula">Aula</a>
-      <a href="#contacto" class="nav__cta">Hablemos</a>
+      <a href="/aula/login" class="nav__cta">Aula</a>
     </nav>
 
-    {/* Acciones de la derecha en mobile: CTA Hablemos + hamburguesa.
-        Se muestran sólo en el breakpoint mobile (≤720px). */}
+    {/* Acciones de la derecha en mobile: CTA Aula + hamburguesa.
+        Se muestran sólo en el breakpoint mobile (≤720px).
+        El "Hablemos" no va acá: vive como CTA secundario en el Hero. */}
     <div class="nav__mobile-actions">
-      <a href="#contacto" class="nav__cta-mobile">Hablemos</a>
+      <a href="/aula/login" class="nav__cta-mobile">Aula</a>
 
       <button
         class="nav__burger"
@@ -75,8 +76,6 @@
     <a href="#caminos" data-menu-link>Programas</a>
     <a href="#programa" data-menu-link>Proceso</a>
     <a href="#equipo" data-menu-link>Equipo</a>
-    <a href="/aula/login" data-menu-link>Aula</a>
-    <a href="#contacto" data-menu-link class="nav__panel-cta">Hablemos</a>
   </nav>
 </aside>
 
@@ -162,19 +161,6 @@
   }
   .nav__cta:hover { background: var(--color-accent-dark); }
 
-  /* Link "Aula" — botón secundario (borde) para diferenciarlo del CTA. */
-  .nav__aula {
-    padding: 0.5rem 0.9rem;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-ink);
-    color: var(--color-ink) !important;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-  .nav__aula:hover {
-    background: var(--color-ink);
-    color: var(--color-bg) !important;
-  }
-
   /* ===== Acciones mobile (CTA + hamburguesa) ===== */
   /* En desktop el contenedor es invisible — los links inline se encargan. */
   .nav__mobile-actions {
@@ -183,7 +169,7 @@
     gap: 0.6rem;
   }
 
-  /* CTA "Hablemos" — visible sólo en mobile, al lado del hamburguesa. */
+  /* CTA principal en mobile (Aula) — al lado del hamburguesa. */
   .nav__cta-mobile {
     display: inline-flex;
     align-items: center;
