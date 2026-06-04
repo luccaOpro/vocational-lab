@@ -208,6 +208,7 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 | `telefono`             | text         | Opcional.                                                                    |
 | `pais`                 | text         | Opcional.                                                                    |
 | `como_nos_encontraste` | text         | Opcional.                                                                    |
+| `canal_preferido_respuesta` | text    | `mail` o `whatsapp`. Cómo prefiere el inscripto ser contactado. Si es `whatsapp`, el teléfono es obligatorio. |
 | `rol_solicitante`      | text         | `mayor` o `responsable_menor`. Obligatorio si `intencion = 'inscripcion'`.   |
 | `nombre_menor`         | text         | Obligatorio si `rol_solicitante = 'responsable_menor'`.                      |
 | `edad_menor`           | int          | Opcional.                                                                    |

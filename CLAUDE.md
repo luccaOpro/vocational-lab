@@ -25,8 +25,8 @@ El usuario pidió específicamente que la página sea:
 - **Editor**: VS Code (ya instalado).
 - **Framework**: **Astro** — elegido por velocidad, SEO, contenido editable en Markdown y modularidad. Ideal para sitios de servicios con potencial de crecimiento (cursos, blog, etc.).
 - **Control de versiones**: Git + GitHub (todavía no configurado).
-- **Hosting**: Netlify, plan gratuito, con auto-deploy desde GitHub.
-- **Dominio**: `.com` propio, a comprar más adelante (~10-15 USD/año). Mientras tanto, subdominio gratuito de Netlify.
+- **Hosting**: Cloudflare Pages, plan gratuito, con auto-deploy desde GitHub. URL actual: `vocational-lab.pages.dev`. (Decisión revisada el 2026-06-03: arrancamos pensando en Netlify, terminamos en Cloudflare por costo y generosidad del free tier.)
+- **Dominio**: `vlab.com.ar` (comprado, gestionado desde el cPanel del proveedor de hosting tradicional). El sitio web apunta a Cloudflare Pages vía DNS; los emails del dominio (`hola@`, `julia@`, `laura@`) viven en cPanel.
 - **Node.js**: instalado.
 - **Claude Code**: instalado y autenticado con plan Pro.
 

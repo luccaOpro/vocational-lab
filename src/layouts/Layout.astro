@@ -8,9 +8,9 @@
     · el <slot /> donde se inserta el contenido de cada página
 
   PENDIENTES antes del lanzamiento:
-    · Reemplazar SITE_URL con el dominio real una vez comprado.
     · Convertir public/og-image.svg a PNG (1200×630px) para máxima
-      compatibilidad con Facebook. Herramienta gratuita: cloudconvert.com
+      compatibilidad con WhatsApp/Facebook (no muestran preview de SVG).
+      Herramienta gratuita: cloudconvert.com
 */
 
 import "../styles/global.css";
@@ -28,7 +28,7 @@ const {
 // ⚠️ Reemplazar con el dominio real antes de lanzar
 const SITE_URL = "https://vlab.com.ar";
 const canonicalURL = new URL(Astro.url.pathname, SITE_URL).toString();
-const ogImage = `${SITE_URL}/og-image.svg`;
+const ogImage = `${SITE_URL}/og-image.png`;
 
 // Datos estructurados JSON-LD — le dice a Google qué es este sitio
 const jsonLd = {
@@ -69,15 +69,14 @@ const jsonLd = {
     <link rel="canonical" href={canonicalURL} />
 
     <!-- ===== Open Graph — preview al compartir en redes ===== -->
-    <!-- ⚠️ og:image requiere public/og-image.png (1200×630px) -->
+    <!-- WhatsApp y Facebook prefieren PNG; el archivo está en public/og-image.png -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Vocational Lab" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:image" content={ogImage} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:alt" content="Vocational Lab — Orientación vocacional" />
     <meta property="og:locale" content="es_AR" />
 

@@ -5,7 +5,7 @@
   importa de acá: `import { supabase } from "../lib/supabase"`.
 
   Las credenciales viven en .env (NO se suben a GitHub).
-  Para producción (Netlify) las cargamos en Site settings → Environment variables.
+  Para producción (Cloudflare Pages) las cargamos en Settings → Environment variables.
 */
 
 import { createClient } from "@supabase/supabase-js";

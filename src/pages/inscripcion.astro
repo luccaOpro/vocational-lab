@@ -86,10 +86,45 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               <input type="email" name="email" required autocomplete="email" />
             </label>
 
-            <label class="ins-form__field">
+            {/* Teléfono internacional: select de país (código) + input numérico.
+                El código y el número se concatenan al enviar el form para
+                guardarlo como un solo string formateado en la base. */}
+            <div class="ins-form__field">
               <span class="ins-form__label">Teléfono</span>
-              <input type="tel" name="telefono" autocomplete="tel" />
-            </label>
+              <div class="ins-form__tel-grid">
+                <select name="telefono_codigo" class="ins-form__tel-codigo" aria-label="Código de país">
+                  <option value="+54">🇦🇷 Argentina (+54)</option>
+                  <option value="+591">🇧🇴 Bolivia (+591)</option>
+                  <option value="+55">🇧🇷 Brasil (+55)</option>
+                  <option value="+56">🇨🇱 Chile (+56)</option>
+                  <option value="+57">🇨🇴 Colombia (+57)</option>
+                  <option value="+506">🇨🇷 Costa Rica (+506)</option>
+                  <option value="+593">🇪🇨 Ecuador (+593)</option>
+                  <option value="+503">🇸🇻 El Salvador (+503)</option>
+                  <option value="+34">🇪🇸 España (+34)</option>
+                  <option value="+1">🇺🇸 Estados Unidos (+1)</option>
+                  <option value="+502">🇬🇹 Guatemala (+502)</option>
+                  <option value="+504">🇭🇳 Honduras (+504)</option>
+                  <option value="+52">🇲🇽 México (+52)</option>
+                  <option value="+505">🇳🇮 Nicaragua (+505)</option>
+                  <option value="+507">🇵🇦 Panamá (+507)</option>
+                  <option value="+595">🇵🇾 Paraguay (+595)</option>
+                  <option value="+51">🇵🇪 Perú (+51)</option>
+                  <option value="+1809">🇩🇴 Rep. Dominicana (+1)</option>
+                  <option value="+598">🇺🇾 Uruguay (+598)</option>
+                  <option value="+58">🇻🇪 Venezuela (+58)</option>
+                </select>
+                <input
+                  type="tel"
+                  name="telefono_numero"
+                  class="ins-form__tel-numero"
+                  inputmode="tel"
+                  autocomplete="tel-national"
+                  placeholder="11 5555 5555"
+                  aria-label="Número de teléfono"
+                />
+              </div>
+            </div>
 
             <label class="ins-form__field">
               <span class="ins-form__label">País</span>
@@ -103,7 +138,30 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
           </div>
         </fieldset>
 
-        {/* ─── PASO 3 · Bloque condicional (solo cuando intencion = inscripcion) ─── */}
+        {/* ─── PASO 3 · Canal preferido para recibir respuesta ─── */}
+        <fieldset class="ins-form__fieldset">
+          <legend class="ins-form__legend">¿Cómo prefieres que te contactemos?</legend>
+
+          <div class="ins-form__radios" role="radiogroup">
+            <label class="ins-form__radio">
+              <input type="radio" name="canal_preferido_respuesta" value="mail" required />
+              <span class="ins-form__radio-label">
+                <strong>Por mail</strong>
+                <small>Recibes la información en tu casilla de email.</small>
+              </span>
+            </label>
+
+            <label class="ins-form__radio">
+              <input type="radio" name="canal_preferido_respuesta" value="whatsapp" required />
+              <span class="ins-form__radio-label">
+                <strong>Por WhatsApp</strong>
+                <small>Te escribimos directamente. Hace falta el teléfono completo.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        {/* ─── PASO 4 · Bloque condicional (solo cuando intencion = inscripcion) ─── */}
         <div id="bloque-inscripcion" hidden>
           <fieldset class="ins-form__fieldset">
             <legend class="ins-form__legend">¿Quién se inscribe?</legend>
@@ -307,14 +365,28 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     const intencion = String(fd.get("intencion") ?? "");
     const nombre = String(fd.get("nombre") ?? "").trim();
     const email = String(fd.get("email") ?? "").trim().toLowerCase();
-    const telefono = String(fd.get("telefono") ?? "").trim() || null;
+
+    // Teléfono internacional: armamos el string "+CC NUMERO".
+    // Si el usuario no escribió ningún dígito en el número, dejamos
+    // todo como null (para no guardar solo el código suelto).
+    const telCodigo = String(fd.get("telefono_codigo") ?? "+54").trim();
+    const telNumero = String(fd.get("telefono_numero") ?? "").trim();
+    const telefono = telNumero ? `${telCodigo} ${telNumero}` : null;
+
     const pais = String(fd.get("pais") ?? "").trim() || null;
     const origen = String(fd.get("origen") ?? "").trim() || null;
+    const canalPreferido = String(fd.get("canal_preferido_respuesta") ?? "");
 
     // Validaciones básicas
     if (!intencion) return mostrarError("Elige qué te trae por aquí.");
     if (!nombre) return mostrarError("Necesitamos tu nombre.");
     if (!email) return mostrarError("Necesitamos tu mail para contactarte.");
+    if (canalPreferido !== "mail" && canalPreferido !== "whatsapp") {
+      return mostrarError("Decinos por dónde prefieres que te contactemos.");
+    }
+    if (canalPreferido === "whatsapp" && !telefono) {
+      return mostrarError("Si elegiste WhatsApp, necesitamos tu número de teléfono.");
+    }
 
     // Si es inscripción: validar los campos extra
     let rolSolicitante: string | null = null;
@@ -362,6 +434,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         telefono,
         pais,
         como_nos_encontraste: origen,
+        canal_preferido_respuesta: canalPreferido,
         rol_solicitante: rolSolicitante,
         nombre_menor: nombreMenor,
         edad_menor: edadMenor,
@@ -379,12 +452,13 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
       return;
     }
 
-    // Confirmación según la intención
+    // Confirmación adaptada a la intención + canal preferido.
+    const canalTexto = canalPreferido === "whatsapp" ? "por WhatsApp" : "por mail";
     const textosConfirmacion: Record<string, string> = {
-      info: "Recibimos tu pedido. En las próximas 48hs te enviamos toda la información del programa por mail.",
-      inscripcion: "Recibimos tu solicitud de inscripción. Te contactamos por mail o WhatsApp para coordinar el pago y confirmar tu lugar.",
+      info: `Recibimos tu pedido. En las próximas 48hs te enviamos toda la información del programa ${canalTexto}.`,
+      inscripcion: `Recibimos tu solicitud de inscripción. Te contactamos ${canalTexto} para coordinar el pago y confirmar tu lugar.`,
     };
-    $confirmTexto.textContent = textosConfirmacion[intencion] ?? "Recibimos tu mensaje. Te contactamos pronto.";
+    $confirmTexto.textContent = textosConfirmacion[intencion] ?? `Recibimos tu mensaje. Te contactamos ${canalTexto} pronto.`;
 
     $form.hidden = true;
     $confirm.hidden = false;
@@ -501,7 +575,8 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
   .ins-form input[type="text"],
   .ins-form input[type="email"],
   .ins-form input[type="tel"],
-  .ins-form input[type="number"] {
+  .ins-form input[type="number"],
+  .ins-form select {
     font: inherit;
     color: var(--color-ink);
     background: #fff;
@@ -510,9 +585,28 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     padding: 0.75rem 0.9rem;
     transition: border-color 0.15s ease;
   }
-  .ins-form input:focus {
+  .ins-form input:focus,
+  .ins-form select:focus {
     outline: none;
     border-color: var(--color-accent);
+  }
+
+  /* Teléfono internacional: select de país + input de número en
+     dos columnas (select más angosto, input ancho). En mobile
+     pasa a apilarse. */
+  .ins-form__tel-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 12rem) 1fr;
+    gap: 0.6rem;
+  }
+  @media (max-width: 480px) {
+    .ins-form__tel-grid { grid-template-columns: 1fr; }
+  }
+  .ins-form__tel-codigo {
+    min-width: 0;
+  }
+  .ins-form__tel-numero {
+    min-width: 0;
   }
 
   /* Bloque protocolo destacado */
