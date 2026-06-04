@@ -181,7 +181,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             </div>
             <div>
               <span class="celda-usuario__nombre">${esc(u.nombre)}</span>
-              ${esElMismo ? `<span class="celda-usuario__yo">(vos)</span>` : ""}
+              ${esElMismo ? `<span class="celda-usuario__yo">(tú)</span>` : ""}
             </div>
           </div>
         </td>
@@ -192,7 +192,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             class="rol-select rol-select--${esc(u.rol)}"
             data-user-id="${esc(u.id)}"
             data-rol-original="${esc(u.rol)}"
-            ${esElMismo ? "disabled title='No podés cambiar tu propio rol'" : ""}
+            ${esElMismo ? "disabled title='No puedes cambiar tu propio rol'" : ""}
           >${opts}</select>
         </td>
       </tr>

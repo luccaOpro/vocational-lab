@@ -43,7 +43,7 @@ export function traducirError(error: unknown): string {
 
   // DB / RLS
   if (msg.includes("violates row-level security") || msg.includes("permission denied")) {
-    return "No tenés permiso para hacer esa acción.";
+    return "No tienes permiso para hacer esa acción.";
   }
   if (msg.includes("violates not-null constraint")) {
     return "Falta completar un campo obligatorio.";

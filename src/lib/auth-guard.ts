@@ -94,7 +94,7 @@ export function mostrarBannerSiPreview(profile: AuthInfo["profile"]) {
   banner.innerHTML = `
     <span class="preview-banner__icono" aria-hidden="true">👁</span>
     <span class="preview-banner__texto">
-      Estás viendo el aula como alumno · sos <strong>${etiqueta}</strong>.
+      Estás viendo el aula como alumno · eres <strong>${etiqueta}</strong>.
     </span>
     <a href="${destino}" class="preview-banner__link">Volver a tu panel →</a>
   `;

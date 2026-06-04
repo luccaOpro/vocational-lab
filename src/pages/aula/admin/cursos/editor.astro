@@ -646,7 +646,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       const tituloActual = ($form.elements.namedItem("titulo") as HTMLInputElement).value;
       const ok = await confirmModal({
         titulo: "Borrar curso",
-        mensaje: `¿Seguro que querés borrar "${tituloActual}"? También se borran sus módulos, tareas e inscripciones. Esta acción no se puede deshacer.`,
+        mensaje: `¿Seguro que quieres borrar "${tituloActual}"? También se borran sus módulos, tareas e inscripciones. Esta acción no se puede deshacer.`,
         confirmLabel: "Borrar definitivamente",
         danger: true,
       });

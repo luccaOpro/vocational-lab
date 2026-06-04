@@ -1,7 +1,33 @@
 # Pendientes del classroom
 
 > Cómo usar este archivo: cada ítem tiene `[ ]` cuando está pendiente y `[x]` cuando está hecho. Actualizamos a medida que avanzamos.
-> Última actualización: 2026-05-26
+> Última actualización: 2026-06-03
+
+## Inscripción y firma del protocolo (nuevo, 2026-06-03)
+
+Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ver `DECISIONES.md`). El código de la página `/inscripcion`, la tabla SQL y la sección Contacto del sitio ya están armados. Lo que falta es lo que Lucas tiene que hacer manualmente en Supabase + redactar copy.
+
+**En Supabase (Lucas):**
+- [x] Correr `docs/sql/04-solicitudes-inscripcion.sql` en el SQL Editor del proyecto
+- [x] Verificar que aparezca la tabla `solicitudes_inscripcion` en Table Editor
+- [x] ~~Verificar que aparezca el bucket `protocolos` en Storage (público)~~ — el bucket queda creado pero **ya no se usa**, el protocolo pasó a ser HTML embebido. Se puede borrar desde Storage si querés limpiar, o dejarlo (no rompe nada).
+- [x] ~~Subir el PDF del protocolo al bucket~~ — descartado, ahora es HTML versionado en código.
+
+**Copy a redactar (Lucas + Julia/Laura):**
+- [ ] **Reemplazar el borrador de `src/components/ProtocoloContenido.astro`** con el texto final aprobado del Protocolo. El componente ya tiene un esqueleto razonable como base (9 secciones). Cuando se publique la versión final, subir `PROTOCOLO_VERSION_ACTUAL` en `src/pages/inscripcion.astro` de `"v1"` a `"v2"` si el contenido cambió sustancialmente.
+- [ ] Revisar el texto del checkbox ("Leí y acepto el Protocolo del programa.") por si Julia y Laura prefieren otra redacción.
+
+**Seguridad del form (más adelante):**
+- [ ] Captcha o honeypot anti-bot en `/inscripcion`
+- [ ] Rate-limit por IP a nivel de Supabase Edge Function o similar
+
+**Cuando sea hora de mails automáticos (decisión 4 que pateamos):**
+- [ ] Elegir servicio (Resend / SendGrid / etc.) y sumar al stack
+- [ ] Disparar mail de confirmación al inscripto cuando se crea la solicitud
+- [ ] Disparar mail al admin cuando entra una nueva solicitud
+
+**Trackeo de canal (opcional, mejora):**
+- [ ] Definir links de WhatsApp/Instagram que apunten a `/inscripcion?canal=whatsapp` y `?canal=instagram` para registrar el origen
 
 ## Setup técnico inicial
 

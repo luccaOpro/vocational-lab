@@ -1,0 +1,184 @@
+---
+/*
+  ProtocoloContenido — texto único del protocolo de consentimiento.
+  ---
+  Este componente es la FUENTE ÚNICA del texto del protocolo.
+  Se renderiza en dos lugares:
+    1. /protocolo (página standalone, linkeable y para SEO)
+    2. /inscripcion (dentro del panel scrolleable del form)
+
+  Cuando se actualice el contenido:
+    1. Editar este archivo.
+    2. Subir la constante PROTOCOLO_VERSION_ACTUAL en
+       src/pages/inscripcion.astro (ej: "v1" → "v2").
+    3. Los registros viejos en Supabase quedan con la versión
+       que firmaron (ej "v1"). Los nuevos quedan con "v2".
+
+  Estilos: usa las clases .prot__* definidas en el mismo archivo
+  para que el contenedor padre (panel scrolleable o página) solo
+  defina el layout exterior.
+
+  ⚠️ BORRADOR — Julia y Laura tienen que revisar y aprobar.
+*/
+---
+
+<div class="prot">
+  <p class="prot__borrador">
+    <strong>BORRADOR</strong> — Este texto es una base de trabajo.
+    Julia y Laura tienen que revisarlo y aprobarlo antes de salir
+    al aire.
+  </p>
+
+  <h2 class="prot__h2">1. Objeto del programa</h2>
+  <p>
+    Vocational Lab es un programa de orientación vocacional para
+    jóvenes y sus familias, conformado por encuentros grupales e
+    individuales online, materiales de trabajo y acompañamiento
+    profesional durante el proceso.
+  </p>
+  <p>
+    El programa no constituye tratamiento clínico ni psicológico
+    profesional individual. Es un proceso pedagógico de
+    autoconocimiento y exploración vocacional.
+  </p>
+
+  <h2 class="prot__h2">2. Modalidad y duración</h2>
+  <ul>
+    <li>8 encuentros: 6 grupales + 2 individuales.</li>
+    <li>100% online a través de plataforma de videollamada.</li>
+    <li>Grupos reducidos para asegurar participación.</li>
+    <li>Materiales complementarios disponibles en el aula virtual durante todo el proceso.</li>
+  </ul>
+
+  <h2 class="prot__h2">3. Datos personales (Ley 25.326)</h2>
+  <p>
+    Los datos que se completan en este formulario son recolectados
+    por Vocational Lab con el fin de gestionar la inscripción y el
+    contacto durante el programa. Los datos se conservan en bases
+    de Vocational Lab y no se ceden a terceros sin consentimiento
+    expreso del titular.
+  </p>
+  <p>
+    El titular puede en cualquier momento solicitar acceso,
+    rectificación o supresión de sus datos escribiendo a
+    <a href="mailto:hola@vlab.com.ar">hola@vlab.com.ar</a>.
+  </p>
+
+  <h2 class="prot__h2">4. Confidencialidad</h2>
+  <p>
+    Lo que cada participante comparte durante los encuentros
+    queda en el espacio del grupo y del proceso individual. El
+    equipo de Vocational Lab se compromete a no divulgar
+    información personal de los participantes fuera del marco
+    del programa, salvo obligación legal.
+  </p>
+  <p>
+    Pedimos a cada participante el mismo compromiso respecto a
+    lo que escucha de sus compañeros y compañeras.
+  </p>
+
+  <h2 class="prot__h2">5. Compromisos del participante</h2>
+  <ul>
+    <li>Asistir a los encuentros pactados, llegando con tiempo y desde un lugar tranquilo.</li>
+    <li>Participar activamente y completar los trabajos entre encuentros.</li>
+    <li>Cuidar el espacio del grupo: respeto, escucha, confidencialidad.</li>
+    <li>Avisar con antelación si por motivos justificados no puede asistir a algún encuentro.</li>
+  </ul>
+
+  <h2 class="prot__h2">6. Compromisos de Vocational Lab</h2>
+  <ul>
+    <li>Sostener los encuentros pactados con profesionales formados y supervisados.</li>
+    <li>Entregar los materiales prometidos y el informe final personalizado.</li>
+    <li>Mantener confidencialidad sobre los datos e información compartida.</li>
+    <li>Estar disponibles para consultas durante todo el proceso.</li>
+  </ul>
+
+  <h2 class="prot__h2">7. Política de cancelación y reembolso</h2>
+  <p>
+    En caso de cancelación antes del inicio del programa, se
+    reintegra el monto total menos un cargo administrativo a
+    definir. Una vez iniciado el programa no se realizan
+    reembolsos parciales.
+  </p>
+  <p>
+    Vocational Lab se reserva el derecho de reprogramar encuentros
+    por causas de fuerza mayor avisando con antelación razonable.
+  </p>
+
+  <h2 class="prot__h2">8. Participantes menores de edad</h2>
+  <p>
+    Para participantes menores de 18 años, la inscripción y la
+    aceptación de este protocolo deben ser realizadas por su
+    representante legal (padre, madre o tutor/a). El adulto
+    responsable acompaña el proceso y se mantiene disponible
+    para coordinar con el equipo del programa cuando sea
+    necesario.
+  </p>
+
+  <h2 class="prot__h2">9. Aceptación</h2>
+  <p>
+    Al marcar el checkbox de aceptación en el formulario de
+    inscripción, el participante (o su representante legal, si
+    es menor) declara haber leído y comprendido los puntos de
+    este protocolo y los acepta como parte de su inscripción en
+    el programa.
+  </p>
+  <p class="prot__cierre">
+    <em>Fin del protocolo. Gracias por llegar hasta acá — esto nos importa.</em>
+  </p>
+</div>
+
+<style>
+  .prot {
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--color-ink);
+  }
+
+  .prot__borrador {
+    margin: 0 0 1.5rem;
+    padding: 0.9rem 1.1rem;
+    background: rgba(216, 85, 42, 0.08);
+    border-left: 3px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    color: var(--color-accent);
+    font-size: 0.92rem;
+  }
+
+  .prot__h2 {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    margin: 1.8rem 0 0.5rem;
+    color: var(--color-ink);
+  }
+  .prot__h2:first-of-type {
+    margin-top: 0.5rem;
+  }
+
+  .prot p {
+    margin: 0 0 0.9rem;
+  }
+
+  .prot ul {
+    margin: 0 0 0.9rem;
+    padding-left: 1.4rem;
+  }
+  .prot li {
+    margin-bottom: 0.35rem;
+  }
+
+  .prot a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prot a:hover {
+    color: var(--color-accent-dark);
+  }
+
+  .prot__cierre {
+    margin-top: 2rem;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+</style>

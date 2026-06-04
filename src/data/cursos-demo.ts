@@ -86,7 +86,7 @@ export interface Profesor {
 export const profeDemo: Profesor = {
   id: "p-001",
   nombre: "Julia Vargas",
-  email: "julia@vocationallab.com",
+  email: "julia@vlab.com.ar",
   cursos: ["coaching-vocacional-agosto-2026"],
 };
 
@@ -95,7 +95,7 @@ export const profesDemo: Profesor[] = [
   {
     id: "p-002",
     nombre: "Laura Pires",
-    email: "laura@vocationallab.com",
+    email: "laura@vlab.com.ar",
     cursos: ["coaching-vocacional-agosto-2026", "taller-identidad-y-proposito"],
   },
 ];
@@ -156,7 +156,7 @@ export const cursosDemo: Curso[] = [
         tarea: {
           titulo: "Carta a tu yo del futuro",
           consigna:
-            "Escribí una carta (una carilla aprox.) a vos en 5 años. Compartila por acá.",
+            "Escribe una carta (una carilla aprox.) a ti en 5 años. Compártela por aquí.",
           fechaEntrega: "15 de agosto",
           estado: "corregida",
           devolucion: {
@@ -195,7 +195,7 @@ export const cursosDemo: Curso[] = [
         tarea: {
           titulo: "Tres escenarios posibles",
           consigna:
-            "Imaginá tres escenarios distintos para vos en 2030. Una página por escenario.",
+            "Imagina tres escenarios distintos para ti en 2030. Una página por escenario.",
           fechaEntrega: "12 de septiembre",
           estado: "pendiente",
         },

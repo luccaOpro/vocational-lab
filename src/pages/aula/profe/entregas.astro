@@ -96,7 +96,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       ? `<div class="empty-state">
           <span class="empty-state__icono" aria-hidden="true">🎯</span>
           <h3 class="empty-state__titulo">¡Al día!</h3>
-          <p class="empty-state__bajada">No tenés entregas para corregir por ahora.</p>
+          <p class="empty-state__bajada">No tienes entregas para corregir por ahora.</p>
         </div>`
       : `<ul class="lista">${pend.map((e) => renderItem(e, "pendiente")).join("")}</ul>`;
 

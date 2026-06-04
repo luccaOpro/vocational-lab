@@ -1,0 +1,79 @@
+---
+/*
+  /protocolo — página standalone con el protocolo del programa.
+  ---
+  El texto vive en src/components/ProtocoloContenido.astro
+  (fuente única). Esta página solo lo envuelve en el Layout
+  del sitio para que sea linkeable, leíble desde mobile, e
+  indexable por Google.
+*/
+
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/sections/Nav.astro";
+import Footer from "../components/sections/Footer.astro";
+import ProtocoloContenido from "../components/ProtocoloContenido.astro";
+---
+
+<Layout
+  title="Protocolo del programa · Vocational Lab"
+  description="Protocolo de consentimiento informado del programa Vocational Lab — modalidad, datos personales, confidencialidad y compromisos mutuos."
+>
+  <Nav />
+
+  <main class="protocolo-page section">
+    <div class="container protocolo-page__inner">
+      <header class="protocolo-page__head" data-animate>
+        <p class="eyebrow">Documento</p>
+        <h1>Protocolo del programa.</h1>
+        <p class="protocolo-page__sub">
+          Este es el documento que aceptas al inscribirte. Te lo
+          dejamos también acá, accesible en cualquier momento.
+        </p>
+      </header>
+
+      <article class="protocolo-page__doc">
+        <ProtocoloContenido />
+      </article>
+
+      <p class="protocolo-page__back">
+        <a href="/inscripcion">Ir al formulario de inscripción →</a>
+      </p>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .protocolo-page {
+    background: var(--color-bg);
+  }
+  .protocolo-page__inner {
+    max-width: 760px;
+  }
+  .protocolo-page__head {
+    margin-bottom: 2.5rem;
+  }
+  .protocolo-page__sub {
+    margin: 1rem 0 0;
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+  }
+  .protocolo-page__doc {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2.5rem;
+  }
+  @media (max-width: 560px) {
+    .protocolo-page__doc { padding: 1.75rem 1.5rem; }
+  }
+  .protocolo-page__back {
+    margin-top: 2.5rem;
+    text-align: center;
+  }
+  .protocolo-page__back a {
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+</style>

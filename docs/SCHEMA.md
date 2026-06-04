@@ -193,12 +193,54 @@ La combinación (curso_id, profesor_id) es la clave primaria.
 
 ---
 
+### 10. `solicitudes_inscripcion` — entrada del embudo (pre-pago)
+
+Capta a quien llena el form público de `/inscripcion` (o el form web simplificado con otra intención). Es la tabla del embudo: vive **antes** del pago. Cuando una solicitud se concreta como pago, el admin crea la `transferencia` correspondiente.
+
+| Campo                  | Tipo         | Descripción                                                                  |
+| ---------------------- | ------------ | ---------------------------------------------------------------------------- |
+| `id`                   | uuid (PK)    | Identificador único.                                                         |
+| `creado_en`            | timestamptz  | Cuándo se envió la solicitud.                                                |
+| `canal`                | text         | `web`, `whatsapp`, `instagram` u `otro`. Se setea por query param.           |
+| `intencion`            | text         | `info` / `inscripcion`. (`charla` está permitido en la DB pero el form ya no lo emite — deprecado 2026-06-03.) |
+| `nombre`               | text         | Nombre de quien completa el form.                                            |
+| `email`                | text         | Mail de contacto.                                                            |
+| `telefono`             | text         | Opcional.                                                                    |
+| `pais`                 | text         | Opcional.                                                                    |
+| `como_nos_encontraste` | text         | Opcional.                                                                    |
+| `rol_solicitante`      | text         | `mayor` o `responsable_menor`. Obligatorio si `intencion = 'inscripcion'`.   |
+| `nombre_menor`         | text         | Obligatorio si `rol_solicitante = 'responsable_menor'`.                      |
+| `edad_menor`           | int          | Opcional.                                                                    |
+| `protocolo_aceptado`   | boolean      | Tiene que ser `true` si `intencion = 'inscripcion'`.                         |
+| `protocolo_version`    | text         | Versión del PDF aceptado (ej `protocolo-v1.pdf`).                            |
+| `protocolo_aceptado_en`| timestamptz  | Momento exacto de la aceptación.                                             |
+| `user_agent`           | text         | Browser/dispositivo desde el que se firmó (para evidencia probatoria).       |
+| `estado`               | text         | `nueva` / `contactada` / `convertida` / `descartada`. Default `nueva`.       |
+| `curso_id`             | uuid (FK)    | A qué curso quiere anotarse (opcional).                                      |
+| `notas_admin`          | text         | Notas internas del admin (opcional).                                         |
+
+**Reglas RLS:**
+- **INSERT abierto** — anónimos y logueados pueden crear solicitudes. Esto es lo que permite que el form público funcione sin login.
+- **SELECT / UPDATE / DELETE solo admin.**
+
+**Constraint de coherencia:** si `intencion = 'inscripcion'`, los campos de protocolo y `rol_solicitante` son obligatorios. Si `rol_solicitante = 'responsable_menor'`, además `nombre_menor` es obligatorio. La base rechaza inserts incoherentes.
+
+**Flujo:**
+1. Alguien entra a `/inscripcion` (o al form web), elige intención, completa datos.
+2. Si la intención es `inscripcion`, marca el checkbox del protocolo. Se guarda `protocolo_version`, `protocolo_aceptado_en` y `user_agent`.
+3. INSERT en esta tabla → estado queda `nueva`.
+4. Admin la ve en su panel, contacta, marca como `contactada`.
+5. Si paga, el admin pasa los datos a `transferencias` y marca esta solicitud como `convertida`.
+
+---
+
 ## Storage (archivos)
 
-Supabase tiene un sistema de "buckets" (carpetas) para guardar archivos. Vamos a crear dos:
+Supabase tiene un sistema de "buckets" (carpetas) para guardar archivos. Vamos a crear tres:
 
 - **`material-cursos`** — privado. Acá viven los PDFs, videos y audios que sube el profe (los `archivos_modulo`).
 - **`entregas-alumnos`** — privado. Acá viven los archivos que suben los alumnos al entregar tareas.
+- **`protocolos`** — **público para lectura**. Acá viven las versiones del PDF del protocolo de consentimiento informado (`protocolo-v1.pdf`, `protocolo-v2.pdf`, etc.). Lectura pública porque el link tiene que ser abrible desde el form sin login. Subir y borrar sigue siendo solo admin.
 
 Las reglas de quién puede subir / descargar de cada bucket replican las reglas de las tablas.
 

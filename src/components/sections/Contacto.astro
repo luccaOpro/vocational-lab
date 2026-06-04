@@ -2,10 +2,13 @@
 /*
   SECCIÓN 8 · INSCRIPCIÓN Y CONTACTO
   Dos columnas:
-   · Izquierda: formulario de reserva (5 campos según el Word)
-   · Derecha: alternativa por WhatsApp/email para los que prefieren hablar
-  El form todavía NO está conectado a ningún backend: cuando definamos
-  herramienta (Netlify Forms / Formspree / Zapier) lo enchufamos.
+   · Izquierda: CTA grande que lleva a /inscripcion (form completo
+     con las 3 intenciones del flow + firma del protocolo).
+   · Derecha: alternativa por mail/Instagram para quien prefiere
+     escribir directo.
+
+  El form de inscripción vive en /inscripcion como página única
+  para los 3 canales (web, WhatsApp, Instagram).
 */
 ---
 
@@ -13,59 +16,37 @@
   <div class="container">
     <header class="contacto__head" data-animate>
       <p class="eyebrow">Inscripción y contacto</p>
-      <h2>¿Querés empezar el viaje?</h2>
+      <h2>¿Quieres empezar el viaje?</h2>
       <p class="contacto__sub">
         Próxima edición — Agosto 2026 · Grupos reducidos
       </p>
     </header>
 
     <div class="contacto__grid" data-animate data-delay="200">
-      <!-- Columna 1 · Formulario de reserva -->
+      <!-- Columna 1 · CTA a la página de inscripción -->
       <div class="contacto__card contacto__card--principal">
         <h3>Quiero mi lugar</h3>
         <p class="contacto__intro">
-          Completá el formulario y te enviamos toda la información del
-          programa — incluyendo precio, fechas y formato.
+          Reserva tu lugar en el formulario de inscripción. Te pedimos
+          tus datos, leés el protocolo del programa y te contactamos
+          para coordinar el pago.
         </p>
-
-        <form class="form" action="#" method="post" name="reserva" novalidate>
-          <label class="form__field">
-            <span class="form__label">Nombre</span>
-            <input type="text" name="nombre" required autocomplete="name" />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Email</span>
-            <input type="email" name="email" required autocomplete="email" />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Teléfono</span>
-            <input type="tel" name="telefono" required autocomplete="tel" />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">País</span>
-            <input type="text" name="pais" required autocomplete="country-name" />
-          </label>
-
-          <label class="form__field form__field--full">
-            <span class="form__label">¿Cómo nos encontraste?</span>
-            <input type="text" name="origen" />
-          </label>
-
-          <button type="submit" class="btn btn-primary form__submit">
-            Reservá tu lugar →
-          </button>
-        </form>
+        <a href="/inscripcion" class="btn btn-primary contacto__cta">
+          Ir al formulario de inscripción →
+        </a>
+        <p class="contacto__hint">
+          ¿No estás seguro/a todavía? Desde el mismo formulario puedes
+          elegir "Quiero más información" y te enviamos toda la info
+          por mail sin compromiso.
+        </p>
       </div>
 
       <!-- Columna 2 · Alternativa de contacto directo -->
       <div class="contacto__card contacto__card--alt">
         <h3>Prefiero hablar primero</h3>
         <p>
-          Si tenés dudas o querés entender si el programa es para vos
-          antes de decidir, escribinos directo.
+          Si tienes dudas o quieres entender si el programa es para ti
+          antes de decidir, escríbenos directo.
         </p>
         <p class="contacto__inversion">
           Inversión a consultar — trabajamos con becas y planes de pago.
@@ -73,7 +54,7 @@
 
         <ul class="contacto__links">
           <li>
-            <a href="mailto:hola@vocationallab.com">hola@vocationallab.com</a>
+            <a href="mailto:hola@vlab.com.ar">hola@vlab.com.ar</a>
           </li>
           <li>
             <a href="https://instagram.com/vocationallab" target="_blank" rel="noopener">
@@ -125,44 +106,15 @@
     color: var(--color-ink-soft);
   }
 
-  /* Formulario */
-  .form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem 1.1rem;
+  /* CTA principal (link grande hacia /inscripcion) */
+  .contacto__cta {
+    align-self: flex-start;
   }
-  @media (max-width: 560px) {
-    .form { grid-template-columns: 1fr; }
-  }
-  .form__field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-  }
-  .form__field--full { grid-column: 1 / -1; }
-  .form__label {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--color-ink-soft);
-  }
-  .form input {
-    font: inherit;
-    color: var(--color-ink);
-    background: var(--color-bg);
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-sm);
-    padding: 0.75rem 0.9rem;
-    transition: border-color 0.15s ease, background 0.15s ease;
-  }
-  .form input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-    background: #fff;
-  }
-  .form__submit {
-    grid-column: 1 / -1;
-    justify-self: flex-start;
-    margin-top: 0.5rem;
+  .contacto__hint {
+    margin: 1.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--color-ink-muted);
+    line-height: 1.5;
   }
 
   /* Card alternativa */

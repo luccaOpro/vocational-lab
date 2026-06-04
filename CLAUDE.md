@@ -7,7 +7,8 @@ Sitio web profesional para una empresa que vende servicios de **orientación voc
 ## Sobre el usuario con quien estás trabajando
 
 - **Cero experiencia técnica**: no sabe programación web, nunca trabajó con archivos de código antes.
-- **Idioma**: español argentino, voseo (`vos`, `tenés`, `querés`). Respondé siempre en este registro.
+- **Idioma para hablar con el usuario**: español argentino, voseo (`vos`, `tenés`, `querés`). Respondé siempre en este registro cuando hables CON él.
+- **Idioma del contenido del sitio (textos visibles al usuario final)**: **tuteo neutro** (`tú`, `tienes`, `quieres`). Decisión 2026-06-03: el sitio apunta a LATAM, por eso pasamos todo el contenido público a tuteo. Los comentarios del código siguen en español argentino (son comunicación con devs).
 - **Estilo de trabajo preferido**: paso a paso, explicaciones claras, sin abrumar. Indicar concretamente qué hacer y por qué, sin clases largas. Claude escribe el código, el usuario decide el contenido y el diseño.
 
 ## Objetivos del proyecto

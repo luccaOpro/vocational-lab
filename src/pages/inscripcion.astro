@@ -1,0 +1,651 @@
+---
+/*
+  /inscripcion — formulario único de embudo para los 3 canales.
+  ---
+  Esta es la URL a la que apuntan TODOS los caminos de "Quiero
+  más info / Quiero anotarme / Prefiero hablar primero",
+  vengan desde el sitio web, desde WhatsApp o desde Instagram.
+
+  El form arranca con un selector de intención. Si el usuario
+  elige "Quiero anotarme", aparece el bloque de firma del
+  protocolo (checkbox obligatorio + link al PDF).
+
+  Para menores: el form pregunta primero "Soy mayor de 18 / Soy
+  responsable de un menor". Si es responsable, pide datos del
+  menor también. El adulto es quien firma.
+
+  Al enviar, INSERT en public.solicitudes_inscripcion con todos
+  los datos + la versión del protocolo aceptado + user-agent.
+
+  Query param soportado: ?canal=whatsapp|instagram|web|otro
+  (default = web). Lo usamos para trackear de dónde vienen.
+
+  Constante a editar cuando suban una nueva versión del PDF:
+  PROTOCOLO_VERSION_ACTUAL en el <script> de abajo.
+*/
+
+import Layout from "../layouts/Layout.astro";
+import Nav from "../components/sections/Nav.astro";
+import Footer from "../components/sections/Footer.astro";
+import ProtocoloContenido from "../components/ProtocoloContenido.astro";
+---
+
+<Layout title="Inscripción · Vocational Lab" description="Reserva tu lugar en Vocational Lab. Programa de orientación vocacional para jóvenes.">
+  <Nav />
+
+  <main class="inscripcion section">
+    <div class="container inscripcion__inner">
+
+      {/* ============ HEADER ============ */}
+      <header class="inscripcion__head" data-animate>
+        <p class="eyebrow">Inscripción y contacto</p>
+        <h1>Reserva tu lugar.</h1>
+        <p class="inscripcion__sub">
+          Próxima edición — Agosto 2026 · Grupos reducidos · 100% online
+        </p>
+      </header>
+
+      {/* ============ FORM ============ */}
+      <form id="inscripcion-form" class="ins-form" novalidate>
+
+        {/* ─── PASO 1 · Intención ─── */}
+        <fieldset class="ins-form__fieldset">
+          <legend class="ins-form__legend">¿Qué te trae por acá?</legend>
+
+          <div class="ins-form__radios" role="radiogroup">
+            <label class="ins-form__radio">
+              <input type="radio" name="intencion" value="info" required />
+              <span class="ins-form__radio-label">
+                <strong>Quiero más información</strong>
+                <small>Te enviamos toda la info del programa por mail.</small>
+              </span>
+            </label>
+
+            <label class="ins-form__radio">
+              <input type="radio" name="intencion" value="inscripcion" required />
+              <span class="ins-form__radio-label">
+                <strong>Quiero anotarme</strong>
+                <small>Reservas tu lugar y coordinamos el pago.</small>
+              </span>
+            </label>
+          </div>
+        </fieldset>
+
+        {/* ─── PASO 2 · Datos de contacto (siempre visibles) ─── */}
+        <fieldset class="ins-form__fieldset">
+          <legend class="ins-form__legend">Tus datos</legend>
+
+          <div class="ins-form__grid">
+            <label class="ins-form__field">
+              <span class="ins-form__label">Nombre y apellido</span>
+              <input type="text" name="nombre" required autocomplete="name" minlength="2" />
+            </label>
+
+            <label class="ins-form__field">
+              <span class="ins-form__label">Email</span>
+              <input type="email" name="email" required autocomplete="email" />
+            </label>
+
+            <label class="ins-form__field">
+              <span class="ins-form__label">Teléfono</span>
+              <input type="tel" name="telefono" autocomplete="tel" />
+            </label>
+
+            <label class="ins-form__field">
+              <span class="ins-form__label">País</span>
+              <input type="text" name="pais" autocomplete="country-name" />
+            </label>
+
+            <label class="ins-form__field ins-form__field--full">
+              <span class="ins-form__label">¿Cómo nos encontraste?</span>
+              <input type="text" name="origen" placeholder="Instagram, una amiga, búsqueda en Google…" />
+            </label>
+          </div>
+        </fieldset>
+
+        {/* ─── PASO 3 · Bloque condicional (solo cuando intencion = inscripcion) ─── */}
+        <div id="bloque-inscripcion" hidden>
+          <fieldset class="ins-form__fieldset">
+            <legend class="ins-form__legend">¿Quién se inscribe?</legend>
+
+            <div class="ins-form__radios" role="radiogroup">
+              <label class="ins-form__radio">
+                <input type="radio" name="rol_solicitante" value="mayor" />
+                <span class="ins-form__radio-label">
+                  <strong>Soy mayor de 18</strong>
+                  <small>Me inscribo a mí mismo/a.</small>
+                </span>
+              </label>
+
+              <label class="ins-form__radio">
+                <input type="radio" name="rol_solicitante" value="responsable_menor" />
+                <span class="ins-form__radio-label">
+                  <strong>Soy responsable de un menor de 18</strong>
+                  <small>Inscribo a mi hijo/a o a un menor a mi cargo.</small>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          {/* Sub-bloque para datos del menor */}
+          <fieldset id="bloque-menor" class="ins-form__fieldset" hidden>
+            <legend class="ins-form__legend">Datos del menor</legend>
+
+            <div class="ins-form__grid">
+              <label class="ins-form__field">
+                <span class="ins-form__label">Nombre del menor</span>
+                <input type="text" name="nombre_menor" autocomplete="off" />
+              </label>
+
+              <label class="ins-form__field">
+                <span class="ins-form__label">Edad</span>
+                <input type="number" name="edad_menor" min="1" max="17" />
+              </label>
+            </div>
+          </fieldset>
+
+          {/* Protocolo + checkbox */}
+          <fieldset class="ins-form__fieldset ins-form__fieldset--protocolo">
+            <legend class="ins-form__legend">Protocolo</legend>
+
+            <p class="ins-form__nota">
+              Lee el protocolo del programa. Cubre la modalidad, cómo
+              cuidamos tus datos, la confidencialidad y los compromisos
+              mutuos. El checkbox se habilita cuando termines de leerlo.
+            </p>
+
+            {/* Panel scrolleable con el contenido del protocolo.
+                JS detecta cuando llegás al final y recién ahí habilita
+                el checkbox de abajo. */}
+            <div id="protocolo-panel" class="ins-form__protocolo-panel">
+              <div id="protocolo-scroll" class="ins-form__protocolo-scroll">
+                <ProtocoloContenido />
+              </div>
+              <div class="ins-form__protocolo-fade" aria-hidden="true"></div>
+            </div>
+
+            <p id="protocolo-hint" class="ins-form__protocolo-hint">
+              ↓ Haz scroll hasta el final para habilitar el checkbox.
+              <a href="/protocolo" target="_blank" rel="noopener">Abrir en otra pestaña</a>
+            </p>
+
+            <label class="ins-form__checkbox" id="protocolo-checkbox-label">
+              <input type="checkbox" name="protocolo_aceptado" disabled />
+              <span>He leído y acepto el Protocolo del programa.</span>
+            </label>
+          </fieldset>
+        </div>
+
+        {/* ─── Mensajes y submit ─── */}
+        <p id="ins-error" class="ins-form__msg ins-form__msg--error" hidden></p>
+
+        <button type="submit" id="ins-submit" class="btn btn-primary ins-form__submit">
+          Enviar →
+        </button>
+      </form>
+
+      {/* ============ CONFIRMACIÓN (oculta al inicio) ============ */}
+      <div id="ins-confirmacion" class="ins-confirm" hidden>
+        <h2>¡Listo!</h2>
+        <p id="ins-confirm-texto"></p>
+        <a href="/" class="ins-confirm__back">← Volver al inicio</a>
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+
+<script>
+  import { supabase } from "../lib/supabase";
+
+  /*
+    Versión del protocolo que se guarda en la base junto con
+    la aceptación. Cambiar cuando se edite el texto del protocolo
+    en src/components/ProtocoloContenido.astro (ej: "v1" → "v2").
+    El contenido histórico de cada versión queda en git log.
+  */
+  const PROTOCOLO_VERSION_ACTUAL = "v1";
+
+  // ============ Referencias DOM ============
+  const $form = document.getElementById("inscripcion-form") as HTMLFormElement;
+  const $submit = document.getElementById("ins-submit") as HTMLButtonElement;
+  const $error = document.getElementById("ins-error") as HTMLElement;
+  const $confirm = document.getElementById("ins-confirmacion") as HTMLElement;
+  const $confirmTexto = document.getElementById("ins-confirm-texto") as HTMLElement;
+  const $bloqueInscripcion = document.getElementById("bloque-inscripcion") as HTMLElement;
+  const $bloqueMenor = document.getElementById("bloque-menor") as HTMLElement;
+
+  // Protocolo: panel scrolleable + checkbox que arranca disabled
+  const $protocoloScroll = document.getElementById("protocolo-scroll") as HTMLElement;
+  const $protocoloPanel = document.getElementById("protocolo-panel") as HTMLElement;
+  const $protocoloHint = document.getElementById("protocolo-hint") as HTMLElement;
+  const $protocoloCheckboxLabel = document.getElementById("protocolo-checkbox-label") as HTMLElement;
+  const $protocoloCheckbox = $protocoloCheckboxLabel.querySelector(
+    'input[name="protocolo_aceptado"]'
+  ) as HTMLInputElement;
+
+  /*
+    Cuando el usuario hace scroll dentro del panel del protocolo
+    y llega al final (o se acerca lo suficiente), habilitamos el
+    checkbox. Una vez habilitado, queda habilitado para siempre
+    en esa sesión.
+  */
+  let protocoloLeido = false;
+  function chequearProtocoloLeido() {
+    if (protocoloLeido) return;
+    const dist = $protocoloScroll.scrollHeight - $protocoloScroll.scrollTop - $protocoloScroll.clientHeight;
+    if (dist <= 10) {
+      protocoloLeido = true;
+      $protocoloCheckbox.disabled = false;
+      $protocoloPanel.classList.add("ins-form__protocolo-panel--leido");
+      $protocoloHint.textContent = "✓ Listo. Ya puedes marcar el checkbox.";
+      $protocoloHint.classList.add("ins-form__protocolo-hint--leido");
+    }
+  }
+  $protocoloScroll.addEventListener("scroll", chequearProtocoloLeido);
+
+  /*
+    Edge case: si el panel del protocolo arranca con su contenido
+    completamente visible (sin scroll necesario), igual habilitamos
+    el checkbox al momento de mostrarlo por primera vez.
+  */
+  function chequearProtocoloSinScroll() {
+    if (protocoloLeido) return;
+    if ($protocoloScroll.scrollHeight <= $protocoloScroll.clientHeight + 10) {
+      chequearProtocoloLeido();
+    }
+  }
+
+  // ============ Canal (query param) ============
+  function detectarCanal(): "web" | "whatsapp" | "instagram" | "otro" {
+    const param = new URLSearchParams(window.location.search).get("canal");
+    if (param === "whatsapp" || param === "instagram" || param === "otro") return param;
+    return "web";
+  }
+
+  // ============ Mostrar/ocultar bloques según selección ============
+  function actualizarVisibilidad() {
+    const intencion = ($form.elements.namedItem("intencion") as RadioNodeList)?.value;
+    const rol = ($form.elements.namedItem("rol_solicitante") as RadioNodeList)?.value;
+
+    // Bloque grande de inscripción solo si la intención es "inscripcion"
+    const inscripcionVisible = intencion === "inscripcion";
+    $bloqueInscripcion.hidden = !inscripcionVisible;
+
+    // Bloque "datos del menor" solo si el rol es "responsable_menor"
+    $bloqueMenor.hidden = !(inscripcionVisible && rol === "responsable_menor");
+
+    // Si recién se hizo visible el bloque, chequeamos si el panel
+    // del protocolo entra entero en pantalla sin necesidad de scroll.
+    if (inscripcionVisible) {
+      requestAnimationFrame(chequearProtocoloSinScroll);
+    }
+  }
+
+  $form.addEventListener("change", actualizarVisibilidad);
+
+  // ============ Helpers de mensaje ============
+  function mostrarError(msg: string) {
+    $error.textContent = msg;
+    $error.hidden = false;
+    $error.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  function ocultarError() {
+    $error.hidden = true;
+    $error.textContent = "";
+  }
+
+  // ============ Submit ============
+  $form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    ocultarError();
+
+    const fd = new FormData($form);
+    const intencion = String(fd.get("intencion") ?? "");
+    const nombre = String(fd.get("nombre") ?? "").trim();
+    const email = String(fd.get("email") ?? "").trim().toLowerCase();
+    const telefono = String(fd.get("telefono") ?? "").trim() || null;
+    const pais = String(fd.get("pais") ?? "").trim() || null;
+    const origen = String(fd.get("origen") ?? "").trim() || null;
+
+    // Validaciones básicas
+    if (!intencion) return mostrarError("Elige qué te trae por aquí.");
+    if (!nombre) return mostrarError("Necesitamos tu nombre.");
+    if (!email) return mostrarError("Necesitamos tu mail para contactarte.");
+
+    // Si es inscripción: validar los campos extra
+    let rolSolicitante: string | null = null;
+    let nombreMenor: string | null = null;
+    let edadMenor: number | null = null;
+    let protocoloAceptado: boolean | null = null;
+    let protocoloVersion: string | null = null;
+    let protocoloAceptadoEn: string | null = null;
+
+    if (intencion === "inscripcion") {
+      rolSolicitante = String(fd.get("rol_solicitante") ?? "");
+      if (rolSolicitante !== "mayor" && rolSolicitante !== "responsable_menor") {
+        return mostrarError("Dinos si te inscribes tú o si eres responsable de un menor.");
+      }
+
+      if (rolSolicitante === "responsable_menor") {
+        nombreMenor = String(fd.get("nombre_menor") ?? "").trim();
+        const edadStr = String(fd.get("edad_menor") ?? "").trim();
+        edadMenor = edadStr ? parseInt(edadStr, 10) : null;
+        if (!nombreMenor) {
+          return mostrarError("Necesitamos el nombre del menor que se inscribe.");
+        }
+      }
+
+      const checkbox = $form.elements.namedItem("protocolo_aceptado") as HTMLInputElement;
+      if (!checkbox.checked) {
+        return mostrarError("Tienes que leer y aceptar el Protocolo para anotarte.");
+      }
+      protocoloAceptado = true;
+      protocoloVersion = PROTOCOLO_VERSION_ACTUAL;
+      protocoloAceptadoEn = new Date().toISOString();
+    }
+
+    // INSERT
+    $submit.disabled = true;
+    $submit.textContent = "Enviando…";
+
+    const { error: dbError } = await supabase
+      .from("solicitudes_inscripcion")
+      .insert({
+        canal: detectarCanal(),
+        intencion,
+        nombre,
+        email,
+        telefono,
+        pais,
+        como_nos_encontraste: origen,
+        rol_solicitante: rolSolicitante,
+        nombre_menor: nombreMenor,
+        edad_menor: edadMenor,
+        protocolo_aceptado: protocoloAceptado,
+        protocolo_version: protocoloVersion,
+        protocolo_aceptado_en: protocoloAceptadoEn,
+        user_agent: navigator.userAgent,
+      });
+
+    if (dbError) {
+      console.error("[inscripcion]", dbError);
+      mostrarError("Hubo un problema al guardar tu solicitud. Probá de nuevo en un momento.");
+      $submit.disabled = false;
+      $submit.textContent = "Enviar →";
+      return;
+    }
+
+    // Confirmación según la intención
+    const textosConfirmacion: Record<string, string> = {
+      info: "Recibimos tu pedido. En las próximas 48hs te enviamos toda la información del programa por mail.",
+      inscripcion: "Recibimos tu solicitud de inscripción. Te contactamos por mail o WhatsApp para coordinar el pago y confirmar tu lugar.",
+    };
+    $confirmTexto.textContent = textosConfirmacion[intencion] ?? "Recibimos tu mensaje. Te contactamos pronto.";
+
+    $form.hidden = true;
+    $confirm.hidden = false;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+</script>
+
+
+<style>
+  .inscripcion {
+    background: var(--color-bg);
+  }
+
+  .inscripcion__inner {
+    max-width: 760px;
+  }
+
+  .inscripcion__head {
+    margin-bottom: 3rem;
+  }
+  .inscripcion__sub {
+    margin: 1rem 0 0;
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+  }
+
+  /* ============ Form ============ */
+  .ins-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .ins-form__fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .ins-form__legend {
+    font-family: var(--font-serif);
+    font-size: 1.35rem;
+    color: var(--color-ink);
+    margin: 0 0 0.5rem;
+    padding: 0;
+  }
+
+  /* Radios — usados en intención y rol_solicitante */
+  .ins-form__radios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .ins-form__radio {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 1rem 1.2rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .ins-form__radio:hover {
+    border-color: var(--color-accent);
+  }
+  .ins-form__radio input[type="radio"] {
+    margin-top: 0.25rem;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+  }
+  .ins-form__radio:has(input:checked) {
+    border-color: var(--color-accent);
+    background: rgba(216, 85, 42, 0.05);
+  }
+  .ins-form__radio-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .ins-form__radio-label strong {
+    font-weight: 500;
+    color: var(--color-ink);
+  }
+  .ins-form__radio-label small {
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+  }
+
+  /* Campos de texto */
+  .ins-form__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem 1.1rem;
+  }
+  @media (max-width: 560px) {
+    .ins-form__grid { grid-template-columns: 1fr; }
+  }
+  .ins-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .ins-form__field--full { grid-column: 1 / -1; }
+  .ins-form__label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+  }
+  .ins-form input[type="text"],
+  .ins-form input[type="email"],
+  .ins-form input[type="tel"],
+  .ins-form input[type="number"] {
+    font: inherit;
+    color: var(--color-ink);
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 0.9rem;
+    transition: border-color 0.15s ease;
+  }
+  .ins-form input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+
+  /* Bloque protocolo destacado */
+  .ins-form__fieldset--protocolo {
+    background: var(--color-surface);
+    padding: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-line);
+  }
+  .ins-form__nota {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  /* Panel scrolleable con el contenido del protocolo */
+  .ins-form__protocolo-panel {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.2s ease;
+  }
+  .ins-form__protocolo-panel--leido {
+    border-color: var(--color-accent);
+  }
+  .ins-form__protocolo-scroll {
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 1.25rem 1.5rem;
+  }
+  /* Fade visual abajo del panel para insinuar que hay más contenido */
+  .ins-form__protocolo-fade {
+    position: absolute;
+    inset: auto 1px 1px 1px;
+    height: 40px;
+    pointer-events: none;
+    background: linear-gradient(to bottom, transparent, #fff 85%);
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    transition: opacity 0.2s ease;
+  }
+  .ins-form__protocolo-panel--leido .ins-form__protocolo-fade {
+    opacity: 0;
+  }
+
+  .ins-form__protocolo-hint {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+  }
+  .ins-form__protocolo-hint a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .ins-form__protocolo-hint--leido {
+    color: var(--color-deep);
+    font-weight: 500;
+  }
+
+  .ins-form__checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    transition: opacity 0.2s ease;
+  }
+  /* Checkbox deshabilitado: visualmente "apagado" hasta que se lea el protocolo */
+  .ins-form__checkbox:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ins-form__checkbox input[type="checkbox"] {
+    margin-top: 0.2rem;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+  .ins-form__checkbox input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Mensaje de error */
+  .ins-form__msg {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  .ins-form__msg--error {
+    background: rgba(216, 85, 42, 0.1);
+    border-left: 3px solid var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .ins-form__submit {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+  }
+  .ins-form__submit:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+
+  /* ============ Confirmación ============ */
+  .ins-confirm {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+  }
+  .ins-confirm h2 {
+    margin: 0 0 1rem;
+  }
+  .ins-confirm p {
+    color: var(--color-ink-soft);
+    font-size: 1.1rem;
+    line-height: 1.55;
+    max-width: 50ch;
+    margin: 0 auto 2rem;
+  }
+  .ins-confirm__back {
+    color: var(--color-accent);
+    font-weight: 500;
+  }
+</style>

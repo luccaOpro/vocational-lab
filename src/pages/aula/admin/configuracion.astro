@@ -61,11 +61,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
             <label class="config-form__label">
               <span>Texto del botón</span>
-              <input type="text" name="popup_cta_texto" id="popup_cta_texto" placeholder="Reservá tu lugar →" />
+              <input type="text" name="popup_cta_texto" id="popup_cta_texto" placeholder="Reserva tu lugar →" />
             </label>
 
             <label class="config-form__label">
-              <span>URL del botón <small class="config-form__hint">— usá #contacto para ir a la sección de la home</small></span>
+              <span>URL del botón <small class="config-form__hint">— usa #contacto para ir a la sección de la home</small></span>
               <input type="text" name="popup_cta_url" id="popup_cta_url" placeholder="#contacto" />
             </label>
 
@@ -120,7 +120,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     campo("popup_activo").checked = config.popup_activo !== "false";
     campo("popup_titulo").value  = config.popup_titulo  ?? "Próxima edición";
     campo("popup_fecha").value   = config.popup_fecha   ?? "Agosto 2026";
-    campo("popup_cta_texto").value = config.popup_cta_texto ?? "Reservá tu lugar →";
+    campo("popup_cta_texto").value = config.popup_cta_texto ?? "Reserva tu lugar →";
     campo("popup_cta_url").value   = config.popup_cta_url   ?? "#contacto";
 
     $loader.hidden = true;
@@ -137,7 +137,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       { clave: "popup_activo",    valor: fd.get("popup_activo") ? "true" : "false" },
       { clave: "popup_titulo",    valor: String(fd.get("popup_titulo")).trim()   || "Próxima edición" },
       { clave: "popup_fecha",     valor: String(fd.get("popup_fecha")).trim()    || "Agosto 2026" },
-      { clave: "popup_cta_texto", valor: String(fd.get("popup_cta_texto")).trim() || "Reservá tu lugar →" },
+      { clave: "popup_cta_texto", valor: String(fd.get("popup_cta_texto")).trim() || "Reserva tu lugar →" },
       { clave: "popup_cta_url",   valor: String(fd.get("popup_cta_url")).trim()   || "#contacto" },
     ];
 
