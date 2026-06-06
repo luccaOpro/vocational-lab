@@ -298,9 +298,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             <span>Estado</span>
             <select data-estado="${esc(s.id)}">${opcionesEstado}</select>
           </label>
-          <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">
-            ${s.notas_admin ? "Editar nota" : "Agregar nota"}
-          </button>
+          <div class="sol-card__botones">
+            <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">
+              ${s.notas_admin ? "Editar nota" : "Agregar nota"}
+            </button>
+            <button type="button" class="sol-eliminar" data-eliminar="${esc(s.id)}">Eliminar</button>
+          </div>
         </div>
       </li>`;
   }
@@ -317,6 +320,36 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     document.querySelectorAll<HTMLButtonElement>("[data-nota]").forEach((btn) => {
       btn.addEventListener("click", () => editarNota(btn.dataset.nota!));
     });
+    document.querySelectorAll<HTMLButtonElement>("[data-eliminar]").forEach((btn) => {
+      btn.addEventListener("click", () => eliminarSolicitud(btn.dataset.eliminar!, btn));
+    });
+  }
+
+  async function eliminarSolicitud(id: string, btn: HTMLButtonElement) {
+    const sol = solicitudes.find((s) => s.id === id);
+    const ok = await confirmModal({
+      titulo: "Eliminar solicitud",
+      mensaje: `¿Eliminar la solicitud de ${sol?.nombre ?? "esta persona"} de forma permanente? Sirve para sacar pruebas o spam. No se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      danger: true,
+    });
+    if (!ok) return;
+
+    btn.disabled = true;
+    const { error } = await supabase
+      .from("solicitudes_inscripcion")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      btn.disabled = false;
+      return;
+    }
+
+    solicitudes = solicitudes.filter((s) => s.id !== id);
+    showToast("Solicitud eliminada.");
+    render();
   }
 
   async function cambiarEstado(id: string, nuevo: Estado, sel: HTMLSelectElement) {
@@ -581,6 +614,29 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     color: var(--color-ink);
     cursor: pointer;
   }
+  :global(.sol-card__botones) {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  :global(.sol-eliminar) {
+    padding: 0.5rem 0.95rem;
+    background: transparent;
+    color: var(--color-ink-soft);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  :global(.sol-eliminar:hover:not(:disabled)) {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: rgba(216, 85, 42, 0.06);
+  }
+  :global(.sol-eliminar:disabled) { opacity: 0.6; cursor: wait; }
 
   @media (max-width: 540px) {
     :global(.sol-fila) { grid-template-columns: 1fr; gap: 0.1rem; }
