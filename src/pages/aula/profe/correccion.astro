@@ -56,7 +56,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../../lib/supabase";
-  import { requireSession } from "../../../lib/auth-guard";
+  import { requireRol, requireSession } from "../../../lib/auth-guard";
 
   const $loader = document.getElementById("correc-loader") as HTMLElement;
   const $contenido = document.getElementById("correc-contenido") as HTMLElement;
@@ -117,7 +117,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   };
 
   async function cargar() {
-    const auth = await requireSession();
+    const auth = await requireRol(["profe", "admin"]);
     if (!auth) return;
 
     const id = new URLSearchParams(window.location.search).get("id");

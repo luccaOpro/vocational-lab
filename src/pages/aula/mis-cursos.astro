@@ -53,7 +53,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../lib/supabase";
-  import { requireSession, mostrarBannerSiPreview } from "../../lib/auth-guard";
+  import { requireSession } from "../../lib/auth-guard";
   import { traducirError } from "../../lib/ui";
 
   const $loader = document.getElementById("cursos-loader")!;
@@ -73,7 +73,6 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     if (!auth) return;
 
     const { profile } = auth;
-    mostrarBannerSiPreview(profile);
 
     // Cursos visibles (RLS filtra por inscripción).
     const { data: cursos, error: errCursos } = await supabase

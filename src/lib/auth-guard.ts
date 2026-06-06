@@ -74,31 +74,3 @@ export async function requireRol(roles: Rol[]): Promise<AuthInfo | null> {
   }
   return auth;
 }
-
-/**
- * Muestra el banner "vista de alumno" cuando un admin/profe está
- * navegando una página de alumno. Si el user es alumno, no hace nada.
- *
- * Llamar desde páginas de alumno (mis-cursos, curso) después de
- * requireSession().
- */
-export function mostrarBannerSiPreview(profile: AuthInfo["profile"]) {
-  if (profile.rol === "alumno") return;
-
-  const banner = document.createElement("div");
-  banner.className = "preview-banner";
-
-  const etiqueta = profile.rol === "admin" ? "Administrador" : "Profesor";
-  const destino = homePorRol[profile.rol];
-
-  banner.innerHTML = `
-    <span class="preview-banner__icono" aria-hidden="true">👁</span>
-    <span class="preview-banner__texto">
-      Estás viendo el aula como alumno · eres <strong>${etiqueta}</strong>.
-    </span>
-    <a href="${destino}" class="preview-banner__link">Volver a tu panel →</a>
-  `;
-
-  // Lo metemos arriba de todo, dentro del body.
-  document.body.insertBefore(banner, document.body.firstChild);
-}

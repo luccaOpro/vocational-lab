@@ -53,7 +53,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../../lib/supabase";
-  import { requireSession } from "../../../lib/auth-guard";
+  import { requireRol } from "../../../lib/auth-guard";
   import { traducirError } from "../../../lib/ui";
 
   const $loader = document.getElementById("profe-loader") as HTMLElement;
@@ -85,7 +85,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   };
 
   async function cargar() {
-    const auth = await requireSession();
+    const auth = await requireRol(["profe", "admin"]);
     if (!auth) return;
     const { profile } = auth;
 

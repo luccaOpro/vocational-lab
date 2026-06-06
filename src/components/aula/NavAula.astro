@@ -62,7 +62,7 @@ const home = homePorRol[rol];
 const etiqueta = etiquetaPorRol[rol];
 ---
 
-<header class={`navaula navaula--${rol}`}>
+<header class={`navaula navaula--${rol}`} data-rol={rol}>
   <div class="navaula__inner container">
     <a href={home} class="navaula__brand" aria-label={etiqueta}>
       {/* Logo completo (ícono + texto), versión clara para nav del aula.
@@ -334,6 +334,63 @@ const etiqueta = etiquetaPorRol[rol];
 </style>
 
 <script>
+  /*
+    Ajuste del logo + banner según el usuario REAL (no el rol que declara
+    la página, que es estático de build-time). Quién está logueado se sabe
+    recién en el cliente, así que:
+      · El logo siempre lleva al panel del usuario real. Un admin que entra a
+        una página de profe vuelve a /aula/admin, no a /aula/profe.
+      · Si el usuario tiene más permisos que el área que está viendo (ej: un
+        admin en páginas de profe), mostramos un banner con "Volver a tu panel"
+        para que sepa que está actuando en otro panel y cómo volver.
+  */
+  (async () => {
+    const { supabase } = await import("../../lib/supabase");
+    const { data: sesion } = await supabase.auth.getSession();
+    const uid = sesion.session?.user?.id;
+    if (!uid) return;
+
+    const { data: perfil } = await supabase
+      .from("profiles").select("rol").eq("id", uid).single();
+    const rolReal = perfil?.rol as "alumno" | "profe" | "admin" | undefined;
+    if (!rolReal) return;
+
+    const homePorRol = {
+      alumno: "/aula/mis-cursos",
+      profe: "/aula/profe",
+      admin: "/aula/admin",
+    } as const;
+
+    // 1) El logo siempre lleva al panel del usuario real.
+    const brand = document.querySelector<HTMLAnchorElement>(".navaula__brand");
+    if (brand) brand.href = homePorRol[rolReal];
+
+    // 2) Banner de "vista previa" cuando el usuario baja a un área de menor
+    //    permiso (admin viendo profe/alumno, o profe viendo alumno).
+    const orden = { alumno: 0, profe: 1, admin: 2 };
+    const areaPagina = (document.querySelector(".navaula")?.getAttribute("data-rol")
+      ?? "alumno") as "alumno" | "profe" | "admin";
+
+    // "Mi perfil" es una página compartida por todos los roles (declara
+    // alumno solo para mostrar un nav), no es una vista previa de otro panel:
+    // ahí no mostramos el banner.
+    const esPaginaCompartida = location.pathname.startsWith("/aula/perfil");
+
+    if (orden[rolReal] > orden[areaPagina] && !esPaginaCompartida && !document.querySelector(".preview-banner")) {
+      const labelRol = rolReal === "admin" ? "Administrador" : "Profesor";
+      const texto = areaPagina === "alumno"
+        ? `Estás viendo el aula como alumno · sos <strong>${labelRol}</strong>.`
+        : `Estás viendo el panel de profe · sos <strong>${labelRol}</strong>.`;
+      const banner = document.createElement("div");
+      banner.className = "preview-banner";
+      banner.innerHTML = `
+        <span class="preview-banner__icono" aria-hidden="true">&#128065;</span>
+        <span class="preview-banner__texto">${texto}</span>
+        <a href="${homePorRol[rolReal]}" class="preview-banner__link">Volver a tu panel &rarr;</a>`;
+      document.body.insertBefore(banner, document.body.firstChild);
+    }
+  })();
+
   // Lógica del menú mobile del aula (mismo patrón que el nav público).
   const toggles = document.querySelectorAll<HTMLElement>('[data-aula-toggle]');
   const panel = document.getElementById('aula-menu');

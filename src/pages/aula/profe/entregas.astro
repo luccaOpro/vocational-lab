@@ -34,7 +34,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
 <script>
   import { supabase } from "../../../lib/supabase";
-  import { requireSession } from "../../../lib/auth-guard";
+  import { requireRol } from "../../../lib/auth-guard";
 
   const $loader = document.getElementById("entregas-loader") as HTMLElement;
   const $contenido = document.getElementById("entregas-contenido") as HTMLElement;
@@ -70,7 +70,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   async function cargar() {
-    const auth = await requireSession();
+    const auth = await requireRol(["profe", "admin"]);
     if (!auth) return;
 
     const { data: entregas, error } = await supabase

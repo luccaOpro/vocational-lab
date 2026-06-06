@@ -51,6 +51,7 @@ Cuando alguien se loguea, Supabase nos da su `auth.users.id`; con ese id vamos a
 **Reglas de acceso (RLS):**
 - Cualquier usuario logueado puede ver su propio perfil.
 - Solo el `admin` puede ver y modificar el perfil de otros.
+- **El campo `rol` solo lo puede cambiar un `admin`** (trigger `trg_profiles_guard_rol`, migración 07). Sin esto, un usuario podía actualizar su propia fila y auto-ascenderse a admin. Un no-admin puede editar su `nombre`/`avatar_url`, nunca su `rol`.
 
 ---
 
@@ -248,7 +249,7 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 
 Supabase tiene un sistema de "buckets" (carpetas) para guardar archivos. Vamos a crear tres:
 
-- **`material-cursos`** — privado. Acá viven los PDFs, videos y audios que sube el profe (los `archivos_modulo`).
+- **`material-cursos`** — privado. Acá viven los PDFs, videos y audios que sube el profe (los `archivos_modulo`). Lectura **gateada por curso** (migración 07): solo admin, el profe del curso o un alumno inscripto pueden descargar; el path es `cursoId/moduloId/archivo`.
 - **`entregas-alumnos`** — privado. Acá viven los archivos que suben los alumnos al entregar tareas.
 - **`protocolos`** — **público para lectura**. Acá viven las versiones del PDF del protocolo de consentimiento informado (`protocolo-v1.pdf`, `protocolo-v2.pdf`, etc.). Lectura pública porque el link tiene que ser abrible desde el form sin login. Subir y borrar sigue siendo solo admin.
 
