@@ -7,6 +7,16 @@
     1. /protocolo (página standalone, linkeable y para SEO)
     2. /inscripcion (dentro del panel scrolleable del form)
 
+  El texto es la transcripción fiel del documento legal aprobado
+  "Protocolo de Confidencialidad y Consentimiento Informado"
+  (v1.0 — Junio 2026, aprobado por Julia Vargas y Laura Pires).
+
+  Las SECCIONES 11 y 12 del documento original (los formularios de
+  consentimiento con los datos a completar) NO van acá: esos datos
+  se cargan en los casilleros del form de /inscripcion. Lo que sí
+  queda acá es la declaración que la persona acepta (sección
+  "Aceptación y consentimiento" al final).
+
   Cuando se actualice el contenido:
     1. Editar este archivo.
     2. Subir la constante PROTOCOLO_VERSION_ACTUAL en
@@ -17,114 +27,645 @@
   Estilos: usa las clases .prot__* definidas en el mismo archivo
   para que el contenedor padre (panel scrolleable o página) solo
   defina el layout exterior.
-
-  ⚠️ BORRADOR — Julia y Laura tienen que revisar y aprobar.
 */
 ---
 
 <div class="prot">
-  <p class="prot__borrador">
-    <strong>BORRADOR</strong> — Este texto es una base de trabajo.
-    Julia y Laura tienen que revisarlo y aprobarlo antes de salir
-    al aire.
+  <header class="prot__meta">
+    <p class="prot__titulo">Protocolo de Confidencialidad y Consentimiento Informado</p>
+    <p class="prot__subtitulo">Programa de Orientación Vocacional Online</p>
+    <dl class="prot__ficha">
+      <div><dt>Versión</dt><dd>1.0 — Junio 2026</dd></div>
+      <div><dt>Revisión</dt><dd>Julia Vargas — Co-directora, Vocational Lab</dd></div>
+      <div><dt>Aprobación</dt><dd>Laura Pires — Co-directora / Dirección Clínica, Vocational Lab</dd></div>
+    </dl>
+  </header>
+
+  {/* ───────────────────────── 1 ───────────────────────── */}
+  <h2 class="prot__h2">1. Presentación del programa</h2>
+  <p>
+    El presente documento tiene como finalidad establecer pautas de
+    participación, confidencialidad, cuidado y consentimiento para
+    quienes participen en el Programa de Orientación Vocacional Online
+    brindado por Vocational Lab.
+  </p>
+  <p>
+    El programa tiene fines educativos, orientativos y de desarrollo
+    personal/vocacional. No constituye tratamiento médico, psiquiátrico
+    ni psicoterapéutico.
+  </p>
+  <p>
+    La aceptación de este protocolo es condición necesaria para
+    participar. En caso de participantes menores de 18 años, la
+    aceptación debe ser otorgada por su madre, padre o representante
+    legal.
+  </p>
+  <p>
+    <strong>Identificación legal del responsable:</strong> Vocational Lab
+    es operado por Julia Vargas (CUIL 27-30654273-2) y Laura Inés Pires
+    (CUIL 27-23905956-8), con domicilio de contacto en Mendoza 3342, CABA
+    (Julia Vargas) y Blanco Encalada 1721 20 E, CABA (Laura Inés Pires).
+    A los efectos de la Ley 25.326, ambas actúan como responsables
+    conjuntas del tratamiento de datos personales.
   </p>
 
-  <h2 class="prot__h2">1. Objeto del programa</h2>
+  {/* ───────────────────────── 2 ───────────────────────── */}
+  <h2 class="prot__h2">2. Confidencialidad y cuidado del espacio grupal</h2>
   <p>
-    Vocational Lab es un programa de orientación vocacional para
-    jóvenes y sus familias, conformado por encuentros grupales e
-    individuales online, materiales de trabajo y acompañamiento
-    profesional durante el proceso.
+    Vocational Lab promueve un espacio de intercambio respetuoso, seguro
+    y confidencial. La naturaleza del programa implica que los
+    participantes puedan compartir experiencias e inquietudes de carácter
+    personal, lo que genera una responsabilidad colectiva sobre la
+    privacidad del espacio.
   </p>
-  <p>
-    El programa no constituye tratamiento clínico ni psicológico
-    profesional individual. Es un proceso pedagógico de
-    autoconocimiento y exploración vocacional.
-  </p>
-
-  <h2 class="prot__h2">2. Modalidad y duración</h2>
+  <p>Todas las personas participantes se comprometen a:</p>
   <ul>
-    <li>8 encuentros: 6 grupales + 2 individuales.</li>
-    <li>100% online a través de plataforma de videollamada.</li>
-    <li>Grupos reducidos para asegurar participación.</li>
-    <li>Materiales complementarios disponibles en el aula virtual durante todo el proceso.</li>
+    <li>
+      Respetar la privacidad de las experiencias, opiniones y vivencias
+      compartidas por otras personas dentro del programa.
+    </li>
+    <li>
+      No divulgar, reenviar, publicar ni compartir fuera del espacio
+      grupal información personal, relatos, imágenes, videos, capturas de
+      pantalla o producciones realizadas por otros participantes.
+    </li>
+    <li>
+      Mantener una actitud de respeto, escucha y buen trato hacia el
+      grupo y coordinadores/as.
+    </li>
+    <li>
+      No grabar las sesiones, total o parcialmente, salvo autorización
+      expresa y previa de Vocational Lab.
+    </li>
+  </ul>
+  <p>
+    Si bien el equipo coordinador promoverá y resguardará la
+    confidencialidad del espacio, no puede garantizar de manera absoluta
+    la conducta individual de cada participante en entornos virtuales. El
+    incumplimiento de estas pautas por parte de un participante puede
+    generar responsabilidades a su cargo.
+  </p>
+
+  {/* ───────────────────────── 3 ───────────────────────── */}
+  <h2 class="prot__h2">3. Protección y uso de información</h2>
+  <p>
+    <strong>Política de Privacidad y Protección de Datos Personales.</strong>
+    El tratamiento de datos personales realizado por Vocational Lab se
+    rige por la Ley N.° 25.326 de Protección de Datos Personales
+    (Argentina) y su Decreto Reglamentario 1558/2001, sin perjuicio de
+    las normativas concurrentes aplicables según el país de residencia
+    del participante.
+  </p>
+
+  <h3 class="prot__h3">3.1. Responsable del tratamiento</h3>
+  <p>
+    Vocational Lab es el responsable del archivo, registro y base de
+    datos de datos personales generada en el marco del programa, así como
+    del tratamiento de datos.
+  </p>
+
+  <h3 class="prot__h3">3.2. Categorías de datos recopilados</h3>
+  <p>En el marco del programa se recopilan y tratan las siguientes categorías de datos:</p>
+  <ul>
+    <li>
+      <strong>Datos identificatorios:</strong> nombre y apellido, edad,
+      país de residencia, correo electrónico y, en caso de menores, datos
+      del representante legal.
+    </li>
+    <li>
+      <strong>Datos vinculados al proceso de orientación:</strong>
+      intereses, valores, expectativas, experiencias educativas y
+      laborales, preferencias vocacionales.
+    </li>
+    <li>
+      <strong>Datos generados durante la participación:</strong>
+      producciones escritas, materiales gráficos, grabaciones y capturas
+      realizadas con autorización expresa.
+    </li>
+    <li>
+      <strong>Datos de imagen y voz:</strong> imagen personal y voz a
+      través de videollamada o grabación, sujeto a las autorizaciones
+      previstas en este documento.
+    </li>
+    <li>
+      <strong>Datos técnicos:</strong> dirección IP, tipo de dispositivo,
+      plataforma utilizada, registros de acceso.
+    </li>
   </ul>
 
-  <h2 class="prot__h2">3. Datos personales (Ley 25.326)</h2>
+  <h3 class="prot__h3">3.3. Datos sensibles</h3>
   <p>
-    Los datos que se completan en este formulario son recolectados
-    por Vocational Lab con el fin de gestionar la inscripción y el
-    contacto durante el programa. Los datos se conservan en bases
-    de Vocational Lab y no se ceden a terceros sin consentimiento
-    expreso del titular.
+    En el marco de la orientación vocacional, los participantes podrán
+    compartir voluntariamente información que el Art. 2 de la Ley 25.326
+    clasifica como datos sensibles: situaciones de salud, vida familiar,
+    creencias, origen étnico, u otras allí enumeradas.
   </p>
-  <p>
-    El titular puede en cualquier momento solicitar acceso,
-    rectificación o supresión de sus datos escribiendo a
-    <a href="mailto:hola@vlab.com.ar">hola@vlab.com.ar</a>.
-  </p>
-
-  <h2 class="prot__h2">4. Confidencialidad</h2>
-  <p>
-    Lo que cada participante comparte durante los encuentros
-    queda en el espacio del grupo y del proceso individual. El
-    equipo de Vocational Lab se compromete a no divulgar
-    información personal de los participantes fuera del marco
-    del programa, salvo obligación legal.
-  </p>
-  <p>
-    Pedimos a cada participante el mismo compromiso respecto a
-    lo que escucha de sus compañeros y compañeras.
-  </p>
-
-  <h2 class="prot__h2">5. Compromisos del participante</h2>
+  <p>Vocational Lab informa que:</p>
   <ul>
-    <li>Asistir a los encuentros pactados, llegando con tiempo y desde un lugar tranquilo.</li>
-    <li>Participar activamente y completar los trabajos entre encuentros.</li>
-    <li>Cuidar el espacio del grupo: respeto, escucha, confidencialidad.</li>
-    <li>Avisar con antelación si por motivos justificados no puede asistir a algún encuentro.</li>
+    <li>
+      El suministro de datos sensibles es siempre VOLUNTARIO y nunca
+      condición obligatoria para participar.
+    </li>
+    <li>
+      Dichos datos reciben tratamiento diferenciado con mayor protección
+      y restricción de acceso.
+    </li>
+    <li>
+      No serán objeto de cesión, comunicación ni difusión sin
+      consentimiento expreso adicional.
+    </li>
+    <li>
+      Serán suprimidos cuando el participante lo solicite, en la medida
+      en que no exista obligación legal de conservación.
+    </li>
+  </ul>
+  <p>
+    <strong>Tests psicométricos:</strong> En el marco del programa podrán
+    administrarse instrumentos de evaluación psicológica y/o vocacional
+    (tests psicométricos) por profesionales habilitados a tal efecto. Los
+    resultados de dichos instrumentos constituyen datos sensibles en los
+    términos del Art. 2 de la Ley 25.326 y serán tratados con las mismas
+    garantías establecidas en esta sección: estricta confidencialidad,
+    acceso restringido al equipo profesional habilitado, sin cesión a
+    terceros bajo ninguna circunstancia, y con posibilidad de supresión a
+    solicitud del titular.
+  </p>
+
+  <h3 class="prot__h3">3.4. Base de legitimación del tratamiento</h3>
+  <p>
+    El tratamiento de datos personales se realiza sobre la base de las
+    siguientes causas de legitimación previstas en el Art. 5 de la Ley
+    25.326:
+  </p>
+  <dl class="prot__deflist">
+    <div>
+      <dt>Consentimiento del titular (Art. 5 inc. a)</dt>
+      <dd>
+        Tratamiento de datos personales generales y de imagen. Datos
+        necesarios para la prestación del servicio de orientación
+        (inscripción, comunicaciones, seguimiento). Base principal para
+        datos sensibles.
+      </dd>
+    </div>
+    <div>
+      <dt>Obligación legal (Art. 5 inc. e)</dt>
+      <dd>Situaciones donde la ley exige la comunicación a autoridades competentes.</dd>
+    </div>
+  </dl>
+
+  <h3 class="prot__h3">3.5. Finalidades del tratamiento</h3>
+  <p>Los datos personales se recopilan y tratan exclusivamente para las siguientes finalidades:</p>
+  <ul>
+    <li>Gestión administrativa de la inscripción y comunicaciones del programa.</li>
+    <li>Desarrollo de las actividades de orientación vocacional (individuales y grupales).</li>
+    <li>Seguimiento pedagógico y mejora de la experiencia educativa.</li>
+    <li>Emisión de certificados o constancias de participación, si correspondiera.</li>
+    <li>Cumplimiento de obligaciones legales o requerimientos de autoridades competentes.</li>
+    <li>Uso estadístico y de mejora interna, únicamente de forma anonimizada o disociada.</li>
+  </ul>
+  <p>
+    Los datos no serán tratados para finalidades incompatibles con las
+    aquí enunciadas sin otorgamiento de un nuevo consentimiento.
+  </p>
+
+  <h3 class="prot__h3">3.6. Destinatarios y cesión de datos</h3>
+  <p>
+    Vocational Lab no venderá, cederá, comunicará ni difundirá datos
+    personales a terceros, salvo:
+  </p>
+  <ul>
+    <li>
+      Proveedores de servicios tecnológicos necesarios para el
+      funcionamiento del programa (plataformas de videoconferencia,
+      almacenamiento en nube, herramientas de gestión), quienes actuarán
+      como encargados del tratamiento bajo instrucciones de Vocational Lab
+      y con obligaciones de confidencialidad y de seguridad apropiadas.
+    </li>
+    <li>Cuando exista consentimiento expreso del titular para una cesión específica.</li>
+    <li>
+      Cuando la cesión sea exigida por ley o dispuesta por autoridad
+      judicial o administrativa competente.
+    </li>
+  </ul>
+  <p>
+    Las plataformas de videoconferencia (Zoom, Google Meet u otras)
+    procesan datos conforme a sus propias políticas de privacidad. Se
+    recomienda al participante revisarlas.
+  </p>
+
+  <h3 class="prot__h3">3.7. Encargados de tratamiento</h3>
+  <p>
+    Vocational Lab se compromete a elegir encargados de tratamiento con
+    estándares de seguridad adecuados, los cuales realizarán el
+    tratamiento conforme las instrucciones de Vocational Lab.
+  </p>
+  <p>
+    Entre las categorías de encargados de tratamiento actualmente
+    utilizados se incluyen: plataformas de videoconferencia (Zoom, Google
+    Meet u otras), servicios de almacenamiento en la nube, herramientas
+    de gestión de inscripciones y comunicaciones, y sistemas de gestión
+    de aula virtual. Vocational Lab garantizará que cada proveedor cuente
+    con políticas de privacidad y seguridad compatibles con los
+    estándares exigidos por la Ley 25.326.
+  </p>
+
+  <h3 class="prot__h3">3.8. Plazos de conservación</h3>
+  <p>
+    Los datos personales serán conservados durante el tiempo necesario
+    para cumplir las finalidades para las que fueron recopilados y, en
+    cualquier caso, durante los plazos exigidos por la normativa vigente.
+    Transcurridos dichos plazos, serán suprimidos o anonimizados de forma
+    segura.
+  </p>
+
+  <h3 class="prot__h3">3.9. Medidas de seguridad en el tratamiento de datos</h3>
+  <p>
+    Vocational Lab adopta medidas técnicas y organizativas orientadas a
+    garantizar la seguridad, integridad y confidencialidad de los datos
+    personales, en cumplimiento del Art. 9 de la Ley 25.326 y las
+    disposiciones reglamentarias de la DNPDP.
+  </p>
+  <p>Entre las medidas implementadas se incluyen:</p>
+  <ul>
+    <li>
+      Acceso restringido a los datos: solo accede el personal autorizado
+      estrictamente necesario para la prestación del servicio.
+    </li>
+    <li>
+      Cifrado de comunicaciones y datos almacenados en la nube mediante
+      protocolos estándar de la industria.
+    </li>
+    <li>Uso de plataformas con políticas de privacidad y seguridad auditables.</li>
+    <li>
+      Acuerdos de confidencialidad y seguridad con proveedores de
+      servicios que accedan a datos personales.
+    </li>
+    <li>
+      Capacitación del equipo coordinador en protección de datos y manejo
+      de información confidencial.
+    </li>
+  </ul>
+  <p>
+    Sin perjuicio de lo expuesto, el participante comprende que el uso de
+    plataformas digitales e internet implica riesgos tecnológicos
+    inherentes que exceden el control absoluto de cualquier organización.
+  </p>
+  <p>
+    En caso de detectarse una brecha de seguridad que afecte datos
+    personales, Vocational Lab notificará a los titulares afectados y a la
+    autoridad de aplicación en los plazos y formas que establezca la
+    normativa vigente.
+  </p>
+
+  <h3 class="prot__h3">3.10. Derechos del titular de los datos</h3>
+  <p>En virtud de la Ley 25.326, el titular de los datos personales tiene los siguientes derechos:</p>
+  <dl class="prot__deflist">
+    <div>
+      <dt>Acceso (Art. 14)</dt>
+      <dd>
+        Conocer qué datos propios son tratados, de qué fuente provienen,
+        la finalidad y los destinatarios.
+      </dd>
+    </div>
+    <div>
+      <dt>Rectificación (Art. 16)</dt>
+      <dd>
+        Solicitar la corrección de datos inexactos, incompletos,
+        desactualizados o que induzcan a error.
+      </dd>
+    </div>
+    <div>
+      <dt>Actualización (Art. 16)</dt>
+      <dd>Requerir la puesta al día de información que haya variado desde su suministro.</dd>
+    </div>
+    <div>
+      <dt>Supresión (Art. 16)</dt>
+      <dd>
+        Pedir la eliminación de datos cuando su tratamiento no se ajuste
+        a la ley o hayan cumplido su finalidad, salvo obligación legal de
+        conservación.
+      </dd>
+    </div>
+  </dl>
+  <p>
+    <strong>Derechos adicionales para participantes residentes en España
+    (RGPD — UE 2016/679):</strong> Los participantes con residencia en la
+    Unión Europea cuentan con derechos adicionales bajo el RGPD,
+    incluyendo el derecho a la portabilidad de datos (recibir sus datos
+    en formato estructurado y de uso común), el derecho a la limitación
+    del tratamiento, y el derecho al olvido (supresión reforzada). Estos
+    derechos pueden ejercerse por los mismos canales indicados en la
+    sección 3.10.1.
+  </p>
+
+  <h3 class="prot__h3">3.10.1. Cómo ejercer los derechos</h3>
+  <p>Para ejercer cualquiera de los derechos mencionados, el titular deberá:</p>
+  <ul>
+    <li>
+      Enviar solicitud escrita al correo electrónico institucional de
+      Vocational Lab: <a href="mailto:hola@vlab.com.ar">hola@vlab.com.ar</a>,
+      con asunto “Ejercicio de Derechos - Ley 25.326”.
+    </li>
+    <li>Identificarse adjuntando copia de DNI, pasaporte u otro documento válido.</li>
+    <li>
+      Indicar claramente el derecho que desea ejercer y los datos
+      específicos sobre los que versa la solicitud.
+    </li>
+  </ul>
+  <p>
+    Vocational Lab responderá dentro del plazo de 5 (cinco) días hábiles
+    conforme al Art. 14 y Art. 16 de la Ley 25.326.
+  </p>
+
+  {/* ───────────────────────── 4 ───────────────────────── */}
+  <h2 class="prot__h2">4. Materiales, producciones e imágenes</h2>
+  <p>
+    Durante el programa podrán generarse actividades, ejercicios,
+    producciones creativas, documentos, imágenes, collages, líneas de
+    tiempo u otros materiales individuales o grupales.
+  </p>
+  <p>Dichos materiales:</p>
+  <ul>
+    <li>Permanecerán bajo resguardo confidencial dentro del marco del programa.</li>
+    <li>
+      No serán difundidos públicamente sin autorización expresa del/la
+      participante y, en caso de menores de edad, de sus representantes
+      legales.
+    </li>
+    <li>
+      Podrán utilizarse de forma anonimizada para fines estadísticos y de
+      mejora interna del programa, sin requerir consentimiento adicional.
+    </li>
+    <li>
+      Podrán utilizarse de forma no anonimizada o identificable para
+      fines pedagógicos o de difusión interna únicamente con
+      consentimiento previo y específico.
+    </li>
+  </ul>
+  <p>
+    La participación en sesiones online implica la captura de imagen y voz
+    a través de la plataforma digital utilizada para el desarrollo
+    ordinario del programa.
+  </p>
+  <p>
+    Cualquier otro uso de imagen y/o voz (institucional, difusión, redes
+    sociales, publicaciones académicas) requiere autorización expresa y
+    diferenciada, que se otorgará de forma PREVIA al tratamiento Y
+    OPCIONAL, sin que implique supeditar dicho consentimiento a la
+    aceptación de las presentes cláusulas ni viceversa. Dicha autorización
+    será revocable en cualquier momento.
+  </p>
+  <p>
+    <strong>Propiedad intelectual de los materiales del programa:</strong>
+    Las guías, ejercicios, recursos, metodología y contenidos de cualquier
+    tipo provistos por Vocational Lab son de su exclusiva propiedad
+    intelectual. Los participantes no podrán reproducirlos, distribuirlos,
+    publicarlos ni comercializarlos sin autorización expresa y por escrito
+    de Vocational Lab.
+  </p>
+
+  {/* ───────────────────────── 5 ───────────────────────── */}
+  <h2 class="prot__h2">5. Participación de menores de edad</h2>
+  <p>
+    En el caso de participantes menores de 18 años, el presente
+    consentimiento deberá ser aceptado por su madre, padre o representante
+    legal, quienes asumen las obligaciones y responsabilidades que se
+    detallan a continuación.
+  </p>
+
+  <h3 class="prot__h3">5.1. Obligaciones del representante legal</h3>
+  <p>La persona adulta responsable declara:</p>
+  <ul>
+    <li>Haber leído y comprendido el presente documento en su totalidad.</li>
+    <li>
+      Haber sido informada sobre las características, objetivos, modalidad
+      y límites del programa.
+    </li>
+    <li>Autorizar la participación del/la menor en actividades online, individuales y/o grupales.</li>
+    <li>
+      Comprender que el espacio promueve reflexión vocacional,
+      autoconocimiento y orientación educativa/laboral, sin constituir
+      atención psicológica ni médica.
+    </li>
+    <li>
+      Comprometerse a acompañar y colaborar en el cumplimiento de las
+      pautas de convivencia y confidencialidad.
+    </li>
   </ul>
 
-  <h2 class="prot__h2">6. Compromisos de Vocational Lab</h2>
+  <h3 class="prot__h3">5.2. Interacción del menor con adultos en el espacio grupal</h3>
+  <p>
+    Las sesiones grupales pueden incluir la interacción de participantes
+    menores con adultos bajo la supervisión permanente del equipo
+    coordinador de Vocational Lab. El representante legal, al aceptar este
+    protocolo, reconoce y acepta esta modalidad de trabajo grupal,
+    confiando en los estándares de cuidado y encuadre profesional de la
+    organización.
+  </p>
+  <p>
+    En caso de cualquier situación que genere malestar al/la menor, el
+    representante legal puede comunicarse de forma inmediata con el equipo
+    coordinador.
+  </p>
+
+  {/* ───────────────────────── 6 ───────────────────────── */}
+  <h2 class="prot__h2">6. Participación de jóvenes adultos y personas mayores de edad</h2>
+  <p>Las personas mayores de 18 años que participen en el programa declaran:</p>
   <ul>
-    <li>Sostener los encuentros pactados con profesionales formados y supervisados.</li>
-    <li>Entregar los materiales prometidos y el informe final personalizado.</li>
-    <li>Mantener confidencialidad sobre los datos e información compartida.</li>
-    <li>Estar disponibles para consultas durante todo el proceso.</li>
+    <li>Actuar de forma libre, voluntaria y sin ninguna presión o condicionamiento.</li>
+    <li>
+      Haber leído y comprendido la totalidad del presente documento,
+      incluyendo las cláusulas de protección de datos, confidencialidad,
+      derechos y límites del programa.
+    </li>
+    <li>
+      Comprender el carácter educativo y orientativo del programa,
+      diferenciándolo de cualquier forma de atención psicológica o
+      terapéutica.
+    </li>
+    <li>
+      Asumir personalmente la responsabilidad por el cumplimiento de las
+      pautas de confidencialidad y convivencia digital.
+    </li>
+    <li>
+      Conocer los derechos que la Ley 25.326 les reconoce sobre sus datos
+      personales y los canales para ejercerlos.
+    </li>
+  </ul>
+  <p>La participación puede interrumpirse en cualquier momento sin necesidad de expresar causa.</p>
+
+  {/* ───────────────────────── 7 ───────────────────────── */}
+  <h2 class="prot__h2">7. Límites de confidencialidad</h2>
+  <p>
+    La confidencialidad podrá verse limitada en situaciones excepcionales
+    donde exista riesgo cierto para la integridad física o psicológica
+    del/la participante o de terceros, o cuando la legislación aplicable
+    así lo requiera.
+  </p>
+  <p>
+    En dichos casos, Vocational Lab podrá contactar a familiares,
+    responsables legales o servicios pertinentes de cuidado y protección.
+  </p>
+
+  {/* ───────────────────────── 8 ───────────────────────── */}
+  <h2 class="prot__h2">8. Normas de convivencia digital</h2>
+  <p>Las personas participantes se comprometen a:</p>
+  <ul>
+    <li>Mantener un trato respetuoso.</li>
+    <li>Evitar conductas discriminatorias, agresivas o invasivas.</li>
+    <li>No interrumpir deliberadamente el desarrollo de las actividades.</li>
+    <li>Utilizar adecuadamente chats, micrófonos y cámaras durante las sesiones.</li>
+    <li>Comunicar a los/as coordinadores/as cualquier situación de incomodidad, conflicto o malestar.</li>
+    <li>No compartir el enlace de acceso a las sesiones con personas ajenas al programa.</li>
+  </ul>
+  <p>
+    Vocational Lab podrá suspender o limitar la participación ante
+    conductas que afecten el bienestar del grupo o incumplan estas normas.
+  </p>
+
+  {/* ───────────────────────── 9 ───────────────────────── */}
+  <h2 class="prot__h2">9. Alcance internacional</h2>
+
+  <h3 class="prot__h3">9.1. Ley aplicable</h3>
+  <p>
+    Vocational Lab es una organización con domicilio en la República
+    Argentina. En consecuencia, el tratamiento de datos personales que
+    realiza se rige por la Ley N.° 25.326 de Protección de Datos
+    Personales y su Decreto Reglamentario 1558/2001. La circunstancia de
+    que participen personas residentes en otros países no altera, por sí
+    sola, la aplicación de la normativa argentina al tratamiento efectuado
+    por dicha organización, sin perjuicio de la eventual aplicación
+    concurrente de normas extranjeras cuando ello corresponda.
+  </p>
+
+  <h3 class="prot__h3">9.2. Transferencias internacionales</h3>
+  <p>
+    Al utilizar encargados de tratamiento para la plataforma tecnológica
+    de videoconferencia (Zoom, Google Meet u otras) o servicios de
+    almacenamiento en la nube establecidos en otros países, se configura
+    una transferencia internacional de datos en los términos del Art. 12
+    de la Ley 25.326.
+  </p>
+  <p>
+    En estos casos, los datos de todos los participantes —con
+    independencia de su nacionalidad— son procesados por dichos
+    proveedores en el exterior bajo las instrucciones de Vocational Lab en
+    tanto responsable de tratamiento. En este sentido se informa que:
+  </p>
+  <ul>
+    <li>
+      Solo utiliza proveedores (encargados de tratamiento) que ofrecen
+      estándares adecuados de seguridad y privacidad, y que cuentan con
+      políticas de protección de datos compatibles con la normativa
+      aplicable.
+    </li>
+    <li>
+      Dichos proveedores actúan como encargados del tratamiento, bajo
+      instrucciones de Vocational Lab y con obligaciones de
+      confidencialidad.
+    </li>
+    <li>
+      El participante puede consultar las políticas de privacidad de cada
+      plataforma para conocer cómo procesan sus datos.
+    </li>
   </ul>
 
-  <h2 class="prot__h2">7. Política de cancelación y reembolso</h2>
+  {/* ───────────────────────── 10 ───────────────────────── */}
+  <h2 class="prot__h2">10. Derecho de arrepentimiento (Art. 34, Ley 24.240 de Defensa del Consumidor)</h2>
   <p>
-    En caso de cancelación antes del inicio del programa, se
-    reintegra el monto total menos un cargo administrativo a
-    definir. Una vez iniciado el programa no se realizan
-    reembolsos parciales.
+    En virtud del artículo 34 de la Ley 24.240 de Defensa del Consumidor,
+    y por tratarse de un servicio contratado a distancia (online), el/la
+    participante o su representante legal tiene el derecho de revocar la
+    aceptación dentro de los 10 (diez) días hábiles contados desde la
+    fecha de aceptación, sin necesidad de expresar causa alguna y sin
+    penalidad de ningún tipo.
   </p>
+  <p>En caso de ejercer este derecho:</p>
+  <ul>
+    <li>
+      Vocational Lab procederá a la devolución íntegra de los importes
+      abonados dentro de los 10 (diez) días hábiles de recibida la
+      notificación.
+    </li>
+    <li>
+      Para ejercer este derecho, el/la participante o su representante
+      legal deberá comunicarlo por escrito a
+      <a href="mailto:hola@vlab.com.ar">hola@vlab.com.ar</a> con el asunto
+      “Arrepentimiento - [Nombre completo]”.
+    </li>
+    <li>
+      El derecho de arrepentimiento no aplica una vez que el servicio
+      haya comenzado a prestarse efectivamente con el consentimiento
+      expreso del/la consumidor/a.
+    </li>
+  </ul>
+
+  {/* ──────────────────── Aceptación ──────────────────── */}
+  <h2 class="prot__h2">11. Aceptación y consentimiento</h2>
   <p>
-    Vocational Lab se reserva el derecho de reprogramar encuentros
-    por causas de fuerza mayor avisando con antelación razonable.
+    Al marcar la casilla de aceptación en el formulario de inscripción y
+    completar los datos solicitados, la persona participante mayor de edad
+    —o el representante legal, en caso de menores— presta su firma digital
+    y declara lo siguiente.
   </p>
 
-  <h2 class="prot__h2">8. Participantes menores de edad</h2>
-  <p>
-    Para participantes menores de 18 años, la inscripción y la
-    aceptación de este protocolo deben ser realizadas por su
-    representante legal (padre, madre o tutor/a). El adulto
-    responsable acompaña el proceso y se mantiene disponible
-    para coordinar con el equipo del programa cuando sea
-    necesario.
-  </p>
+  <h3 class="prot__h3">Si sos mayor de edad y te inscribís a vos mismo/a</h3>
+  <p>Declarás, en pleno uso de tus facultades, que:</p>
+  <ul>
+    <li>Has leído y comprendido la totalidad del presente Protocolo.</li>
+    <li>
+      Aceptás voluntariamente participar en el Programa de Orientación
+      Vocacional Online bajo las condiciones descritas.
+    </li>
+    <li>
+      Prestás consentimiento libre, expreso e informado para el
+      tratamiento de tus datos personales con las finalidades indicadas en
+      este documento.
+    </li>
+    <li>
+      Has sido informado/a sobre tus derechos como titular de datos
+      personales y los canales para ejercerlos.
+    </li>
+    <li>
+      Entendés que este consentimiento es revocable en cualquier momento,
+      sin que ello afecte la legalidad del tratamiento realizado hasta la
+      fecha de revocación.
+    </li>
+  </ul>
 
-  <h2 class="prot__h2">9. Aceptación</h2>
-  <p>
-    Al marcar el checkbox de aceptación en el formulario de
-    inscripción, el participante (o su representante legal, si
-    es menor) declara haber leído y comprendido los puntos de
-    este protocolo y los acepta como parte de su inscripción en
-    el programa.
-  </p>
-  <p class="prot__cierre">
-    <em>Fin del protocolo. Gracias por llegar hasta acá — esto nos importa.</em>
+  <h3 class="prot__h3">Si sos representante legal de un/a menor de edad</h3>
+  <p>En carácter de representante legal del/la menor identificado/a, declarás que:</p>
+  <ul>
+    <li>Has leído y comprendido en su totalidad el presente Protocolo de Vocational Lab.</li>
+    <li>
+      Autorizás la participación del/la menor en el Programa de
+      Orientación Vocacional Online bajo las condiciones aquí descritas.
+    </li>
+    <li>
+      Prestás consentimiento libre, expreso e informado para el
+      tratamiento de los datos personales del/la menor con las finalidades
+      indicadas.
+    </li>
+    <li>
+      Has sido informado/a sobre los derechos que la Ley 25.326 otorga al
+      titular de los datos personales y cómo ejercerlos.
+    </li>
+    <li>
+      Asumís la responsabilidad de acompañar al/la menor en el
+      cumplimiento de las pautas de convivencia y confidencialidad, y
+      respondés solidariamente por su incumplimiento.
+    </li>
+    <li>
+      Entendés que podés revocar este consentimiento en cualquier momento,
+      sin perjuicio de la legalidad del tratamiento realizado hasta ese
+      momento.
+    </li>
+  </ul>
+
+  <p class="prot__nota-final">
+    Se recomienda complementar este protocolo con un documento separado de
+    Términos y Condiciones que incluya las condiciones de precio,
+    modalidades de pago y política de cancelación.
   </p>
 </div>
 
@@ -135,24 +676,62 @@
     color: var(--color-ink);
   }
 
-  .prot__borrador {
-    margin: 0 0 1.5rem;
-    padding: 0.9rem 1.1rem;
-    background: rgba(216, 85, 42, 0.08);
-    border-left: 3px solid var(--color-accent);
-    border-radius: var(--radius-sm);
-    color: var(--color-accent);
-    font-size: 0.92rem;
+  /* Encabezado del documento (título + ficha de versión) */
+  .prot__meta {
+    margin: 0 0 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .prot__titulo {
+    font-family: var(--font-serif);
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+    color: var(--color-ink);
+    line-height: 1.25;
+  }
+  .prot__subtitulo {
+    margin: 0 0 1.2rem;
+    color: var(--color-ink-soft);
+    font-size: 1.05rem;
+  }
+  .prot__ficha {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+  }
+  .prot__ficha div {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .prot__ficha dt {
+    flex-shrink: 0;
+    min-width: 5.5rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .prot__ficha dd {
+    margin: 0;
+    color: var(--color-ink);
   }
 
   .prot__h2 {
     font-family: var(--font-serif);
     font-size: 1.2rem;
-    margin: 1.8rem 0 0.5rem;
+    margin: 2rem 0 0.6rem;
     color: var(--color-ink);
+    line-height: 1.3;
   }
   .prot__h2:first-of-type {
     margin-top: 0.5rem;
+  }
+
+  .prot__h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.4rem 0 0.4rem;
+    color: var(--color-ink);
   }
 
   .prot p {
@@ -164,7 +743,28 @@
     padding-left: 1.4rem;
   }
   .prot li {
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.4rem;
+  }
+
+  /* Listas de definición — usadas para las dos "tablas" del documento
+     legal (base de legitimación, derechos del titular). Se ven mejor
+     que una tabla en el panel angosto del form y en mobile. */
+  .prot__deflist {
+    margin: 0 0 0.9rem;
+    display: grid;
+    gap: 0.85rem;
+  }
+  .prot__deflist > div {
+    border-left: 2px solid var(--color-line);
+    padding-left: 0.9rem;
+  }
+  .prot__deflist dt {
+    font-weight: 600;
+    margin-bottom: 0.15rem;
+  }
+  .prot__deflist dd {
+    margin: 0;
+    color: var(--color-ink-soft);
   }
 
   .prot a {
@@ -176,9 +776,12 @@
     color: var(--color-accent-dark);
   }
 
-  .prot__cierre {
-    margin-top: 2rem;
+  .prot__nota-final {
+    margin-top: 1.5rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--color-line);
     color: var(--color-ink-soft);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    font-style: italic;
   }
 </style>

@@ -46,6 +46,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             <span class="kpi__numero" id="kpi-cursos">0</span>
             <span class="kpi__label">Cursos publicados</span>
           </article>
+          <a href="/aula/admin/solicitudes" class="kpi kpi--alerta kpi--link" id="kpi-solicitudes-wrap">
+            <span class="kpi__numero" id="kpi-solicitudes">0</span>
+            <span class="kpi__label">Solicitudes nuevas</span>
+            <span class="kpi__cta">Ver solicitudes →</span>
+          </a>
           <a href="/aula/admin/transferencias" class="kpi kpi--alerta kpi--link" id="kpi-sin-curso-wrap">
             <span class="kpi__numero" id="kpi-sin-curso">0</span>
             <span class="kpi__label">Alumnos sin curso</span>
@@ -67,6 +72,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
               <div>
                 <span class="accion__titulo">Gestionar cursos</span>
                 <span class="accion__bajada">Crear, editar y publicar cursos del aula.</span>
+              </div>
+            </a>
+            <a href="/aula/admin/solicitudes" class="accion">
+              <span class="accion__icono">📨</span>
+              <div>
+                <span class="accion__titulo">Solicitudes de inscripción</span>
+                <span class="accion__bajada">Ver quién se anotó por la web y seguir cada caso.</span>
               </div>
             </a>
             <a href="/aula/admin/transferencias" class="accion">
@@ -117,12 +129,17 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $titulo.textContent = `Hola, ${auth.profile.nombre.split(" ")[0]}.`;
 
     // Consultas en paralelo para acelerar.
-    const [profilesRes, cursosRes, entregasRes, sinCursoRes] = await Promise.all([
+    const [profilesRes, cursosRes, entregasRes, sinCursoRes, solicitudesRes] = await Promise.all([
       supabase.from("profiles").select("rol"),
       supabase.from("cursos").select("id").eq("publicado", true),
       supabase.from("entregas").select("id").is("corregida_en", null),
       // Alumnos sin ninguna inscripción activa.
       supabase.rpc("alumnos_sin_inscripcion_count").maybeSingle(),
+      // Solicitudes de inscripción sin revisar (estado = nueva).
+      supabase
+        .from("solicitudes_inscripcion")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "nueva"),
     ]);
 
     if (profilesRes.error) return mostrarError(profilesRes.error.message);
@@ -158,19 +175,27 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       sinCurso = Number(sinCursoRes.data) || 0;
     }
 
+    // Solicitudes nuevas (si la consulta falló, lo tratamos como 0 sin romper el panel).
+    const solicitudesNuevas = solicitudesRes.error ? 0 : (solicitudesRes.count ?? 0);
+
     document.getElementById("kpi-alumnos")!.textContent = String(conteo.alumno);
     document.getElementById("kpi-profes")!.textContent = String(conteo.profe);
     document.getElementById("kpi-admins")!.textContent = String(conteo.admin);
     document.getElementById("kpi-cursos")!.textContent = String(cursos.length);
     document.getElementById("kpi-pendientes")!.textContent = String(entregas.length);
     document.getElementById("kpi-sin-curso")!.textContent = String(sinCurso);
+    document.getElementById("kpi-solicitudes")!.textContent = String(solicitudesNuevas);
 
-    // Ocultamos el KPI si está vacío (no es prioritario verlo).
+    // Ocultamos los KPI que están en cero (no son prioritarios de ver).
     const $sinCursoWrap = document.getElementById("kpi-sin-curso-wrap")!;
     if (sinCurso === 0) $sinCursoWrap.hidden = true;
+    const $solicitudesWrap = document.getElementById("kpi-solicitudes-wrap")!;
+    if (solicitudesNuevas === 0) $solicitudesWrap.hidden = true;
 
     // Bajada: priorizamos el aviso más urgente.
-    if (sinCurso > 0) {
+    if (solicitudesNuevas > 0) {
+      $bajada.textContent = `Tenés ${solicitudesNuevas} solicitud${solicitudesNuevas === 1 ? "" : "es"} de inscripción sin revisar.`;
+    } else if (sinCurso > 0) {
       $bajada.textContent = `Tenés ${sinCurso} alumno${sinCurso === 1 ? "" : "s"} registrado${sinCurso === 1 ? "" : "s"} sin curso asignado.`;
     } else if (entregas.length > 0) {
       $bajada.textContent = `Hay ${entregas.length} entrega${entregas.length === 1 ? "" : "s"} esperando corrección.`;

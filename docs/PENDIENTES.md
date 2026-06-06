@@ -1,21 +1,26 @@
 # Pendientes del classroom
 
 > Cómo usar este archivo: cada ítem tiene `[ ]` cuando está pendiente y `[x]` cuando está hecho. Actualizamos a medida que avanzamos.
-> Última actualización: 2026-06-03
+> Última actualización: 2026-06-06
 
 ## Inscripción y firma del protocolo (nuevo, 2026-06-03)
 
-Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ver `DECISIONES.md`). El código de la página `/inscripcion`, la tabla SQL y la sección Contacto del sitio ya están armados. Lo que falta es lo que Lucas tiene que hacer manualmente en Supabase + redactar copy.
+Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ver `DECISIONES.md`). El código de la página `/inscripcion`, la tabla SQL, la sección Contacto del sitio y el panel de admin para ver las solicitudes (`/aula/admin/solicitudes`) ya están armados. Lo que falta es lo que Lucas tiene que hacer manualmente en Supabase + redactar copy.
+
+**Panel de admin (hecho 2026-06-06):** Julia y Laura ven las solicitudes que entran por el form en `/aula/admin/solicitudes` (link en el menú del aula y acceso/ KPI en el dashboard del admin). Pueden filtrar por estado, cambiar el estado (nueva/contactada/convertida/descartada) y dejar notas internas. Las solicitudes también se pueden ver crudas en Supabase → Table Editor → `solicitudes_inscripcion`.
 
 **En Supabase (Lucas):**
 - [x] Correr `docs/sql/04-solicitudes-inscripcion.sql` en el SQL Editor del proyecto
 - [x] Verificar que aparezca la tabla `solicitudes_inscripcion` en Table Editor
 - [x] ~~Verificar que aparezca el bucket `protocolos` en Storage (público)~~ — el bucket queda creado pero **ya no se usa**, el protocolo pasó a ser HTML embebido. Se puede borrar desde Storage si querés limpiar, o dejarlo (no rompe nada).
 - [x] ~~Subir el PDF del protocolo al bucket~~ — descartado, ahora es HTML versionado en código.
+- [ ] **⚠️ Correr `docs/sql/06-datos-consentimiento.sql`** (suma las columnas del consentimiento: edad, fecha_nacimiento_menor, vínculo, DNI del tutor, contacto de emergencia). **Hasta que se corra, el form de `/inscripcion` no guarda nada** — el INSERT manda columnas que todavía no existen.
 
-**Copy a redactar (Lucas + Julia/Laura):**
-- [ ] **Reemplazar el borrador de `src/components/ProtocoloContenido.astro`** con el texto final aprobado del Protocolo. El componente ya tiene un esqueleto razonable como base (9 secciones). Cuando se publique la versión final, subir `PROTOCOLO_VERSION_ACTUAL` en `src/pages/inscripcion.astro` de `"v1"` a `"v2"` si el contenido cambió sustancialmente.
-- [ ] Revisar el texto del checkbox ("Leí y acepto el Protocolo del programa.") por si Julia y Laura prefieren otra redacción.
+**Copy / contenido (Lucas + Julia/Laura):**
+- [x] **Reemplazar el borrador de `src/components/ProtocoloContenido.astro`** — hecho el 2026-06-06: se cargó la transcripción fiel del documento legal aprobado (Protocolo_VL_062026, v1.0). `PROTOCOLO_VERSION_ACTUAL` queda en `"v1"`.
+- [x] **Dato sensible público:** el protocolo (sección 1) incluye CUILs y domicilios particulares de Julia y Laura. Resuelto el 2026-06-06 con `noindex` en `/protocolo` (meta robots + excluida del sitemap + `Disallow` en robots.txt): la página sigue accesible por link pero no la indexa Google. Queda abierto, si ellas lo prefieren, reemplazar los domicilios particulares por un domicilio único de contacto en el texto.
+- [ ] Revisar el texto del checkbox ("He leído y acepto el Protocolo del programa.") por si Julia y Laura prefieren otra redacción.
+- [ ] (Opcional) Redactar el documento separado de Términos y Condiciones (precio, pago, cancelación) que el propio protocolo recomienda.
 
 **Seguridad del form (más adelante):**
 - [ ] Captcha o honeypot anti-bot en `/inscripcion`

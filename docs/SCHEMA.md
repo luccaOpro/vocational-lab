@@ -1,6 +1,6 @@
 # Esquema de la base de datos · Aula Vocational Lab
 
-> Última actualización: 2026-05-28
+> Última actualización: 2026-06-06
 > Plataforma: Supabase (Postgres + Auth + Storage)
 
 ## Para qué sirve este documento
@@ -210,8 +210,15 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 | `como_nos_encontraste` | text         | Opcional.                                                                    |
 | `canal_preferido_respuesta` | text    | `mail` o `whatsapp`. Cómo prefiere el inscripto ser contactado. Si es `whatsapp`, el teléfono es obligatorio. |
 | `rol_solicitante`      | text         | `mayor` o `responsable_menor`. Obligatorio si `intencion = 'inscripcion'`.   |
+| `edad`                 | int          | Edad del participante mayor. Obligatoria si `rol_solicitante = 'mayor'`.     |
 | `nombre_menor`         | text         | Obligatorio si `rol_solicitante = 'responsable_menor'`.                      |
-| `edad_menor`           | int          | Opcional.                                                                    |
+| `fecha_nacimiento_menor` | date       | Fecha de nacimiento del menor. Obligatoria si `rol_solicitante = 'responsable_menor'`. |
+| `vinculo_menor`        | text         | Vínculo del tutor con el menor. Obligatorio si `rol_solicitante = 'responsable_menor'`. |
+| `dni_tutor`            | text         | DNI/documento del representante legal. Obligatorio si `rol_solicitante = 'responsable_menor'`. |
+| `edad_menor`           | int          | _Deprecado_ — reemplazado por `fecha_nacimiento_menor`. El form ya no lo escribe. |
+| `contacto_emergencia_nombre` | text   | Contacto de emergencia. Obligatorio para `mayor`; opcional (adicional) para menores. |
+| `contacto_emergencia_telefono` | text | Teléfono del contacto de emergencia.                                        |
+| `contacto_emergencia_vinculo` | text  | Vínculo del contacto de emergencia con el participante.                      |
 | `protocolo_aceptado`   | boolean      | Tiene que ser `true` si `intencion = 'inscripcion'`.                         |
 | `protocolo_version`    | text         | Versión del PDF aceptado (ej `protocolo-v1.pdf`).                            |
 | `protocolo_aceptado_en`| timestamptz  | Momento exacto de la aceptación.                                             |
@@ -225,6 +232,8 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 - **SELECT / UPDATE / DELETE solo admin.**
 
 **Constraint de coherencia:** si `intencion = 'inscripcion'`, los campos de protocolo y `rol_solicitante` son obligatorios. Si `rol_solicitante = 'responsable_menor'`, además `nombre_menor` es obligatorio. La base rechaza inserts incoherentes.
+
+**Constraint del consentimiento** (`solicitudes_datos_consentimiento`, migración 06): si `intencion = 'inscripcion'`, según el rol se exigen los datos que pide el protocolo legal — para `mayor`: `edad` (≥18) + contacto de emergencia completo; para `responsable_menor`: `fecha_nacimiento_menor` + `vinculo_menor` + `dni_tutor`. El contacto de emergencia es opcional para menores (el tutor ya es el principal).
 
 **Flujo:**
 1. Alguien entra a `/inscripcion` (o al form web), elige intención, completa datos.

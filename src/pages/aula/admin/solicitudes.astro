@@ -1,0 +1,589 @@
+---
+/*
+  /aula/admin/solicitudes — bandeja de solicitudes de inscripción.
+  ---
+  Muestra todo lo que entra por el formulario público de /inscripcion
+  (tabla solicitudes_inscripcion). El admin puede:
+    · Ver todos los datos de cada solicitud (contacto + consentimiento).
+    · Filtrar por estado (nueva / contactada / convertida / descartada).
+    · Cambiar el estado de cada una.
+    · Dejar una nota interna.
+
+  Es la entrada del embudo: cuando una persona efectivamente paga, el
+  admin la marca como "convertida" y carga el pago en /aula/admin/transferencias.
+
+  Las reglas de seguridad (RLS) que permiten al admin leer/editar esta
+  tabla ya están en docs/sql/04-solicitudes-inscripcion.sql.
+*/
+
+import AulaLayout from "../../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Solicitudes · Admin · Vocational Lab" rol="admin">
+  <main class="sols">
+    <div class="container">
+      <a href="/aula/admin" class="sols__volver">← Volver al panel</a>
+
+      <header class="sols__head">
+        <div>
+          <p class="sols__eyebrow">Admin</p>
+          <h1 class="sols__titulo">Solicitudes</h1>
+          <p class="sols__bajada" id="sols-bajada">Cargando…</p>
+        </div>
+      </header>
+
+      {/* Filtros por estado */}
+      <div class="sols__filtros" id="sols-filtros" role="tablist" aria-label="Filtrar por estado" hidden>
+        <button type="button" class="sols__filtro is-activo" data-filtro="todas">Todas</button>
+        <button type="button" class="sols__filtro" data-filtro="nueva">Nuevas</button>
+        <button type="button" class="sols__filtro" data-filtro="contactada">Contactadas</button>
+        <button type="button" class="sols__filtro" data-filtro="convertida">Convertidas</button>
+        <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
+      </div>
+
+      <div id="sols-loader" class="sols__loader">
+        <div class="loader" role="status">
+          <span class="loader__spinner" aria-hidden="true"></span>
+          <span class="loader__label">Cargando solicitudes…</span>
+        </div>
+      </div>
+
+      <div id="sols-lista"></div>
+
+      <p id="sols-error" class="sols__error" hidden></p>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../../lib/supabase";
+  import { requireRol } from "../../../lib/auth-guard";
+  import { showToast, confirmModal, formModal, traducirError } from "../../../lib/ui";
+
+  const $loader = document.getElementById("sols-loader") as HTMLElement;
+  const $lista = document.getElementById("sols-lista") as HTMLElement;
+  const $bajada = document.getElementById("sols-bajada")!;
+  const $errorBox = document.getElementById("sols-error") as HTMLElement;
+  const $filtros = document.getElementById("sols-filtros") as HTMLElement;
+
+  // ============ Tipos ============
+  type Estado = "nueva" | "contactada" | "convertida" | "descartada";
+  type Solicitud = {
+    id: string;
+    creado_en: string;
+    canal: string;
+    intencion: "info" | "inscripcion" | "charla";
+    nombre: string;
+    email: string;
+    telefono: string | null;
+    pais: string | null;
+    como_nos_encontraste: string | null;
+    canal_preferido_respuesta: "mail" | "whatsapp" | null;
+    rol_solicitante: "mayor" | "responsable_menor" | null;
+    edad: number | null;
+    nombre_menor: string | null;
+    fecha_nacimiento_menor: string | null;
+    vinculo_menor: string | null;
+    dni_tutor: string | null;
+    contacto_emergencia_nombre: string | null;
+    contacto_emergencia_telefono: string | null;
+    contacto_emergencia_vinculo: string | null;
+    protocolo_aceptado: boolean | null;
+    protocolo_version: string | null;
+    protocolo_aceptado_en: string | null;
+    estado: Estado;
+    notas_admin: string | null;
+  };
+
+  const ESTADOS: Record<Estado, { label: string }> = {
+    nueva: { label: "Nueva" },
+    contactada: { label: "Contactada" },
+    convertida: { label: "Convertida" },
+    descartada: { label: "Descartada" },
+  };
+
+  const CANAL_LABEL: Record<string, string> = {
+    web: "Web", whatsapp: "WhatsApp", instagram: "Instagram", otro: "Otro",
+  };
+
+  let solicitudes: Solicitud[] = [];
+  let filtroActivo: "todas" | Estado = "todas";
+
+  // ============ Helpers ============
+  function esc(s: string | null | undefined) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+  }
+
+  function formatoFechaHora(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("es-AR", {
+        day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+      });
+    } catch { return iso; }
+  }
+
+  function formatoFecha(iso: string | null) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso + "T00:00:00").toLocaleDateString("es-AR", {
+        day: "numeric", month: "long", year: "numeric",
+      });
+    } catch { return iso; }
+  }
+
+  // Edad a partir de una fecha de nacimiento (YYYY-MM-DD).
+  function calcularEdad(fecha: string | null): number | null {
+    if (!fecha) return null;
+    const nac = new Date(fecha + "T00:00:00");
+    if (Number.isNaN(nac.getTime())) return null;
+    const hoy = new Date();
+    let edad = hoy.getFullYear() - nac.getFullYear();
+    const m = hoy.getMonth() - nac.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+    return edad;
+  }
+
+  function iniciales(nombre: string) {
+    return nombre.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  }
+
+  // Link de WhatsApp a partir de un teléfono (deja solo dígitos).
+  function waLink(tel: string | null): string | null {
+    if (!tel) return null;
+    const soloDigitos = tel.replace(/\D/g, "");
+    return soloDigitos.length >= 8 ? `https://wa.me/${soloDigitos}` : null;
+  }
+
+  // ============ Carga ============
+  async function cargar() {
+    const auth = await requireRol(["admin"]);
+    if (!auth) return;
+
+    const { data, error } = await supabase
+      .from("solicitudes_inscripcion")
+      .select("*")
+      .order("creado_en", { ascending: false });
+
+    if (error) {
+      $loader.hidden = true;
+      $errorBox.hidden = false;
+      $errorBox.textContent = `Error: ${traducirError(error)}`;
+      return;
+    }
+
+    solicitudes = (data ?? []) as Solicitud[];
+    $loader.hidden = true;
+    $filtros.hidden = false;
+    render();
+  }
+
+  // ============ Render ============
+  function render() {
+    const visibles = filtroActivo === "todas"
+      ? solicitudes
+      : solicitudes.filter((s) => s.estado === filtroActivo);
+
+    // Resumen en la bajada.
+    const nuevas = solicitudes.filter((s) => s.estado === "nueva").length;
+    const total = solicitudes.length;
+    $bajada.textContent = total === 0
+      ? "Todavía no entró ninguna solicitud."
+      : `${total} en total · ${nuevas} sin revisar`;
+
+    // Contadores en los filtros.
+    document.querySelectorAll<HTMLButtonElement>(".sols__filtro").forEach((btn) => {
+      const f = btn.dataset.filtro as "todas" | Estado;
+      const n = f === "todas" ? total : solicitudes.filter((s) => s.estado === f).length;
+      const base = btn.textContent?.replace(/\s*\(\d+\)$/, "") ?? "";
+      btn.textContent = `${base} (${n})`;
+      btn.classList.toggle("is-activo", f === filtroActivo);
+    });
+
+    if (visibles.length === 0) {
+      $lista.innerHTML = `
+        <div class="empty-state">
+          <span class="empty-state__icono" aria-hidden="true">📨</span>
+          <h3 class="empty-state__titulo">Nada por acá</h3>
+          <p class="empty-state__bajada">No hay solicitudes con este filtro.</p>
+        </div>`;
+      return;
+    }
+
+    $lista.innerHTML = `<ul class="sols-cards">${visibles.map(renderCard).join("")}</ul>`;
+    enchufarAcciones();
+  }
+
+  function renderCard(s: Solicitud): string {
+    const esInscripcion = s.intencion === "inscripcion";
+    const intLabel = esInscripcion ? "Quiere anotarse" : "Quiere info";
+    const wa = waLink(s.telefono);
+    const prefiere = s.canal_preferido_respuesta === "whatsapp" ? "Prefiere WhatsApp"
+      : s.canal_preferido_respuesta === "mail" ? "Prefiere mail" : null;
+
+    // Bloque de consentimiento (solo si es inscripción).
+    let consentimiento = "";
+    if (esInscripcion) {
+      const filas: string[] = [];
+      if (s.rol_solicitante === "mayor") {
+        filas.push(fila("Se inscribe", "Mayor de edad" + (s.edad ? ` · ${s.edad} años` : "")));
+      } else if (s.rol_solicitante === "responsable_menor") {
+        const edadM = calcularEdad(s.fecha_nacimiento_menor);
+        filas.push(fila("Se inscribe", "Menor de edad (lo anota un responsable)"));
+        filas.push(fila("Menor", `${esc(s.nombre_menor ?? "—")}${edadM != null ? ` · ${edadM} años` : ""}`));
+        filas.push(fila("Nacimiento", formatoFecha(s.fecha_nacimiento_menor)));
+        filas.push(fila("Responsable", `${esc(s.nombre)} · ${esc(s.vinculo_menor ?? "—")}`));
+        filas.push(fila("DNI responsable", esc(s.dni_tutor ?? "—")));
+      }
+      // Contacto de emergencia (si lo cargaron).
+      if (s.contacto_emergencia_nombre || s.contacto_emergencia_telefono) {
+        filas.push(fila(
+          "Emergencia",
+          `${esc(s.contacto_emergencia_nombre ?? "—")} · ${esc(s.contacto_emergencia_telefono ?? "—")}${s.contacto_emergencia_vinculo ? ` (${esc(s.contacto_emergencia_vinculo)})` : ""}`
+        ));
+      }
+      // Protocolo.
+      const protoOk = s.protocolo_aceptado
+        ? `✓ Aceptado ${s.protocolo_version ? `(${esc(s.protocolo_version)})` : ""} · ${esc(formatoFechaHora(s.protocolo_aceptado_en))}`
+        : "✗ No consta aceptación";
+      filas.push(fila("Protocolo", protoOk));
+
+      consentimiento = `
+        <div class="sol-card__bloque">
+          <span class="sol-card__bloque-titulo">Consentimiento</span>
+          <dl class="sol-card__datos">${filas.join("")}</dl>
+        </div>`;
+    }
+
+    // Selector de estado.
+    const opcionesEstado = (Object.keys(ESTADOS) as Estado[]).map((e) =>
+      `<option value="${e}" ${e === s.estado ? "selected" : ""}>${ESTADOS[e].label}</option>`
+    ).join("");
+
+    return `
+      <li class="sol-card sol-card--${s.estado}" data-sol-id="${esc(s.id)}">
+        <div class="sol-card__head">
+          <div class="sol-card__id">
+            <span class="sol-card__avatar">${esc(iniciales(s.nombre))}</span>
+            <div>
+              <span class="sol-card__nombre">${esc(s.nombre)}</span>
+              <span class="sol-card__fecha">Entró el ${esc(formatoFechaHora(s.creado_en))}</span>
+            </div>
+          </div>
+          <div class="sol-card__tags">
+            <span class="sol-tag sol-tag--${esInscripcion ? "insc" : "info"}">${intLabel}</span>
+            <span class="sol-tag sol-tag--canal">vía ${esc(CANAL_LABEL[s.canal] ?? s.canal)}</span>
+          </div>
+        </div>
+
+        <div class="sol-card__bloque">
+          <span class="sol-card__bloque-titulo">Contacto</span>
+          <dl class="sol-card__datos">
+            ${fila("Mail", `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`)}
+            ${s.telefono ? fila("Teléfono", `${esc(s.telefono)}${wa ? ` · <a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}`) : ""}
+            ${s.pais ? fila("País", esc(s.pais)) : ""}
+            ${prefiere ? fila("Respuesta", esc(prefiere)) : ""}
+            ${s.como_nos_encontraste ? fila("Nos encontró por", esc(s.como_nos_encontraste)) : ""}
+          </dl>
+        </div>
+
+        ${consentimiento}
+
+        ${s.notas_admin ? `<p class="sol-card__nota"><strong>Nota:</strong> ${esc(s.notas_admin)}</p>` : ""}
+
+        <div class="sol-card__acciones">
+          <label class="sol-card__estado">
+            <span>Estado</span>
+            <select data-estado="${esc(s.id)}">${opcionesEstado}</select>
+          </label>
+          <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">
+            ${s.notas_admin ? "Editar nota" : "Agregar nota"}
+          </button>
+        </div>
+      </li>`;
+  }
+
+  function fila(label: string, valorHTML: string): string {
+    return `<div class="sol-fila"><dt>${esc(label)}</dt><dd>${valorHTML}</dd></div>`;
+  }
+
+  // ============ Acciones ============
+  function enchufarAcciones() {
+    document.querySelectorAll<HTMLSelectElement>("[data-estado]").forEach((sel) => {
+      sel.addEventListener("change", () => cambiarEstado(sel.dataset.estado!, sel.value as Estado, sel));
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-nota]").forEach((btn) => {
+      btn.addEventListener("click", () => editarNota(btn.dataset.nota!));
+    });
+  }
+
+  async function cambiarEstado(id: string, nuevo: Estado, sel: HTMLSelectElement) {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol || sol.estado === nuevo) return;
+
+    // Confirmamos solo el caso "descartada" (es el más definitivo).
+    if (nuevo === "descartada") {
+      const ok = await confirmModal({
+        titulo: "Descartar solicitud",
+        mensaje: `¿Marcar la solicitud de ${sol.nombre} como descartada?`,
+        confirmLabel: "Descartar",
+        danger: true,
+      });
+      if (!ok) { sel.value = sol.estado; return; }
+    }
+
+    sel.disabled = true;
+    const { error } = await supabase
+      .from("solicitudes_inscripcion")
+      .update({ estado: nuevo })
+      .eq("id", id);
+    sel.disabled = false;
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      sel.value = sol.estado;
+      return;
+    }
+
+    sol.estado = nuevo;
+    showToast(`Marcada como ${ESTADOS[nuevo].label.toLowerCase()}.`);
+    render();
+  }
+
+  async function editarNota(id: string) {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol) return;
+
+    const result = await formModal({
+      titulo: "Nota interna",
+      mensaje: `Sobre la solicitud de ${sol.nombre}. Solo la ven los admins.`,
+      campos: [
+        {
+          name: "nota",
+          label: "Nota",
+          type: "textarea",
+          rows: 4,
+          value: sol.notas_admin ?? "",
+          placeholder: "Ej: la llamé el 7/6, coordina pago para la semana que viene.",
+        },
+      ],
+      confirmLabel: "Guardar",
+    });
+    if (result === null) return;
+
+    const nota = result.nota.trim() || null;
+    const { error } = await supabase
+      .from("solicitudes_inscripcion")
+      .update({ notas_admin: nota })
+      .eq("id", id);
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return;
+    }
+
+    sol.notas_admin = nota;
+    showToast("Nota guardada.");
+    render();
+  }
+
+  // ============ Filtros ============
+  $filtros.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".sols__filtro");
+    if (!btn) return;
+    filtroActivo = btn.dataset.filtro as "todas" | Estado;
+    render();
+  });
+
+  cargar().catch((err) => {
+    console.error("[solicitudes]", err);
+    $loader.hidden = true;
+    $errorBox.hidden = false;
+    $errorBox.textContent = `Error inesperado: ${err instanceof Error ? err.message : String(err)}`;
+  });
+</script>
+
+<style>
+  .sols { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
+
+  .sols__volver {
+    display: inline-block;
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    margin-bottom: 1.5rem;
+  }
+  .sols__volver:hover { color: var(--color-ink); }
+
+  .sols__head {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+  .sols__eyebrow {
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 500;
+    margin: 0 0 0.9rem;
+  }
+  .sols__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.4rem; }
+  .sols__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .sols__loader { padding: 1.5rem 0; }
+  .sols__error { color: var(--color-accent); padding: 1rem 0; }
+
+  /* ===== Filtros ===== */
+  .sols__filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.8rem;
+  }
+  .sols__filtro {
+    padding: 0.45rem 0.95rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: 99px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .sols__filtro:hover { border-color: var(--color-accent); color: var(--color-ink); }
+  .sols__filtro.is-activo {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-bg);
+  }
+
+  /* ===== Cards ===== */
+  :global(.sols-cards) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  :global(.sol-card) {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-left: 3px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.3rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  :global(.sol-card--nueva) { border-left-color: var(--color-accent); }
+  :global(.sol-card--contactada) { border-left-color: var(--color-deep); }
+  :global(.sol-card--convertida) { border-left-color: #2e8b57; }
+  :global(.sol-card--descartada) { opacity: 0.62; }
+
+  :global(.sol-card__head) {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  :global(.sol-card__id) { display: flex; gap: 0.8rem; align-items: center; min-width: 0; }
+  :global(.sol-card__avatar) {
+    display: grid;
+    place-items: center;
+    width: 40px; height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+  :global(.sol-card__nombre) { display: block; font-weight: 500; color: var(--color-ink); }
+  :global(.sol-card__fecha) { display: block; font-size: 0.8rem; color: var(--color-ink-muted); margin-top: 0.1rem; }
+
+  :global(.sol-card__tags) { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  :global(.sol-tag) {
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  :global(.sol-tag--insc) { background: rgba(216, 85, 42, 0.12); color: var(--color-accent); }
+  :global(.sol-tag--info) { background: rgba(36, 58, 130, 0.1); color: var(--color-deep); }
+  :global(.sol-tag--canal) { background: var(--color-bg); color: var(--color-ink-soft); }
+
+  /* Bloques de datos */
+  :global(.sol-card__bloque) {
+    border-top: 1px solid var(--color-line);
+    padding-top: 0.85rem;
+  }
+  :global(.sol-card__bloque-titulo) {
+    display: block;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.5rem;
+  }
+  :global(.sol-card__datos) { margin: 0; display: grid; gap: 0.35rem; }
+  :global(.sol-fila) {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  :global(.sol-fila dt) { color: var(--color-ink-soft); }
+  :global(.sol-fila dd) { margin: 0; color: var(--color-ink); word-break: break-word; }
+  :global(.sol-fila a) { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
+
+  :global(.sol-card__nota) {
+    margin: 0;
+    padding: 0.8rem 1rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+  :global(.sol-card__nota strong) { color: var(--color-ink-soft); }
+
+  /* Acciones */
+  :global(.sol-card__acciones) {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--color-line);
+    padding-top: 0.9rem;
+  }
+  :global(.sol-card__estado) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.78rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.sol-card__estado select) {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  @media (max-width: 540px) {
+    :global(.sol-fila) { grid-template-columns: 1fr; gap: 0.1rem; }
+    :global(.sol-fila dt) { font-size: 0.78rem; }
+  }
+</style>

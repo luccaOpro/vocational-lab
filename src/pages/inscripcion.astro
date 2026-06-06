@@ -78,7 +78,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
           <div class="ins-form__grid">
             <label class="ins-form__field">
               <span class="ins-form__label">Nombre y apellido</span>
-              <input type="text" name="nombre" required autocomplete="name" minlength="2" />
+              <input type="text" name="nombre" required autocomplete="name" minlength="2" maxlength="60" />
             </label>
 
             <label class="ins-form__field">
@@ -118,9 +118,10 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
                   type="tel"
                   name="telefono_numero"
                   class="ins-form__tel-numero"
-                  inputmode="tel"
+                  inputmode="numeric"
                   autocomplete="tel-national"
                   placeholder="11 5555 5555"
+                  maxlength="20"
                   aria-label="Número de teléfono"
                 />
               </div>
@@ -128,7 +129,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
             <label class="ins-form__field">
               <span class="ins-form__label">País</span>
-              <input type="text" name="pais" autocomplete="country-name" />
+              <input type="text" name="pais" autocomplete="country-name" maxlength="40" />
             </label>
 
             <label class="ins-form__field ins-form__field--full">
@@ -170,7 +171,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               <label class="ins-form__radio">
                 <input type="radio" name="rol_solicitante" value="mayor" />
                 <span class="ins-form__radio-label">
-                  <strong>Soy mayor de 18</strong>
+                  <strong>Soy mayor de edad</strong>
                   <small>Me inscribo a mí mismo/a.</small>
                 </span>
               </label>
@@ -178,26 +179,85 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               <label class="ins-form__radio">
                 <input type="radio" name="rol_solicitante" value="responsable_menor" />
                 <span class="ins-form__radio-label">
-                  <strong>Soy responsable de un menor de 18</strong>
+                  <strong>Soy responsable de un menor</strong>
                   <small>Inscribo a mi hijo/a o a un menor a mi cargo.</small>
                 </span>
               </label>
             </div>
           </fieldset>
 
-          {/* Sub-bloque para datos del menor */}
+          {/* Sub-bloque para el participante mayor de edad (rol = mayor).
+              El nombre/email/teléfono/país ya se pidieron arriba; acá
+              solo falta la edad que exige el protocolo (sección 11). */}
+          <fieldset id="bloque-mayor" class="ins-form__fieldset" hidden>
+            <legend class="ins-form__legend">Tu edad</legend>
+
+            <div class="ins-form__grid">
+              <label class="ins-form__field">
+                <span class="ins-form__label">Edad</span>
+                <input type="text" name="edad" inputmode="numeric" maxlength="3" autocomplete="off" />
+              </label>
+            </div>
+          </fieldset>
+
+          {/* Sub-bloque para datos del menor + del tutor (rol = responsable_menor).
+              El nombre/email/teléfono de arriba corresponden al adulto
+              responsable; acá pedimos los datos del menor y los del tutor
+              que faltan según el protocolo (sección 12). */}
           <fieldset id="bloque-menor" class="ins-form__fieldset" hidden>
             <legend class="ins-form__legend">Datos del menor</legend>
 
             <div class="ins-form__grid">
               <label class="ins-form__field">
-                <span class="ins-form__label">Nombre del menor</span>
-                <input type="text" name="nombre_menor" autocomplete="off" />
+                <span class="ins-form__label">Nombre completo del menor</span>
+                <input type="text" name="nombre_menor" autocomplete="off" maxlength="60" />
               </label>
 
               <label class="ins-form__field">
-                <span class="ins-form__label">Edad</span>
-                <input type="number" name="edad_menor" min="1" max="17" />
+                <span class="ins-form__label">Fecha de nacimiento</span>
+                <input type="date" name="fecha_nacimiento_menor" />
+              </label>
+            </div>
+
+            <p class="ins-form__nota">Tus datos como representante legal:</p>
+
+            <div class="ins-form__grid">
+              <label class="ins-form__field">
+                <span class="ins-form__label">Tu vínculo con el menor</span>
+                <input type="text" name="vinculo_menor" placeholder="Madre, padre, tutor/a…" autocomplete="off" maxlength="30" />
+              </label>
+
+              <label class="ins-form__field">
+                <span class="ins-form__label">Tu DNI / documento</span>
+                <input type="text" name="dni_tutor" inputmode="text" autocomplete="off" maxlength="15" placeholder="Sin puntos ni espacios" />
+              </label>
+            </div>
+          </fieldset>
+
+          {/* Contacto de emergencia. Para mayores es obligatorio (protocolo
+              sección 11). Para menores el tutor ya es el contacto principal,
+              así que este es un contacto ADICIONAL y opcional (sección 12).
+              El texto del legend y la nota se ajustan por JS según el rol. */}
+          <fieldset id="bloque-emergencia" class="ins-form__fieldset" hidden>
+            <legend class="ins-form__legend" id="emergencia-legend">Contacto de emergencia</legend>
+            <p class="ins-form__nota" id="emergencia-nota">
+              Una persona a la que podamos contactar si hiciera falta durante el programa.
+            </p>
+
+            <div class="ins-form__grid">
+              <label class="ins-form__field">
+                <span class="ins-form__label">Nombre y apellido</span>
+                <input type="text" name="contacto_emergencia_nombre" autocomplete="off" maxlength="60" />
+              </label>
+
+              <label class="ins-form__field">
+                <span class="ins-form__label">Teléfono</span>
+                <input type="tel" name="contacto_emergencia_telefono" inputmode="tel" autocomplete="off" placeholder="+54 11 5555 5555" maxlength="20" />
+              </label>
+
+              <label class="ins-form__field ins-form__field--full">
+                <span class="ins-form__label">Vínculo</span>
+                <input type="text" name="contacto_emergencia_vinculo" placeholder="Madre, pareja, amigo/a…" autocomplete="off" maxlength="30" />
               </label>
             </div>
           </fieldset>
@@ -274,7 +334,68 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
   const $confirm = document.getElementById("ins-confirmacion") as HTMLElement;
   const $confirmTexto = document.getElementById("ins-confirm-texto") as HTMLElement;
   const $bloqueInscripcion = document.getElementById("bloque-inscripcion") as HTMLElement;
+  const $bloqueMayor = document.getElementById("bloque-mayor") as HTMLElement;
   const $bloqueMenor = document.getElementById("bloque-menor") as HTMLElement;
+  const $bloqueEmergencia = document.getElementById("bloque-emergencia") as HTMLElement;
+  const $emergenciaLegend = document.getElementById("emergencia-legend") as HTMLElement;
+  const $emergenciaNota = document.getElementById("emergencia-nota") as HTMLElement;
+
+  // ============ Filtrado de caracteres por campo ============
+  /*
+    Cada campo solo acepta lo que corresponde, filtrando en vivo lo que se
+    escribe (sin esperar al submit): el teléfono solo números, los nombres
+    solo letras, el documento solo letras y números, etc. Mantenemos la
+    posición del cursor para poder editar en el medio sin saltos molestos.
+  */
+  function filtrarCampo(name: string, limpiar: (v: string) => string) {
+    const el = $form.querySelector(`[name="${name}"]`) as HTMLInputElement | null;
+    if (!el) return;
+    el.addEventListener("input", () => {
+      const pos = el.selectionStart ?? el.value.length;
+      const antes = el.value;
+      const despues = limpiar(antes);
+      if (antes !== despues) {
+        el.value = despues;
+        const nuevaPos = Math.max(0, pos - (antes.length - despues.length));
+        try { el.setSelectionRange(nuevaPos, nuevaPos); } catch { /* inputs sin selección */ }
+      }
+    });
+  }
+
+  // Limpiadores reutilizables (usan \p{L} para aceptar acentos y ñ).
+  const soloLetras = (v: string) => v.replace(/[^\p{L}\s'.\-]/gu, "");        // nombres
+  const soloVinculo = (v: string) => v.replace(/[^\p{L}\s/\-]/gu, "");        // vínculos (permite "/")
+  const soloPais = (v: string) => v.replace(/[^\p{L}\s.\-]/gu, "");           // país
+  const soloTel = (v: string) => v.replace(/[^\d\s]/g, "");                   // teléfono nacional
+  const soloTelIntl = (v: string) => v.replace(/[^\d\s+]/g, "");             // teléfono con prefijo
+  const soloDoc = (v: string) => v.replace(/[^\p{L}\d]/gu, "").toUpperCase(); // DNI / pasaporte
+  const soloEdad = (v: string) => v.replace(/\D/g, "").slice(0, 3);          // edad
+
+  filtrarCampo("nombre", soloLetras);
+  filtrarCampo("pais", soloPais);
+  filtrarCampo("telefono_numero", soloTel);
+  filtrarCampo("edad", soloEdad);
+  filtrarCampo("nombre_menor", soloLetras);
+  filtrarCampo("vinculo_menor", soloVinculo);
+  filtrarCampo("dni_tutor", soloDoc);
+  filtrarCampo("contacto_emergencia_nombre", soloLetras);
+  filtrarCampo("contacto_emergencia_telefono", soloTelIntl);
+  filtrarCampo("contacto_emergencia_vinculo", soloVinculo);
+
+  // Fecha de nacimiento del menor: no puede ser futura ni absurdamente vieja.
+  const $fechaMenor = $form.querySelector('[name="fecha_nacimiento_menor"]') as HTMLInputElement | null;
+  if ($fechaMenor) {
+    const hoy = new Date();
+    const piso = new Date(hoy);
+    piso.setFullYear(piso.getFullYear() - 25);
+    $fechaMenor.max = hoy.toISOString().split("T")[0];
+    $fechaMenor.min = piso.toISOString().split("T")[0];
+  }
+
+  // Cuenta solo los dígitos de un string (para validar largos de teléfono).
+  function contarDigitos(s: string) {
+    return (s.match(/\d/g) || []).length;
+  }
 
   // Protocolo: panel scrolleable + checkbox que arranca disabled
   const $protocoloScroll = document.getElementById("protocolo-scroll") as HTMLElement;
@@ -333,8 +454,27 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     const inscripcionVisible = intencion === "inscripcion";
     $bloqueInscripcion.hidden = !inscripcionVisible;
 
-    // Bloque "datos del menor" solo si el rol es "responsable_menor"
-    $bloqueMenor.hidden = !(inscripcionVisible && rol === "responsable_menor");
+    const esMayor = inscripcionVisible && rol === "mayor";
+    const esMenor = inscripcionVisible && rol === "responsable_menor";
+
+    // "Tu edad" solo para mayores; "datos del menor" solo para responsables.
+    $bloqueMayor.hidden = !esMayor;
+    $bloqueMenor.hidden = !esMenor;
+
+    // Contacto de emergencia: visible apenas se elige un rol. El texto y la
+    // obligatoriedad cambian según quién se inscribe.
+    //  - Mayor: contacto obligatorio.
+    //  - Menor: el tutor ya es el contacto principal → este es adicional y opcional.
+    $bloqueEmergencia.hidden = !(esMayor || esMenor);
+    if (esMenor) {
+      $emergenciaLegend.textContent = "Contacto de emergencia adicional (opcional)";
+      $emergenciaNota.textContent =
+        "Como representante legal sos el contacto principal. Si querés sumar un segundo contacto, completalo acá.";
+    } else {
+      $emergenciaLegend.textContent = "Contacto de emergencia";
+      $emergenciaNota.textContent =
+        "Una persona a la que podamos contactar si hiciera falta durante el programa.";
+    }
 
     // Si recién se hizo visible el bloque, chequeamos si el panel
     // del protocolo entra entero en pantalla sin necesidad de scroll.
@@ -387,11 +527,21 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     if (canalPreferido === "whatsapp" && !telefono) {
       return mostrarError("Si elegiste WhatsApp, necesitamos tu número de teléfono.");
     }
+    // Si cargó teléfono, validamos que tenga una cantidad razonable de dígitos.
+    if (telNumero && (contarDigitos(telNumero) < 6 || contarDigitos(telNumero) > 15)) {
+      return mostrarError("El teléfono no parece válido. Escribí solo el número, sin el código de país.");
+    }
 
-    // Si es inscripción: validar los campos extra
+    // Si es inscripción: validar los campos extra del consentimiento.
     let rolSolicitante: string | null = null;
+    let edad: number | null = null;
     let nombreMenor: string | null = null;
-    let edadMenor: number | null = null;
+    let fechaNacimientoMenor: string | null = null;
+    let vinculoMenor: string | null = null;
+    let dniTutor: string | null = null;
+    let contactoEmergenciaNombre: string | null = null;
+    let contactoEmergenciaTelefono: string | null = null;
+    let contactoEmergenciaVinculo: string | null = null;
     let protocoloAceptado: boolean | null = null;
     let protocoloVersion: string | null = null;
     let protocoloAceptadoEn: string | null = null;
@@ -399,16 +549,41 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     if (intencion === "inscripcion") {
       rolSolicitante = String(fd.get("rol_solicitante") ?? "");
       if (rolSolicitante !== "mayor" && rolSolicitante !== "responsable_menor") {
-        return mostrarError("Dinos si te inscribes tú o si eres responsable de un menor.");
+        return mostrarError("Indicá si te inscribes tú o si eres responsable de un menor.");
+      }
+
+      // Contacto de emergencia (se completa en ambos roles, con distinta
+      // obligatoriedad). Lo leemos siempre y validamos según el rol más abajo.
+      contactoEmergenciaNombre = String(fd.get("contacto_emergencia_nombre") ?? "").trim() || null;
+      contactoEmergenciaTelefono = String(fd.get("contacto_emergencia_telefono") ?? "").trim() || null;
+      contactoEmergenciaVinculo = String(fd.get("contacto_emergencia_vinculo") ?? "").trim() || null;
+
+      if (rolSolicitante === "mayor") {
+        const edadStr = String(fd.get("edad") ?? "").trim();
+        edad = edadStr ? parseInt(edadStr, 10) : null;
+        if (edad === null || Number.isNaN(edad) || edad < 18 || edad > 120) {
+          return mostrarError("Para inscribirte a ti mismo/a necesitamos una edad válida (18 o más).");
+        }
+        // Para mayores el contacto de emergencia es obligatorio.
+        if (!contactoEmergenciaNombre || !contactoEmergenciaTelefono || !contactoEmergenciaVinculo) {
+          return mostrarError("Completá el contacto de emergencia: nombre, teléfono y vínculo.");
+        }
+        if (contarDigitos(contactoEmergenciaTelefono) < 6 || contarDigitos(contactoEmergenciaTelefono) > 16) {
+          return mostrarError("El teléfono del contacto de emergencia no parece válido.");
+        }
       }
 
       if (rolSolicitante === "responsable_menor") {
-        nombreMenor = String(fd.get("nombre_menor") ?? "").trim();
-        const edadStr = String(fd.get("edad_menor") ?? "").trim();
-        edadMenor = edadStr ? parseInt(edadStr, 10) : null;
-        if (!nombreMenor) {
-          return mostrarError("Necesitamos el nombre del menor que se inscribe.");
-        }
+        nombreMenor = String(fd.get("nombre_menor") ?? "").trim() || null;
+        fechaNacimientoMenor = String(fd.get("fecha_nacimiento_menor") ?? "").trim() || null;
+        vinculoMenor = String(fd.get("vinculo_menor") ?? "").trim() || null;
+        dniTutor = String(fd.get("dni_tutor") ?? "").trim() || null;
+
+        if (!nombreMenor) return mostrarError("Necesitamos el nombre completo del menor que se inscribe.");
+        if (!fechaNacimientoMenor) return mostrarError("Necesitamos la fecha de nacimiento del menor.");
+        if (!vinculoMenor) return mostrarError("Indicá tu vínculo con el menor (madre, padre, tutor/a…).");
+        if (!dniTutor) return mostrarError("Necesitamos tu DNI o documento como representante legal.");
+        if (dniTutor.length < 6) return mostrarError("El DNI o documento parece incompleto.");
       }
 
       const checkbox = $form.elements.namedItem("protocolo_aceptado") as HTMLInputElement;
@@ -436,8 +611,14 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         como_nos_encontraste: origen,
         canal_preferido_respuesta: canalPreferido,
         rol_solicitante: rolSolicitante,
+        edad: edad,
         nombre_menor: nombreMenor,
-        edad_menor: edadMenor,
+        fecha_nacimiento_menor: fechaNacimientoMenor,
+        vinculo_menor: vinculoMenor,
+        dni_tutor: dniTutor,
+        contacto_emergencia_nombre: contactoEmergenciaNombre,
+        contacto_emergencia_telefono: contactoEmergenciaTelefono,
+        contacto_emergencia_vinculo: contactoEmergenciaVinculo,
         protocolo_aceptado: protocoloAceptado,
         protocolo_version: protocoloVersion,
         protocolo_aceptado_en: protocoloAceptadoEn,
@@ -487,6 +668,24 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
   /* ============ Form ============ */
   .ins-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* El atributo `hidden` tiene que ganar siempre. Sin esto, los fieldsets
+     con la clase .ins-form__fieldset (que define display:flex) quedan
+     visibles aunque tengan hidden, porque Astro le sube la especificidad
+     a la clase y le gana al estilo por defecto de [hidden]. */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* Bloque condicional de inscripción: lo hacemos columna con gap para que
+     sus fieldsets internos (rol, edad/menor, emergencia, protocolo) tengan
+     el mismo aire que los del formulario principal. Antes quedaban pegados
+     porque el gap del form solo aplica a sus hijos directos. */
+  #bloque-inscripcion {
     display: flex;
     flex-direction: column;
     gap: 2rem;

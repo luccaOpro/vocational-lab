@@ -18,11 +18,18 @@ import "../styles/global.css";
 interface Props {
   title?: string;
   description?: string;
+  /*
+    noindex: cuando es true, le pedimos a Google que NO indexe la página
+    (no aparece en búsquedas). Lo usamos en /protocolo, que contiene datos
+    personales de las responsables y no queremos que sea googleable.
+  */
+  noindex?: boolean;
 }
 
 const {
   title = "Vocational Lab · Donde futuro y vocación se encuentran",
   description = "Programa de orientación vocacional para jóvenes que quieren explorar su futuro con método, con pares y desde el rol protagonista de su propia historia.",
+  noindex = false,
 } = Astro.props;
 
 // ⚠️ Reemplazar con el dominio real antes de lanzar
@@ -65,7 +72,7 @@ const jsonLd = {
     <!-- ===== SEO básico ===== -->
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content={noindex ? "noindex, follow" : "index, follow"} />
     <link rel="canonical" href={canonicalURL} />
 
     <!-- ===== Open Graph — preview al compartir en redes ===== -->
