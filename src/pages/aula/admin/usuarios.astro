@@ -54,6 +54,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
               <th scope="col">Mail</th>
               <th scope="col">Creado</th>
               <th scope="col">Rol</th>
+              <th scope="col" aria-label="Acciones"></th>
             </tr>
           </thead>
           <tbody id="tabla-body"></tbody>
@@ -151,7 +152,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         ? { icono: "👥", titulo: "Sin usuarios registrados", bajada: "Cuando se registre alguien va a aparecer acá." }
         : { icono: "🔍", titulo: "Sin coincidencias", bajada: "Probá con otro nombre, mail o filtro de rol." };
       $body.innerHTML = `
-        <tr><td colspan="4" style="padding:1.5rem;">
+        <tr><td colspan="5" style="padding:1.5rem;">
           <div class="empty-state">
             <span class="empty-state__icono" aria-hidden="true">${vacio.icono}</span>
             <h3 class="empty-state__titulo">${vacio.titulo}</h3>
@@ -164,6 +165,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $body.innerHTML = filtrados.map(renderFila).join("");
     enchufarSelects();
+    enchufarAcciones();
   }
 
   function renderFila(u: UsuarioRow): string {
@@ -194,6 +196,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             data-rol-original="${esc(u.rol)}"
             ${esElMismo ? "disabled title='No puedes cambiar tu propio rol'" : ""}
           >${opts}</select>
+        </td>
+        <td data-label="" class="celda-acciones">
+          ${esElMismo ? "" : `<button type="button" class="usuario-eliminar" data-eliminar="${esc(u.id)}" aria-label="Eliminar ${esc(u.nombre)}">Eliminar</button>`}
         </td>
       </tr>
     `;
@@ -255,6 +260,38 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         }
 
         showToast(`${u?.nombre ?? "Usuario"} ahora es ${labelRol[nuevo]}.`);
+      });
+    });
+  }
+
+  function enchufarAcciones() {
+    $body.querySelectorAll<HTMLButtonElement>("[data-eliminar]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const userId = btn.dataset.eliminar!;
+        const u = todos.find((x) => x.id === userId);
+
+        const ok = await confirmModal({
+          titulo: "Eliminar usuario",
+          mensaje: `¿Eliminar a ${u?.nombre ?? "este usuario"}${u?.email ? ` (${u.email})` : ""} de forma permanente? Se borra su cuenta y todo lo asociado (entregas, inscripciones). No se puede deshacer.`,
+          confirmLabel: "Eliminar",
+          danger: true,
+        });
+        if (!ok) return;
+
+        btn.disabled = true;
+        const { error } = await supabase.rpc("admin_delete_user", { p_user_id: userId });
+
+        if (error) {
+          showToast(`No se pudo eliminar: ${traducirError(error)}`, "error");
+          btn.disabled = false;
+          return;
+        }
+
+        // Lo sacamos de la lista local y refrescamos.
+        todos = todos.filter((x) => x.id !== userId);
+        $bajada.textContent = `${todos.length} usuario${todos.length === 1 ? "" : "s"} registrado${todos.length === 1 ? "" : "s"}`;
+        renderTabla();
+        showToast(`${u?.nombre ?? "Usuario"} eliminado.`);
       });
     });
   }
@@ -413,6 +450,26 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   :global(.celda-meta) { color: var(--color-ink-soft); }
   :global(.celda-rol) { min-width: 130px; }
+
+  :global(.celda-acciones) { text-align: right; white-space: nowrap; }
+  :global(.usuario-eliminar) {
+    padding: 0.4rem 0.8rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    background: transparent;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  :global(.usuario-eliminar:hover:not(:disabled)) {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: rgba(216, 85, 42, 0.06);
+  }
+  :global(.usuario-eliminar:disabled) { opacity: 0.6; cursor: wait; }
 
   :global(.rol-select) {
     padding: 0.4rem 0.7rem;
