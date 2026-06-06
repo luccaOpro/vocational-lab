@@ -50,7 +50,8 @@ Cuando alguien se loguea, Supabase nos da su `auth.users.id`; con ese id vamos a
 
 **Reglas de acceso (RLS):**
 - Cualquier usuario logueado puede ver su propio perfil.
-- Solo el `admin` puede ver y modificar el perfil de otros.
+- El `admin` puede ver y modificar el perfil de otros.
+- Un `profe` puede **ver** (solo lectura) el perfil de los alumnos activos en sus cursos — para mostrar nombres en entregas y listados (helper `is_profe_de_alumno`, migración 08). No puede ver perfiles de otros profes/admins ni de alumnos de otros cursos, ni modificar nada.
 - **El campo `rol` solo lo puede cambiar un `admin`** (trigger `trg_profiles_guard_rol`, migración 07). Sin esto, un usuario podía actualizar su propia fila y auto-ascenderse a admin. Un no-admin puede editar su `nombre`/`avatar_url`, nunca su `rol`.
 
 ---
