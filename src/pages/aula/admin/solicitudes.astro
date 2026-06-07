@@ -41,6 +41,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
       </div>
 
+      {/* Resumen de origen (de qué canal vino cada solicitud) */}
+      <p class="sols__canales" id="sols-canales" hidden></p>
+
       <div id="sols-loader" class="sols__loader">
         <div class="loader" role="status">
           <span class="loader__spinner" aria-hidden="true"></span>
@@ -65,6 +68,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   const $bajada = document.getElementById("sols-bajada")!;
   const $errorBox = document.getElementById("sols-error") as HTMLElement;
   const $filtros = document.getElementById("sols-filtros") as HTMLElement;
+  const $canales = document.getElementById("sols-canales") as HTMLElement;
 
   // ============ Tipos ============
   type Estado = "nueva" | "contactada" | "convertida" | "descartada";
@@ -192,6 +196,19 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $bajada.textContent = total === 0
       ? "Todavía no entró ninguna solicitud."
       : `${total} en total · ${nuevas} sin revisar`;
+
+    // Resumen por canal (de dónde vino cada solicitud).
+    if (total === 0) {
+      $canales.hidden = true;
+    } else {
+      const porCanal: Record<string, number> = {};
+      for (const s of solicitudes) porCanal[s.canal] = (porCanal[s.canal] ?? 0) + 1;
+      const partes = ["web", "whatsapp", "instagram", "otro"]
+        .filter((c) => porCanal[c])
+        .map((c) => `${CANAL_LABEL[c] ?? c}: ${porCanal[c]}`);
+      $canales.textContent = `Por canal — ${partes.join(" · ")}`;
+      $canales.hidden = false;
+    }
 
     // Contadores en los filtros.
     document.querySelectorAll<HTMLButtonElement>(".sols__filtro").forEach((btn) => {
@@ -464,6 +481,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
   .sols__titulo { font-size: clamp(2rem, 4.5vw, 2.6rem); margin: 0 0 0.4rem; }
   .sols__bajada { color: var(--color-ink-soft); margin: 0; }
+
+  .sols__canales {
+    margin: -0.6rem 0 1.6rem;
+    font-size: 0.85rem;
+    color: var(--color-ink-muted);
+  }
 
   .sols__loader { padding: 1.5rem 0; }
   .sols__error { color: var(--color-accent); padding: 1rem 0; }
