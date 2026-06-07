@@ -48,6 +48,15 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
       {/* ============ FORM ============ */}
       <form id="inscripcion-form" class="ins-form" novalidate>
 
+        {/* Honeypot anti-bot: invisible para personas (queda fuera de pantalla
+            y sin tab). Si llega con texto, es un bot → descartamos el envío.
+            No usar display:none: algunos bots ignoran esos campos. */}
+        <div class="ins-form__hp" aria-hidden="true">
+          <label>No completes este campo
+            <input type="text" name="sitio_web" tabindex="-1" autocomplete="off" />
+          </label>
+        </div>
+
         {/* ─── PASO 1 · Intención ─── */}
         <fieldset class="ins-form__fieldset">
           <legend class="ins-form__legend">¿Qué te trae por acá?</legend>
@@ -327,6 +336,10 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
   */
   const PROTOCOLO_VERSION_ACTUAL = "v1";
 
+  // Momento en que cargó el formulario. Sirve para el chequeo anti-bot:
+  // un envío hecho en menos de ~1.5s es casi seguro automático.
+  const formCargadoEn = Date.now();
+
   // ============ Referencias DOM ============
   const $form = document.getElementById("inscripcion-form") as HTMLFormElement;
   const $submit = document.getElementById("ins-submit") as HTMLButtonElement;
@@ -502,6 +515,20 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     ocultarError();
 
     const fd = new FormData($form);
+
+    // ── Anti-spam (honeypot + tiempo mínimo) ──
+    // Si el honeypot vino con texto, o el form se envió demasiado rápido,
+    // es casi seguro un bot: simulamos éxito sin guardar nada (no le damos
+    // ninguna pista de que lo detectamos, así no reintenta).
+    const honeypot = String(fd.get("sitio_web") ?? "").trim();
+    if (honeypot !== "" || Date.now() - formCargadoEn < 1500) {
+      $confirmTexto.textContent = "Recibimos tu mensaje. Te contactamos pronto.";
+      $form.hidden = true;
+      $confirm.hidden = false;
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     const intencion = String(fd.get("intencion") ?? "");
     const nombre = String(fd.get("nombre") ?? "").trim();
     const email = String(fd.get("email") ?? "").trim().toLowerCase();
@@ -671,6 +698,15 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     display: flex;
     flex-direction: column;
     gap: 2rem;
+  }
+
+  /* Honeypot anti-bot: fuera de pantalla, invisible y no enfocable. */
+  .ins-form__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
   }
 
   /* El atributo `hidden` tiene que ganar siempre. Sin esto, los fieldsets
