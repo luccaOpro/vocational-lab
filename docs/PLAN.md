@@ -4,7 +4,7 @@
 
 ## Visión general
 
-Aula virtual propia, integrada al sitio `vocationallab.com`. Los alumnos que ya pagaron el curso (por transferencia) acceden a un área privada donde:
+Aula virtual propia, integrada al sitio `vlab.com.ar`. Los alumnos que ya pagaron el curso (por transferencia) acceden a un área privada donde:
 
 - Ven sus cursos y módulos.
 - Descargan material que carga el profesor.

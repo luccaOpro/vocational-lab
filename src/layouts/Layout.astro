@@ -32,7 +32,7 @@ const {
   noindex = false,
 } = Astro.props;
 
-// ⚠️ Reemplazar con el dominio real antes de lanzar
+// Dominio de producción. Afecta canonical, Open Graph y JSON-LD.
 const SITE_URL = "https://vlab.com.ar";
 const canonicalURL = new URL(Astro.url.pathname, SITE_URL).toString();
 const ogImage = `${SITE_URL}/og-image.png`;

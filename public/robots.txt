@@ -4,5 +4,4 @@ Allow: /
 # El protocolo tiene datos personales de las responsables: no lo indexamos.
 Disallow: /protocolo
 
-# ⚠️ Reemplazar con el dominio real antes de lanzar
-Sitemap: https://vocationallab.com/sitemap-index.xml
+Sitemap: https://vlab.com.ar/sitemap-index.xml
