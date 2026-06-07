@@ -22,9 +22,9 @@ Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ve
 - [ ] Revisar el texto del checkbox ("He leído y acepto el Protocolo del programa.") por si Julia y Laura prefieren otra redacción.
 - [ ] (Opcional) Redactar el documento separado de Términos y Condiciones (precio, pago, cancelación) que el propio protocolo recomienda.
 
-**Seguridad del form (más adelante):**
-- [ ] Captcha o honeypot anti-bot en `/inscripcion`
-- [ ] Rate-limit por IP a nivel de Supabase Edge Function o similar
+**Seguridad del form:**
+- [x] Honeypot anti-bot + tiempo mínimo en `/inscripcion` (2026-06-06). Frena el spam automático de formularios.
+- [ ] Nivel siguiente (cuando haga falta): captcha (Cloudflare Turnstile) o rate-limit por IP vía Edge Function, para frenar ataques directos a la API que saltean el form.
 
 **Cuando sea hora de mails automáticos (decisión 4 que pateamos):**
 - [ ] Elegir servicio (Resend / SendGrid / etc.) y sumar al stack
