@@ -65,6 +65,7 @@
   class="nav__panel"
   aria-label="Menú"
   aria-hidden="true"
+  inert
 >
   <div class="nav__panel-head">
     <span class="nav__panel-brand">Vocational Lab</span>
@@ -344,20 +345,26 @@
   const panel = document.getElementById('mobile-menu');
   const backdrop = document.querySelector<HTMLElement>('[data-menu-backdrop]');
   const burger = document.querySelector<HTMLElement>('.nav__burger');
+  const closeBtn = panel?.querySelector<HTMLElement>('.nav__close');
   const links = document.querySelectorAll<HTMLAnchorElement>('[data-menu-link]');
 
-  function setMenu(open: boolean) {
+  function setMenu(open: boolean, returnFocus = false) {
     if (!panel || !backdrop || !burger) return;
 
     panel.dataset.open = String(open);
     panel.setAttribute('aria-hidden', String(!open));
 
     if (open) {
+      // Sacamos `inert` para que el panel y sus links sean enfocables.
+      panel.removeAttribute('inert');
       backdrop.hidden = false;
       // Forzar reflow para que la transición de opacidad arranque
       void backdrop.offsetWidth;
       backdrop.dataset.open = 'true';
     } else {
+      // `inert` saca el panel del tab order cuando está cerrado/fuera de
+      // pantalla (sino sus links quedan enfocables por teclado, invisibles).
+      panel.setAttribute('inert', '');
       backdrop.dataset.open = 'false';
       // Esconder el backdrop después de la transición
       setTimeout(() => { if (backdrop.dataset.open !== 'true') backdrop.hidden = true; }, 280);
@@ -367,16 +374,25 @@
     burger.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
 
     document.body.classList.toggle('menu-open', open);
+
+    // Foco: al abrir, lo llevamos al botón de cerrar; al cerrar por
+    // X/ESC/backdrop (no al clickear un link, que navega), lo devolvemos
+    // a la hamburguesa.
+    if (open) {
+      requestAnimationFrame(() => closeBtn?.focus());
+    } else if (returnFocus) {
+      burger.focus();
+    }
   }
 
   toggles.forEach((el) => {
     el.addEventListener('click', () => {
       const isOpen = panel?.dataset.open === 'true';
-      setMenu(!isOpen);
+      setMenu(!isOpen, true);
     });
   });
 
-  backdrop?.addEventListener('click', () => setMenu(false));
+  backdrop?.addEventListener('click', () => setMenu(false, true));
 
   links.forEach((link) => {
     link.addEventListener('click', () => setMenu(false));
@@ -384,7 +400,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && panel?.dataset.open === 'true') {
-      setMenu(false);
+      setMenu(false, true);
     }
   });
 </script>
