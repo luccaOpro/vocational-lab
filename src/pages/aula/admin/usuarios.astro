@@ -104,6 +104,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     email: string;
     rol: Rol;
     creado_en: string;
+    avatar_url: string | null;
   };
 
   // Label visible para cada rol (lo que ve el admin en la UI). El value de
@@ -125,7 +126,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, nombre, email, rol, creado_en")
+      .select("id, nombre, email, rol, creado_en, avatar_url")
       .order("creado_en", { ascending: false });
 
     if (error) {
@@ -182,13 +183,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .map((r) => `<option value="${r}" ${u.rol === r ? "selected" : ""}>${labelRol[r]}</option>`)
       .join("");
 
+    // Avatar: foto si la subió; iniciales con color por rol si no.
+    const avatarHtml = u.avatar_url
+      ? `<div class="celda-usuario__avatar celda-usuario__avatar--con-foto"><img src="${esc(u.avatar_url)}" alt="" /></div>`
+      : `<div class="celda-usuario__avatar celda-usuario__avatar--${esc(u.rol)}">${esc(iniciales(u.nombre))}</div>`;
+
     return `
       <tr data-user-id="${esc(u.id)}">
         <td data-label="Usuario">
           <div class="celda-usuario">
-            <div class="celda-usuario__avatar celda-usuario__avatar--${esc(u.rol)}">
-              ${esc(iniciales(u.nombre))}
-            </div>
+            ${avatarHtml}
             <div>
               <span class="celda-usuario__nombre">${esc(u.nombre)}</span>
               ${esElMismo ? `<span class="celda-usuario__yo">(tú)</span>` : ""}
@@ -254,10 +258,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
         if (u) u.rol = nuevo;
 
-        // Actualizar el color del avatar.
+        // Actualizar el color del avatar — pero solo si está mostrando iniciales.
+        // Si tiene foto subida (--con-foto), el background es transparente y no
+        // hace falta tocar la clase de color.
         const fila = sel.closest("tr");
         const avatar = fila?.querySelector(".celda-usuario__avatar");
-        if (avatar) {
+        if (avatar && !avatar.classList.contains("celda-usuario__avatar--con-foto")) {
           avatar.className = `celda-usuario__avatar celda-usuario__avatar--${nuevo}`;
         }
 
@@ -437,10 +443,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     font-weight: 500;
     letter-spacing: 0.04em;
     background: var(--color-ink-muted);
+    overflow: hidden;
   }
   :global(.celda-usuario__avatar--alumno) { background: var(--color-gold); color: var(--color-ink); }
   :global(.celda-usuario__avatar--profe) { background: var(--color-deep); color: #fff; }
   :global(.celda-usuario__avatar--admin) { background: var(--color-accent); color: #fff; }
+  :global(.celda-usuario__avatar--con-foto) { background: transparent; }
+  :global(.celda-usuario__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.celda-usuario__nombre) { display: block; font-weight: 500; }
   :global(.celda-usuario__yo) {
     display: inline-block;

@@ -212,7 +212,18 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   }
 
   // ============ Gestión de profes ============
-  type ProfileMini = { id: string; nombre: string; email: string; rol: string };
+  type ProfileMini = { id: string; nombre: string; email: string; rol: string; avatar_url: string | null };
+
+  /** Render del avatar (img si tiene foto, iniciales si no). Usa la clase
+   *  base que reciba (alumno-card__avatar, profe-card__avatar, etc.).
+   *  La variante --con-foto pone background transparente. */
+  function avatarHtml(p: ProfileMini, baseClass: string, modificadorRol?: string): string {
+    if (p.avatar_url) {
+      return `<div class="${baseClass} ${baseClass}--con-foto"><img src="${esc(p.avatar_url)}" alt="" /></div>`;
+    }
+    const mod = modificadorRol ? ` ${baseClass}--${esc(modificadorRol)}` : "";
+    return `<div class="${baseClass}${mod}">${esc(iniciales(p.nombre))}</div>`;
+  }
 
   async function cargarProfes() {
     const $grid = document.getElementById("profes-grid")!;
@@ -221,12 +232,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     const [resPosibles, resAsignados] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, nombre, email, rol")
+        .select("id, nombre, email, rol, avatar_url")
         .in("rol", ["profe", "admin"])
         .order("nombre"),
       supabase
         .from("cursos_profesores")
-        .select("profesor_id, profiles!cursos_profesores_profesor_id_fkey(id, nombre, email, rol)")
+        .select("profesor_id, profiles!cursos_profesores_profesor_id_fkey(id, nombre, email, rol, avatar_url)")
         .eq("curso_id", cursoId!),
     ]);
 
@@ -252,7 +263,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       ? `<p class="profes-grid__vacio">Ningún profe asignado todavía.</p>`
       : asignados.map((p) => `
           <article class="profe-card">
-            <div class="profe-card__avatar profe-card__avatar--${esc(p.rol)}">${esc(iniciales(p.nombre))}</div>
+            ${avatarHtml(p, "profe-card__avatar", p.rol)}
             <div class="profe-card__cuerpo">
               <span class="profe-card__nombre">${esc(p.nombre)}</span>
               <span class="profe-card__mail">${esc(p.email)}</span>
@@ -309,7 +320,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
         ${disponibles.map((p) => `
           <label class="multi-item">
             <input type="checkbox" value="${esc(p.id)}" />
-            <div class="multi-item__avatar multi-item__avatar--profe">${esc(iniciales(p.nombre))}</div>
+            ${avatarHtml(p, "multi-item__avatar", "profe")}
             <div class="multi-item__cuerpo">
               <span class="multi-item__nombre">${esc(p.nombre)}</span>
               <span class="multi-item__mail">${esc(p.email)}</span>
@@ -408,12 +419,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     const [resTodos, resInscriptos] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, nombre, email, rol")
+        .select("id, nombre, email, rol, avatar_url")
         .eq("rol", "alumno")
         .order("nombre"),
       supabase
         .from("inscripciones")
-        .select("id, activo, profiles!inscripciones_alumno_id_fkey(id, nombre, email, rol)")
+        .select("id, activo, profiles!inscripciones_alumno_id_fkey(id, nombre, email, rol, avatar_url)")
         .eq("curso_id", cursoId!),
     ]);
 
@@ -442,7 +453,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           const a = i.profiles!;
           return `
             <article class="alumno-card">
-              <div class="alumno-card__avatar">${esc(iniciales(a.nombre))}</div>
+              ${avatarHtml(a, "alumno-card__avatar")}
               <div class="alumno-card__cuerpo">
                 <span class="alumno-card__nombre">${esc(a.nombre)}</span>
                 <span class="alumno-card__mail">${esc(a.email)}</span>
@@ -480,7 +491,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
         ${disponibles.map((a) => `
           <label class="multi-item">
             <input type="checkbox" value="${esc(a.id)}" />
-            <div class="multi-item__avatar">${esc(iniciales(a.nombre))}</div>
+            ${avatarHtml(a, "multi-item__avatar")}
             <div class="multi-item__cuerpo">
               <span class="multi-item__nombre">${esc(a.nombre)}</span>
               <span class="multi-item__mail">${esc(a.email)}</span>
@@ -934,9 +945,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     font-size: 0.85rem;
     font-weight: 500;
     flex-shrink: 0;
+    overflow: hidden;
   }
   :global(.profe-card__avatar--profe) { background: var(--color-deep); }
   :global(.profe-card__avatar--admin) { background: var(--color-accent); }
+  :global(.profe-card__avatar--con-foto) { background: transparent; }
+  :global(.profe-card__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.profe-card__cuerpo) {
     display: flex;
     flex-direction: column;
@@ -1081,7 +1095,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     font-size: 0.85rem;
     font-weight: 500;
     flex-shrink: 0;
+    overflow: hidden;
   }
+  :global(.alumno-card__avatar--con-foto) { background: transparent; }
+  :global(.alumno-card__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.alumno-card__cuerpo) {
     display: flex;
     flex-direction: column;
@@ -1176,11 +1193,15 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     color: var(--color-ink);
     font-size: 0.78rem;
     font-weight: 500;
+    overflow: hidden;
+    flex-shrink: 0;
   }
   :global(.multi-item__avatar--profe) {
     background: var(--color-deep);
     color: #fff;
   }
+  :global(.multi-item__avatar--con-foto) { background: transparent; }
+  :global(.multi-item__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.multi-item__cuerpo) {
     display: flex;
     flex-direction: column;

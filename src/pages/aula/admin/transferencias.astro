@@ -125,7 +125,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         .order("titulo"),
       supabase
         .from("profiles")
-        .select("id, nombre, email, creado_en, inscripciones(activo)")
+        .select("id, nombre, email, creado_en, avatar_url, inscripciones(activo)")
         .eq("rol", "alumno"),
     ]);
 
@@ -151,6 +151,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     // donde NINGUNA está activa.
     type AlumnoConInscr = {
       id: string; nombre: string; email: string; creado_en: string;
+      avatar_url: string | null;
       inscripciones: { activo: boolean }[] | null;
     };
     const sinCurso = ((resAlumnosSinCurso.data ?? []) as AlumnoConInscr[])
@@ -182,7 +183,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <ul class="lista-sin-curso">
           ${sinCurso.map((a) => `
             <li class="sin-curso-item">
-              <div class="sin-curso-item__avatar">${esc(iniciales(a.nombre))}</div>
+              ${a.avatar_url
+                ? `<div class="sin-curso-item__avatar sin-curso-item__avatar--con-foto"><img src="${esc(a.avatar_url)}" alt="" /></div>`
+                : `<div class="sin-curso-item__avatar">${esc(iniciales(a.nombre))}</div>`}
               <div class="sin-curso-item__cuerpo">
                 <span class="sin-curso-item__nombre">${esc(a.nombre)}</span>
                 <span class="sin-curso-item__mail">${esc(a.email)}</span>
@@ -713,7 +716,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     font-size: 0.78rem;
     font-weight: 500;
     flex-shrink: 0;
+    overflow: hidden;
   }
+  :global(.sin-curso-item__avatar--con-foto) { background: transparent; }
+  :global(.sin-curso-item__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.sin-curso-item__cuerpo) {
     display: flex;
     flex-direction: column;

@@ -132,7 +132,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .select(`
         id, alumno_id, storage_path, archivo_nombre, enviada_en,
         nota, comentario, corregida_en,
-        profiles!entregas_alumno_id_fkey (id, nombre),
+        profiles!entregas_alumno_id_fkey (id, nombre, avatar_url),
         tareas (
           id, titulo, consigna, fecha_entrega,
           modulos (numero, cursos (titulo))
@@ -171,7 +171,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $tareaTitulo.textContent = tarea?.titulo ?? "(tarea)";
     $cursoMeta.textContent = `${curso?.titulo ?? ""} · Módulo ${modulo?.numero ?? "?"}`;
-    $alumnoIni.textContent = iniciales(alumno?.nombre ?? "?");
+    // Avatar: foto si el protagonista subió una; iniciales si no.
+    const avatarUrl = (alumno as { avatar_url?: string | null } | undefined)?.avatar_url;
+    if (avatarUrl) {
+      $alumnoIni.innerHTML = `<img src="${esc(avatarUrl)}" alt="" />`;
+      $alumnoIni.classList.add("alumno-card__avatar--con-foto");
+    } else {
+      $alumnoIni.textContent = iniciales(alumno?.nombre ?? "?");
+      $alumnoIni.classList.remove("alumno-card__avatar--con-foto");
+    }
     $alumnoNombre.textContent = alumno?.nombre ?? "(protagonista)";
     $alumnoMail.textContent = ""; // mail no disponible desde el cliente
 
@@ -348,7 +356,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     background: var(--color-deep);
     color: #fff;
     font-weight: 500;
+    overflow: hidden;
   }
+  :global(.alumno-card__avatar--con-foto) { background: transparent; }
+  :global(.alumno-card__avatar img) { width: 100%; height: 100%; object-fit: cover; display: block; }
   :global(.alumno-card__nombre) { display: block; font-weight: 500; }
   :global(.alumno-card__mail) {
     display: block;
