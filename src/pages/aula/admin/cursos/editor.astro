@@ -65,7 +65,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
             <input type="checkbox" name="publicado" />
             <span>
               <strong>Publicar el curso</strong>
-              <small class="form-curso__hint">Si está sin tildar, queda como borrador y los alumnos no lo ven.</small>
+              <small class="form-curso__hint">Si está sin tildar, queda como borrador y los protagonistas no lo ven.</small>
             </span>
           </label>
 
@@ -91,10 +91,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
         <section id="seccion-alumnos" class="seccion-extra" hidden>
           <div class="seccion-extra__head">
             <div>
-              <h2 class="seccion-extra__titulo">Alumnos inscriptos</h2>
+              <h2 class="seccion-extra__titulo">Protagonistas inscriptos</h2>
               <p class="seccion-extra__bajada" id="alumnos-bajada">Quiénes tienen acceso al curso.</p>
             </div>
-            <button type="button" id="abrir-inscribir-btn" class="agregar-profe__btn">+ Inscribir alumnos</button>
+            <button type="button" id="abrir-inscribir-btn" class="agregar-profe__btn">+ Inscribir protagonistas</button>
           </div>
 
           <div id="alumnos-grid" class="alumnos-grid"></div>
@@ -418,7 +418,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     ]);
 
     if (resTodos.error || resInscriptos.error) {
-      $grid.innerHTML = `<p class="alumnos-grid__error">Error al cargar alumnos: ${
+      $grid.innerHTML = `<p class="alumnos-grid__error">Error al cargar protagonistas: ${
         traducirError(resTodos.error ?? resInscriptos.error)
       }</p>`;
       return;
@@ -432,12 +432,12 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
     // Bajada con conteo.
     $bajada.textContent = inscripciones.length === 0
-      ? "Todavía no hay alumnos inscriptos."
-      : `${inscripciones.length} alumno${inscripciones.length === 1 ? "" : "s"} inscripto${inscripciones.length === 1 ? "" : "s"}.`;
+      ? "Todavía no hay protagonistas inscriptos."
+      : `${inscripciones.length} protagonista${inscripciones.length === 1 ? "" : "s"} inscripto${inscripciones.length === 1 ? "" : "s"}.`;
 
     // Grid de cards de inscriptos.
     $grid.innerHTML = inscripciones.length === 0
-      ? `<p class="alumnos-grid__vacio">Aún no hay alumnos en este curso.</p>`
+      ? `<p class="alumnos-grid__vacio">Aún no hay protagonistas en este curso.</p>`
       : inscripciones.map((i) => {
           const a = i.profiles!;
           return `
@@ -459,7 +459,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     // Botón de abrir modal de inscripción múltiple.
     const $btnAbrir = document.getElementById("abrir-inscribir-btn") as HTMLButtonElement;
     $btnAbrir.disabled = disponibles.length === 0;
-    $btnAbrir.title = disponibles.length === 0 ? "No hay más alumnos para inscribir" : "";
+    $btnAbrir.title = disponibles.length === 0 ? "No hay más protagonistas para inscribir" : "";
     $btnAbrir.onclick = () => abrirModalInscribir(disponibles);
   }
 
@@ -472,7 +472,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     const $btnCancel = document.getElementById("modal-confirm-cancel") as HTMLButtonElement;
     const $backdrop = modal.querySelector("[data-modal-backdrop]") as HTMLElement;
 
-    $titulo.textContent = "Inscribir alumnos";
+    $titulo.textContent = "Inscribir protagonistas";
     $mensaje.hidden = false;
     $mensaje.innerHTML = `
       <input type="search" id="inscribir-buscar" placeholder="Buscar por nombre o mail…" class="multi-buscar" autocomplete="off" />
@@ -557,7 +557,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       }
 
       cleanup();
-      showToast(`${ids.length} alumno${ids.length === 1 ? "" : "s"} inscripto${ids.length === 1 ? "" : "s"}.`);
+      showToast(`${ids.length} protagonista${ids.length === 1 ? "" : "s"} inscripto${ids.length === 1 ? "" : "s"}.`);
       await cargarAlumnos();
     }
     function onCancel() { cleanup(); }
@@ -571,7 +571,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
   async function desinscribirAlumno(inscripcionId: string, nombre: string) {
     const ok = await confirmModal({
-      titulo: "Desinscribir alumno",
+      titulo: "Desinscribir protagonista",
       mensaje: `${nombre} va a perder el acceso a este curso y sus entregas. Esta acción no se puede deshacer. ¿Continuar?`,
       confirmLabel: "Desinscribir",
       danger: true,
@@ -585,7 +585,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       showToast(traducirError(error), "error");
       return;
     }
-    showToast("Alumno desinscripto.");
+    showToast("Protagonista desinscripto");
     await cargarAlumnos();
   }
 

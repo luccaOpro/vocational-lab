@@ -32,7 +32,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <section class="kpis">
           <article class="kpi">
             <span class="kpi__numero" id="kpi-alumnos">0</span>
-            <span class="kpi__label">Alumnos</span>
+            <span class="kpi__label">Protagonistas</span>
           </article>
           <article class="kpi">
             <span class="kpi__numero" id="kpi-profes">0</span>
@@ -53,7 +53,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           </a>
           <a href="/aula/admin/transferencias" class="kpi kpi--alerta kpi--link" id="kpi-sin-curso-wrap">
             <span class="kpi__numero" id="kpi-sin-curso">0</span>
-            <span class="kpi__label">Alumnos sin curso</span>
+            <span class="kpi__label">Protagonistas sin curso</span>
             <span class="kpi__cta">Ver pagos →</span>
           </a>
           <article class="kpi kpi--alerta">
@@ -85,7 +85,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
               <span class="accion__icono">💸</span>
               <div>
                 <span class="accion__titulo">Pagos y accesos</span>
-                <span class="accion__bajada">Confirmar transferencias y dar acceso a alumnos nuevos.</span>
+                <span class="accion__bajada">Confirmar transferencias y dar acceso a protagonistas nuevos.</span>
               </div>
             </a>
             <a href="/aula/admin/usuarios" class="accion">
@@ -99,7 +99,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
               <span class="accion__icono">📝</span>
               <div>
                 <span class="accion__titulo">Ver entregas</span>
-                <span class="accion__bajada">Repasar lo entregado por los alumnos y las correcciones.</span>
+                <span class="accion__bajada">Repasar lo entregado por los protagonistas y las correcciones.</span>
               </div>
             </a>
           </div>
@@ -196,7 +196,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (solicitudesNuevas > 0) {
       $bajada.textContent = `Tenés ${solicitudesNuevas} solicitud${solicitudesNuevas === 1 ? "" : "es"} de inscripción sin revisar.`;
     } else if (sinCurso > 0) {
-      $bajada.textContent = `Tenés ${sinCurso} alumno${sinCurso === 1 ? "" : "s"} registrado${sinCurso === 1 ? "" : "s"} sin curso asignado.`;
+      $bajada.textContent = `Tenés ${sinCurso} protagonista${sinCurso === 1 ? "" : "s"} registrado${sinCurso === 1 ? "" : "s"} sin curso asignado.`;
     } else if (entregas.length > 0) {
       $bajada.textContent = `Hay ${entregas.length} entrega${entregas.length === 1 ? "" : "s"} esperando corrección.`;
     } else {

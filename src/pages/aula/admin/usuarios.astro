@@ -33,7 +33,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </label>
         <select id="filtro-rol" class="usuarios__filtro-rol">
           <option value="">Todos los roles</option>
-          <option value="alumno">Solo alumnos</option>
+          <option value="alumno">Solo protagonistas</option>
           <option value="profe">Solo profes</option>
           <option value="admin">Solo admin</option>
         </select>
@@ -106,6 +106,14 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     creado_en: string;
   };
 
+  // Label visible para cada rol (lo que ve el admin en la UI). El value de
+  // la DB sigue siendo "alumno" para mantener el rol técnico estable.
+  const labelRol: Record<Rol, string> = {
+    alumno: "Protagonista",
+    profe: "Profesor/a",
+    admin: "Administrador/a",
+  };
+
   let todos: UsuarioRow[] = [];
   let miUserId: string | null = null;
 
@@ -171,7 +179,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   function renderFila(u: UsuarioRow): string {
     const esElMismo = u.id === miUserId;
     const opts = (["alumno", "profe", "admin"] as Rol[])
-      .map((r) => `<option value="${r}" ${u.rol === r ? "selected" : ""}>${r}</option>`)
+      .map((r) => `<option value="${r}" ${u.rol === r ? "selected" : ""}>${labelRol[r]}</option>`)
       .join("");
 
     return `
@@ -214,12 +222,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
         // Buscar al usuario para mostrar su nombre en el modal.
         const u = todos.find((x) => x.id === userId);
-        const labelRol: Record<Rol, string> = {
-          alumno: "Alumno",
-          profe: "Profesor/a",
-          admin: "Administrador/a",
-        };
-
         const ok = await confirmModal({
           titulo: "Cambiar rol",
           mensaje: `¿Querés cambiar el rol de ${u?.nombre ?? "este usuario"} a "${labelRol[nuevo]}"?`,

@@ -379,7 +379,7 @@ const etiqueta = etiquetaPorRol[rol];
     if (orden[rolReal] > orden[areaPagina] && !esPaginaCompartida && !document.querySelector(".preview-banner")) {
       const labelRol = rolReal === "admin" ? "Administrador" : "Profesor";
       const texto = areaPagina === "alumno"
-        ? `Estás viendo el aula como alumno · sos <strong>${labelRol}</strong>.`
+        ? `Estás viendo el aula como protagonista · sos <strong>${labelRol}</strong>.`
         : `Estás viendo el panel de profe · sos <strong>${labelRol}</strong>.`;
       const banner = document.createElement("div");
       banner.className = "preview-banner";

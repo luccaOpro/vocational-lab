@@ -42,10 +42,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </section>
 
         <section class="transfers__seccion" id="seccion-sin-curso" hidden>
-          <h2 class="transfers__seccion-titulo">Alumnos registrados sin curso</h2>
+          <h2 class="transfers__seccion-titulo">Protagonistas registrados sin curso</h2>
           <p class="transfers__seccion-bajada">
             Se registraron en el aula pero todavía no tienen ningún curso activo.
-            Pueden ser alumnos que pagaron y todavía no les cargaste la transferencia,
+            Pueden ser protagonistas que pagaron y todavía no les cargaste la transferencia,
             o gente que entró por curiosidad.
           </p>
           <div id="lista-sin-curso"></div>
@@ -157,7 +157,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .filter((a) => !(a.inscripciones ?? []).some((i) => i.activo))
       .sort((a, b) => (b.creado_en > a.creado_en ? 1 : -1));
 
-    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${sinCurso.length} alumno${sinCurso.length === 1 ? "" : "s"} sin curso · ${hist.length} en el historial`;
+    $bajada.textContent = `${pend.length} pendiente${pend.length === 1 ? "" : "s"} · ${sinCurso.length} protagonista${sinCurso.length === 1 ? "" : "s"} sin curso · ${hist.length} en el historial`;
 
     $pendientes.innerHTML = pend.length === 0
       ? `<div class="empty-state">
@@ -266,7 +266,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     const cursoTitulo = cursosCache.find((c) => c.id === cursoId)?.titulo ?? "el curso";
     const ok = await confirmModal({
-      titulo: "Inscribir alumno",
+      titulo: "Inscribir protagonista",
       mensaje: `¿Inscribir a ${alumnoNombre} a "${cursoTitulo}" sin cargar transferencia?`,
       confirmLabel: "Inscribir",
     });
@@ -300,7 +300,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       campos: [
         {
           name: "alumno_nombre",
-          label: "Nombre del alumno",
+          label: "Nombre del protagonista",
           type: "text",
           required: true,
           minLength: 2,
@@ -308,7 +308,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         },
         {
           name: "alumno_email",
-          label: "Mail del alumno",
+          label: "Mail del protagonista",
           type: "email",
           required: true,
           placeholder: "el mail con el que va a entrar al aula",
@@ -457,9 +457,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           await cargar();
           return;
         }
-        showToast("Transferencia confirmada · alumno inscripto.");
+        showToast("Transferencia confirmada · protagonista inscripto.");
       } else {
-        showToast("Confirmada. El alumno se inscribirá automáticamente cuando cree su cuenta.");
+        showToast("Confirmada. El protagonista se inscribirá automáticamente cuando cree su cuenta.");
       }
     } else {
       showToast("Transferencia confirmada.");

@@ -25,7 +25,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
         <div class="correccion__grid">
           <section class="bloque">
-            <h2 class="bloque__titulo">Alumno</h2>
+            <h2 class="bloque__titulo">Protagonista</h2>
             <div class="alumno-card">
               <div class="alumno-card__avatar" id="c-alumno-iniciales"></div>
               <div>
@@ -172,7 +172,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $tareaTitulo.textContent = tarea?.titulo ?? "(tarea)";
     $cursoMeta.textContent = `${curso?.titulo ?? ""} · Módulo ${modulo?.numero ?? "?"}`;
     $alumnoIni.textContent = iniciales(alumno?.nombre ?? "?");
-    $alumnoNombre.textContent = alumno?.nombre ?? "(alumno)";
+    $alumnoNombre.textContent = alumno?.nombre ?? "(protagonista)";
     $alumnoMail.textContent = ""; // mail no disponible desde el cliente
 
     $consigna.textContent = tarea?.consigna ?? "(sin consigna)";
@@ -224,8 +224,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           </select>
         </label>
         <label class="form-devolucion__label">
-          <span>Comentario para el alumno</span>
-          <textarea name="comentario" rows="8" required placeholder="Escribí tu devolución con calma — el alumno la va a leer con atención.">${esc(entrega.comentario ?? "")}</textarea>
+          <span>Comentario para el protagonista</span>
+          <textarea name="comentario" rows="8" required placeholder="Escribí tu devolución con calma — el protagonista la va a leer con atención.">${esc(entrega.comentario ?? "")}</textarea>
         </label>
         <button type="submit" id="submit-correccion" class="form-devolucion__submit">Enviar devolución</button>
         <p id="form-error" class="form-devolucion__error" hidden></p>

@@ -167,7 +167,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   function renderEntrega(e: EntregaRow): string {
-    const alumno = e.profiles?.nombre ?? "(alumno desconocido)";
+    const alumno = e.profiles?.nombre ?? "(protagonista desconocido)";
     const tarea = e.tareas;
     const tareaTitulo = tarea?.titulo ?? "(tarea)";
     const modulo = tarea?.modulos;

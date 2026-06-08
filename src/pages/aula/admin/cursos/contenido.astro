@@ -28,7 +28,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           <h1 class="contenido__titulo" id="curso-titulo"></h1>
           <p class="contenido__meta" id="curso-meta"></p>
           <div class="contenido__acciones">
-            <a id="ver-alumno-link" href="#" class="boton-ghost" target="_blank">Ver como alumno ↗</a>
+            <a id="ver-alumno-link" href="#" class="boton-ghost" target="_blank">Ver como protagonista ↗</a>
             <a id="editar-curso-link" href="#" class="boton-ghost">Editar datos del curso</a>
           </div>
         </header>
@@ -359,8 +359,8 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           type: "textarea",
           rows: 3,
           value: existente?.descripcion ?? "",
-          placeholder: "Una bajada que orienta al alumno sobre el módulo.",
-          hint: "Opcional. Se muestra al alumno cuando abre el curso.",
+          placeholder: "Una bajada que orienta al protagonista sobre el módulo.",
+          hint: "Opcional. Se muestra al protagonista cuando abre el curso.",
         },
       ],
       confirmLabel: existente ? "Guardar cambios" : "Crear módulo",
@@ -392,7 +392,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   async function borrarModulo(id: string) {
     const ok = await confirmModal({
       titulo: "Borrar módulo",
-      mensaje: "Esto borra el módulo y todos sus archivos y tareas. Las entregas de los alumnos también se pierden. ¿Continuar?",
+      mensaje: "Esto borra el módulo y todos sus archivos y tareas. Las entregas de los protagonistas también se pierden. ¿Continuar?",
       confirmLabel: "Borrar módulo",
       danger: true,
     });
@@ -523,7 +523,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           required: true,
           rows: 5,
           value: existente?.consigna ?? "",
-          placeholder: "Lo que el alumno tiene que hacer, con detalle.",
+          placeholder: "Lo que el protagonista tiene que hacer, con detalle.",
         },
         {
           name: "fecha_entrega",
@@ -538,7 +538,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           type: "text",
           value: existente?.video_url ?? "",
           placeholder: "https://www.youtube.com/watch?v=… (opcional)",
-          hint: "YouTube, Vimeo o cualquier URL de video. Se muestra al alumno junto a la consigna.",
+          hint: "YouTube, Vimeo o cualquier URL de video. Se muestra al protagonista junto a la consigna.",
         },
       ],
       confirmLabel: existente ? "Guardar cambios" : "Crear tarea",
@@ -568,7 +568,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   async function borrarTarea(tareaId: string) {
     const ok = await confirmModal({
       titulo: "Borrar tarea",
-      mensaje: "También se borran las entregas de los alumnos. ¿Continuar?",
+      mensaje: "También se borran las entregas de los protagonistas. ¿Continuar?",
       confirmLabel: "Borrar tarea",
       danger: true,
     });
