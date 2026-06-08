@@ -43,17 +43,66 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
         <p class="perfil__meta" id="p-creado-en"></p>
 
-        {/* ── Editar nombre ── */}
+        {/* ── Datos personales ── */}
         <section class="card">
-          <h2 class="card__titulo">Editar perfil</h2>
-          <form id="form-nombre" class="form">
+          <h2 class="card__titulo">Datos personales</h2>
+          <form id="form-datos" class="form">
             <label class="form__label">
               <span>Nombre y apellido</span>
-              <input type="text" name="nombre" id="input-nombre" required minlength="2" />
+              <input type="text" name="nombre" id="input-nombre" required minlength="2" maxlength="60" />
             </label>
-            <button type="submit" class="form__submit">Guardar</button>
-            <p id="msg-nombre-ok" class="form__msg-ok" hidden></p>
-            <p id="msg-nombre-error" class="form__msg-error" hidden></p>
+
+            <div class="form__row">
+              <label class="form__label">
+                <span>País</span>
+                <input type="text" name="pais" id="input-pais" maxlength="40" list="lista-paises" placeholder="Argentina" autocomplete="country-name" />
+                {/* Sugerencias LATAM + países comunes — el usuario puede igualmente escribir libre. */}
+                <datalist id="lista-paises">
+                  <option value="Argentina"></option>
+                  <option value="Bolivia"></option>
+                  <option value="Brasil"></option>
+                  <option value="Chile"></option>
+                  <option value="Colombia"></option>
+                  <option value="Costa Rica"></option>
+                  <option value="Cuba"></option>
+                  <option value="Ecuador"></option>
+                  <option value="El Salvador"></option>
+                  <option value="España"></option>
+                  <option value="Estados Unidos"></option>
+                  <option value="Guatemala"></option>
+                  <option value="Honduras"></option>
+                  <option value="México"></option>
+                  <option value="Nicaragua"></option>
+                  <option value="Panamá"></option>
+                  <option value="Paraguay"></option>
+                  <option value="Perú"></option>
+                  <option value="Puerto Rico"></option>
+                  <option value="República Dominicana"></option>
+                  <option value="Uruguay"></option>
+                  <option value="Venezuela"></option>
+                </datalist>
+              </label>
+              <label class="form__label">
+                <span>Ciudad</span>
+                <input type="text" name="ciudad" id="input-ciudad" maxlength="60" placeholder="Buenos Aires" />
+              </label>
+            </div>
+
+            <label class="form__label">
+              <span>Sobre vos <small class="form__hint" id="bio-contador">0 / 280</small></span>
+              <textarea name="bio" id="input-bio" maxlength="280" rows="3" placeholder="Una mini bio. Lo que quieras compartir con el grupo."></textarea>
+            </label>
+
+            <div class="form__label">
+              <span>Tus intereses <small class="form__hint">Escribí y apretá Enter. Máximo 10.</small></span>
+              <div class="chips" id="chips-intereses">
+                <input type="text" id="input-interes" class="chips__input" maxlength="30" placeholder="Música, ciencia, diseño, lectura…" />
+              </div>
+            </div>
+
+            <button type="submit" class="form__submit">Guardar cambios</button>
+            <p id="msg-datos-ok" class="form__msg-ok" hidden></p>
+            <p id="msg-datos-error" class="form__msg-error" hidden></p>
           </form>
         </section>
 
@@ -174,7 +223,25 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     rol: Rol;
     creado_en: string;
     avatar_url: string | null;
+    bio: string | null;
+    pais: string | null;
+    ciudad: string | null;
+    intereses: string[] | null;
   };
+
+  // Lo que se permite por columna (mismos límites que el CHECK constraint de DB).
+  const LIMITES = {
+    bio: 280,
+    pais: 40,
+    ciudad: 60,
+    interes: 30,
+    cantidadIntereses: 10,
+  };
+
+  /** Limpia un string: trim + colapsa espacios + cap al máximo. */
+  function limpiar(s: string, max: number): string {
+    return s.replace(/\s+/g, " ").trim().slice(0, max);
+  }
 
   // Tamaño máximo del avatar antes de upload (en bytes).
   // Si la imagen es más grande, se redimensiona en el cliente a 512×512
@@ -222,10 +289,10 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     const auth = await requireSession();
     if (!auth) return;
 
-    // Traemos profile completo (con email, creado_en y avatar).
+    // Traemos profile completo.
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("id, nombre, email, rol, creado_en, avatar_url")
+      .select("id, nombre, email, rol, creado_en, avatar_url, bio, pais, ciudad, intereses")
       .eq("id", auth.session.user.id)
       .single<ProfileFull>();
 
@@ -248,16 +315,21 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     // El "← Volver" lleva al home del rol del user.
     $volver.href = homePorRol[profile.rol];
 
-    // Pre-rellenamos el input del nombre.
-    const $inputNombre = document.getElementById("input-nombre") as HTMLInputElement;
-    $inputNombre.value = profile.nombre;
+    // Pre-rellenamos los inputs del form de datos personales.
+    (document.getElementById("input-nombre") as HTMLInputElement).value = profile.nombre;
+    (document.getElementById("input-pais") as HTMLInputElement).value = profile.pais ?? "";
+    (document.getElementById("input-ciudad") as HTMLInputElement).value = profile.ciudad ?? "";
+    const $bio = document.getElementById("input-bio") as HTMLTextAreaElement;
+    $bio.value = profile.bio ?? "";
+    actualizarContadorBio();
 
     // Conectar handlers.
-    enchufarFormNombre(profile);
+    enchufarFormDatos(profile);
     enchufarFormPassword();
     enchufarTogglePass();
     enchufarLogout();
     enchufarAvatar(profile);
+    enchufarIntereses(profile);
 
     $loader.hidden = true;
     $contenido.hidden = false;
@@ -342,49 +414,128 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     });
   }
 
-  function enchufarFormNombre(profile: ProfileFull) {
-    const $form = document.getElementById("form-nombre") as HTMLFormElement;
-    const $input = document.getElementById("input-nombre") as HTMLInputElement;
-    const $btn = $form.querySelector("button") as HTMLButtonElement;
-    const $ok = document.getElementById("msg-nombre-ok") as HTMLElement;
-    const $err = document.getElementById("msg-nombre-error") as HTMLElement;
+  /** Contador "X / 280" debajo del label de bio. */
+  function actualizarContadorBio() {
+    const $bio = document.getElementById("input-bio") as HTMLTextAreaElement;
+    const $cont = document.getElementById("bio-contador") as HTMLElement;
+    $cont.textContent = `${$bio.value.length} / ${LIMITES.bio}`;
+  }
+
+  function enchufarFormDatos(profile: ProfileFull) {
+    const $form = document.getElementById("form-datos") as HTMLFormElement;
+    const $inputNombre = document.getElementById("input-nombre") as HTMLInputElement;
+    const $inputPais = document.getElementById("input-pais") as HTMLInputElement;
+    const $inputCiudad = document.getElementById("input-ciudad") as HTMLInputElement;
+    const $bio = document.getElementById("input-bio") as HTMLTextAreaElement;
+    const $btn = $form.querySelector("button[type='submit']") as HTMLButtonElement;
+    const $ok = document.getElementById("msg-datos-ok") as HTMLElement;
+    const $err = document.getElementById("msg-datos-error") as HTMLElement;
+
+    // El contador de bio se actualiza en vivo.
+    $bio.addEventListener("input", actualizarContadorBio);
 
     $form.addEventListener("submit", async (e) => {
       e.preventDefault();
       $ok.hidden = true; $err.hidden = true;
 
-      const nuevo = $input.value.trim();
-      if (nuevo.length < 2) {
+      const nombre = limpiar($inputNombre.value, 60);
+      if (nombre.length < 2) {
         showToast("El nombre tiene que tener al menos 2 caracteres.", "error");
         return;
       }
-      if (nuevo === profile.nombre) {
-        showToast("No hay cambios para guardar.", "info");
-        return;
-      }
+      const pais = limpiar($inputPais.value, LIMITES.pais) || null;
+      const ciudad = limpiar($inputCiudad.value, LIMITES.ciudad) || null;
+      const bio = $bio.value.trim().slice(0, LIMITES.bio) || null;
 
       $btn.disabled = true;
       $btn.textContent = "Guardando…";
 
       const { error } = await supabase
         .from("profiles")
-        .update({ nombre: nuevo })
+        .update({ nombre, pais, ciudad, bio, intereses: profile.intereses })
         .eq("id", profile.id);
 
       $btn.disabled = false;
-      $btn.textContent = "Guardar";
+      $btn.textContent = "Guardar cambios";
 
       if (error) {
         showToast(`No se pudo guardar: ${error.message}`, "error");
         return;
       }
 
-      profile.nombre = nuevo;
-      $nombre.textContent = nuevo;
-      // Si no hay foto, las iniciales reflejan el nombre nuevo.
-      if (!profile.avatar_url) $avatar.textContent = iniciales(nuevo);
-      showToast("Nombre actualizado");
+      profile.nombre = nombre;
+      profile.pais = pais;
+      profile.ciudad = ciudad;
+      profile.bio = bio;
+      $nombre.textContent = nombre;
+      if (!profile.avatar_url) $avatar.textContent = iniciales(nombre);
+      showToast("Datos actualizados");
     });
+  }
+
+  /**
+   * Chips de intereses. El estado vive en profile.intereses; al guardar
+   * datos personales se envían junto con el resto. Acá solo manejamos
+   * agregar/quitar y re-render local.
+   */
+  function enchufarIntereses(profile: ProfileFull) {
+    const $cont = document.getElementById("chips-intereses") as HTMLElement;
+    const $input = document.getElementById("input-interes") as HTMLInputElement;
+    if (!profile.intereses) profile.intereses = [];
+
+    function render() {
+      // Limpiar todo menos el input.
+      $cont.querySelectorAll(".chips__chip").forEach((c) => c.remove());
+      (profile.intereses ?? []).forEach((tag, i) => {
+        const chip = document.createElement("span");
+        chip.className = "chips__chip";
+        chip.innerHTML = `<span>${esc(tag)}</span><button type="button" aria-label="Quitar ${esc(tag)}" data-i="${i}">×</button>`;
+        $cont.insertBefore(chip, $input);
+      });
+      $input.placeholder = (profile.intereses ?? []).length === 0
+        ? "Música, ciencia, diseño, lectura…"
+        : "Sumá otro…";
+    }
+
+    function agregar(raw: string) {
+      const tag = limpiar(raw, LIMITES.interes);
+      if (!tag) return;
+      if ((profile.intereses ?? []).length >= LIMITES.cantidadIntereses) {
+        showToast(`Máximo ${LIMITES.cantidadIntereses} intereses.`, "info");
+        return;
+      }
+      // Sin duplicados (case insensitive).
+      if ((profile.intereses ?? []).some((t) => t.toLowerCase() === tag.toLowerCase())) {
+        showToast("Ese interés ya está.", "info");
+        return;
+      }
+      profile.intereses!.push(tag);
+      render();
+    }
+
+    $input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === ",") {
+        e.preventDefault();
+        agregar($input.value);
+        $input.value = "";
+      } else if (e.key === "Backspace" && $input.value === "" && (profile.intereses ?? []).length > 0) {
+        // Backspace en input vacío borra el último chip.
+        profile.intereses!.pop();
+        render();
+      }
+    });
+
+    $cont.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button[data-i]");
+      if (!btn) return;
+      const i = Number(btn.getAttribute("data-i"));
+      if (!Number.isNaN(i)) {
+        profile.intereses!.splice(i, 1);
+        render();
+      }
+    });
+
+    render();
   }
 
   function enchufarFormPassword() {
@@ -648,7 +799,8 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     color: var(--color-ink-soft);
     font-weight: 500;
   }
-  .form__label input {
+  .form__label input,
+  .form__label textarea {
     font-family: inherit;
     font-size: 1rem;
     padding: 0.7rem 0.9rem;
@@ -658,10 +810,90 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     color: var(--color-ink);
     width: 100%;
   }
-  .form__label input:focus {
+  .form__label textarea {
+    resize: vertical;
+    min-height: 5rem;
+    line-height: 1.5;
+  }
+  .form__label input:focus,
+  .form__label textarea:focus {
     outline: none;
     border-color: var(--color-deep);
     background: #fff;
+  }
+
+  /* Fila de dos campos lado a lado (país + ciudad). En mobile colapsa. */
+  .form__row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 520px) {
+    .form__row { grid-template-columns: 1fr; }
+  }
+
+  /* Hint chiquito a la derecha del label (ej: contador "X / 280"). */
+  .form__label > span {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .form__hint {
+    font-weight: 400;
+    color: var(--color-ink-muted);
+    font-size: 0.78rem;
+  }
+
+  /* Chips de intereses. El contenedor es como un input: fondo, borde,
+     que se llena con los chips + un input invisible al final. */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.5rem 0.6rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    min-height: 2.7rem;
+    cursor: text;
+  }
+  .chips:focus-within {
+    border-color: var(--color-deep);
+    background: #fff;
+  }
+  .chips__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.45rem 0.25rem 0.65rem;
+    background: rgba(36, 58, 130, 0.1);
+    color: var(--color-deep);
+    border-radius: 999px;
+    font-size: 0.88rem;
+    line-height: 1;
+  }
+  .chips__chip button {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.2rem;
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+  .chips__chip button:hover { opacity: 1; color: var(--color-accent); }
+  .chips__input {
+    flex: 1;
+    min-width: 8rem;
+    border: 0 !important;
+    background: transparent !important;
+    padding: 0.25rem 0 !important;
+    font-size: 0.95rem;
+    outline: none !important;
   }
 
   /* Wrap input password + ojito */
