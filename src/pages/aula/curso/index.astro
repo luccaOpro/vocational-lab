@@ -41,6 +41,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../lib/supabase";
   import { requireSession } from "../../../lib/auth-guard";
   import { showToast, confirmModal, traducirError } from "../../../lib/ui";
+  import { iconHtml } from "../../../lib/icons";
 
   // Tamaño máximo de archivo permitido (en bytes). 10 MB.
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -210,7 +211,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const html = (modulos as ModuloRow[]).map((m) => renderModulo(m, entregas)).join("");
     $modulos.innerHTML = html || `
       <div class="empty-state">
-        <span class="empty-state__icono" aria-hidden="true">🌱</span>
+        <span class="empty-state__icono" aria-hidden="true">${iconHtml("sprout", 28)}</span>
         <h3 class="empty-state__titulo">El curso está arrancando</h3>
         <p class="empty-state__bajada">Todavía no hay módulos cargados. Vas a verlos cuando el equipo los publique.</p>
       </div>

@@ -62,6 +62,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
   import { showToast, confirmModal, formModal, traducirError } from "../../../lib/ui";
+  import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("sols-loader") as HTMLElement;
   const $lista = document.getElementById("sols-lista") as HTMLElement;
@@ -222,7 +223,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (visibles.length === 0) {
       $lista.innerHTML = `
         <div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📨</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("inbox", 28)}</span>
           <h3 class="empty-state__titulo">Nada por acá</h3>
           <p class="empty-state__bajada">No hay solicitudes con este filtro.</p>
         </div>`;

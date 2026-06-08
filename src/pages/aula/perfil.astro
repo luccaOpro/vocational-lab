@@ -63,11 +63,39 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
           <form id="form-password" class="form">
             <label class="form__label">
               <span>Nueva contraseña</span>
-              <input type="password" name="pass" minlength="8" required autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+              <div class="form__pass-wrap">
+                <input type="password" name="pass" minlength="8" required autocomplete="new-password" placeholder="Mínimo 8 caracteres" />
+                <button type="button" class="form__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                  <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                    <line x1="2" y1="2" x2="22" y2="22"/>
+                  </svg>
+                </button>
+              </div>
             </label>
             <label class="form__label">
               <span>Confirmar nueva contraseña</span>
-              <input type="password" name="pass2" minlength="8" required autocomplete="new-password" placeholder="Repetí la nueva contraseña" />
+              <div class="form__pass-wrap">
+                <input type="password" name="pass2" minlength="8" required autocomplete="new-password" placeholder="Repetí la nueva contraseña" />
+                <button type="button" class="form__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                  <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                    <line x1="2" y1="2" x2="22" y2="22"/>
+                  </svg>
+                </button>
+              </div>
             </label>
             <button type="submit" class="form__submit">Cambiar contraseña</button>
             <p id="msg-pass-ok" class="form__msg-ok" hidden></p>
@@ -227,6 +255,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     // Conectar handlers.
     enchufarFormNombre(profile);
     enchufarFormPassword();
+    enchufarTogglePass();
     enchufarLogout();
     enchufarAvatar(profile);
 
@@ -396,6 +425,29 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
       showToast("Contraseña actualizada.");
       $form.reset();
+    });
+  }
+
+  /**
+   * Ojito mostrar/ocultar contraseña. Cada botón [data-toggle-pass]
+   * está dentro de un .form__pass-wrap junto a un <input type="password">.
+   * Usamos toggleAttribute porque en <svg> la propiedad .hidden no se
+   * refleja como atributo y el selector CSS [hidden] no engancha.
+   */
+  function enchufarTogglePass() {
+    document.querySelectorAll<HTMLButtonElement>("[data-toggle-pass]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const wrap = btn.closest(".form__pass-wrap");
+        const input = wrap?.querySelector("input") as HTMLInputElement | null;
+        if (!input) return;
+        const yaVisible = input.type === "text";
+        input.type = yaVisible ? "password" : "text";
+        const ahoraVisible = !yaVisible;
+        btn.setAttribute("aria-pressed", String(ahoraVisible));
+        btn.setAttribute("aria-label", ahoraVisible ? "Ocultar contraseña" : "Mostrar contraseña");
+        btn.querySelector(".icono-ojo")?.toggleAttribute("hidden", ahoraVisible);
+        btn.querySelector(".icono-ojo-tachado")?.toggleAttribute("hidden", !ahoraVisible);
+      });
     });
   }
 
@@ -604,12 +656,39 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     border-radius: var(--radius-sm);
     background: var(--color-bg);
     color: var(--color-ink);
+    width: 100%;
   }
   .form__label input:focus {
     outline: none;
     border-color: var(--color-deep);
     background: #fff;
   }
+
+  /* Wrap input password + ojito */
+  .form__pass-wrap {
+    position: relative;
+    display: flex;
+  }
+  .form__pass-wrap input { padding-right: 2.6rem; }
+  .form__pass-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    background: transparent;
+    border: 0;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .form__pass-toggle:hover { color: var(--color-ink); background: rgba(19, 27, 61, 0.04); }
+  .form__pass-toggle:focus-visible { outline: 2px solid var(--color-deep); outline-offset: -2px; }
+  /* `hidden` no siempre oculta <svg> — forzamos con CSS. */
+  .form__pass-toggle svg[hidden] { display: none; }
 
   .form__submit {
     padding: 0.75rem 1.2rem;

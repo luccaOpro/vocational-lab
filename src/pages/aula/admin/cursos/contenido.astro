@@ -56,6 +56,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../../lib/supabase";
   import { requireRol } from "../../../../lib/auth-guard";
   import { showToast, confirmModal, formModal, traducirError } from "../../../../lib/ui";
+  import { iconHtml } from "../../../../lib/icons";
 
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB para material del profe
 
@@ -167,7 +168,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     $count.textContent = `${mods.length} módulo${mods.length === 1 ? "" : "s"}`;
     $modulos.innerHTML = mods.length === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📦</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("package", 28)}</span>
           <h3 class="empty-state__titulo">Sin módulos todavía</h3>
           <p class="empty-state__bajada">Empezá agregando el primer módulo del curso.</p>
         </div>`

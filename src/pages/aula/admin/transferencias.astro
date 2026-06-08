@@ -66,6 +66,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
   import { showToast, confirmModal, formModal, traducirError } from "../../../lib/ui";
+  import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("transfers-loader") as HTMLElement;
   const $contenido = document.getElementById("transfers-contenido") as HTMLElement;
@@ -162,7 +163,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $pendientes.innerHTML = pend.length === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📥</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("inbox", 28)}</span>
           <h3 class="empty-state__titulo">Sin transferencias pendientes</h3>
           <p class="empty-state__bajada">Cuando carguen una, va a aparecer acá para confirmar.</p>
         </div>`

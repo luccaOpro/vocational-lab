@@ -8,6 +8,7 @@
 */
 
 import AulaLayout from "../../../layouts/AulaLayout.astro";
+import Icon from "../../../components/aula/Icon.astro";
 ---
 
 <AulaLayout title="Usuarios · Admin · Vocational Lab" rol="admin">
@@ -23,7 +24,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
       <div class="usuarios__filtros">
         <label class="usuarios__buscar">
-          <span class="usuarios__buscar-icono" aria-hidden="true">🔍</span>
+          <span class="usuarios__buscar-icono" aria-hidden="true"><Icon name="search" size={18} /></span>
           <input
             type="search"
             id="buscar"
@@ -70,6 +71,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../lib/supabase";
   import { requireRol, type Rol } from "../../../lib/auth-guard";
   import { showToast, confirmModal, traducirError } from "../../../lib/ui";
+  import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("usuarios-loader") as HTMLElement;
   const $wrap = document.getElementById("usuarios-wrap") as HTMLElement;
@@ -158,8 +160,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     if (filtrados.length === 0) {
       const vacio = todos.length === 0
-        ? { icono: "👥", titulo: "Sin usuarios registrados", bajada: "Cuando se registre alguien va a aparecer acá." }
-        : { icono: "🔍", titulo: "Sin coincidencias", bajada: "Probá con otro nombre, mail o filtro de rol." };
+        ? { icono: iconHtml("users", 28), titulo: "Sin usuarios registrados", bajada: "Cuando se registre alguien va a aparecer acá." }
+        : { icono: iconHtml("search", 28), titulo: "Sin coincidencias", bajada: "Probá con otro nombre, mail o filtro de rol." };
       $body.innerHTML = `
         <tr><td colspan="5" style="padding:1.5rem;">
           <div class="empty-state">
@@ -370,7 +372,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     color: var(--color-ink);
     outline: none;
   }
-  .usuarios__buscar-icono { font-size: 0.95rem; color: var(--color-ink-muted); }
+  .usuarios__buscar-icono { color: var(--color-ink-muted); display: inline-flex; align-items: center; }
 
   .usuarios__filtro-rol {
     padding: 0.65rem 0.85rem;

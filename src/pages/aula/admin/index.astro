@@ -10,6 +10,7 @@
 */
 
 import AulaLayout from "../../../layouts/AulaLayout.astro";
+import Icon from "../../../components/aula/Icon.astro";
 ---
 
 <AulaLayout title="Admin · Aula Vocational Lab" rol="admin">
@@ -68,35 +69,35 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           </div>
           <div class="acciones">
             <a href="/aula/admin/cursos" class="accion">
-              <span class="accion__icono">📚</span>
+              <span class="accion__icono"><Icon name="book-open" /></span>
               <div>
                 <span class="accion__titulo">Gestionar cursos</span>
                 <span class="accion__bajada">Crear, editar y publicar cursos del aula.</span>
               </div>
             </a>
             <a href="/aula/admin/solicitudes" class="accion">
-              <span class="accion__icono">📨</span>
+              <span class="accion__icono"><Icon name="inbox" /></span>
               <div>
                 <span class="accion__titulo">Solicitudes de inscripción</span>
                 <span class="accion__bajada">Ver quién se anotó por la web y seguir cada caso.</span>
               </div>
             </a>
             <a href="/aula/admin/transferencias" class="accion">
-              <span class="accion__icono">💸</span>
+              <span class="accion__icono"><Icon name="receipt" /></span>
               <div>
                 <span class="accion__titulo">Pagos y accesos</span>
                 <span class="accion__bajada">Confirmar transferencias y dar acceso a protagonistas nuevos.</span>
               </div>
             </a>
             <a href="/aula/admin/usuarios" class="accion">
-              <span class="accion__icono">👥</span>
+              <span class="accion__icono"><Icon name="users" /></span>
               <div>
                 <span class="accion__titulo">Gestionar usuarios</span>
                 <span class="accion__bajada">Promover a profe/admin, ver mails, controlar roles.</span>
               </div>
             </a>
             <a href="/aula/profe/entregas" class="accion">
-              <span class="accion__icono">📝</span>
+              <span class="accion__icono"><Icon name="file-text" /></span>
               <div>
                 <span class="accion__titulo">Ver entregas</span>
                 <span class="accion__bajada">Repasar lo entregado por los protagonistas y las correcciones.</span>
@@ -330,8 +331,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     border-color: var(--color-accent);
   }
   .accion__icono {
-    font-size: 1.5rem;
-    line-height: 1;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(36, 58, 130, 0.08);
+    color: var(--color-deep);
     flex-shrink: 0;
   }
   .accion__titulo {

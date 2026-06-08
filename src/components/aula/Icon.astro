@@ -1,0 +1,52 @@
+---
+/*
+  Icon.astro — wrapper Astro para los iconos lineales del aula.
+  ---
+  Los paths viven en src/lib/icons.ts (fuente única). Este componente
+  los envuelve en un <svg> con stroke=currentColor para uso en HTML
+  estático. Para renders dinámicos por innerHTML, importar iconHtml()
+  desde el mismo módulo.
+
+  Uso:
+    <Icon name="book-open" />
+    <Icon name="users" size={20} aria-label="Usuarios" />
+*/
+
+import { ICON_PATHS, type IconName } from "../../lib/icons";
+
+interface Props {
+  name: IconName;
+  /** Lado del SVG en px. Default 24. */
+  size?: number;
+  /** Si se pasa, se usa como aria-label; sino el icono queda decorativo. */
+  "aria-label"?: string;
+  /** Clases extra. */
+  class?: string;
+}
+
+const {
+  name,
+  size = 24,
+  "aria-label": ariaLabel,
+  class: className,
+} = Astro.props;
+
+const inner = ICON_PATHS[name] ?? "";
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="1.75"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class:list={["icon", className]}
+  aria-hidden={ariaLabel ? "false" : "true"}
+  aria-label={ariaLabel}
+  role={ariaLabel ? "img" : undefined}
+  set:html={inner}
+/>

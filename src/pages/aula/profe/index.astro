@@ -55,6 +55,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
   import { traducirError } from "../../../lib/ui";
+  import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("profe-loader") as HTMLElement;
   const $contenido = document.getElementById("profe-contenido") as HTMLElement;
@@ -133,7 +134,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $cursos.innerHTML = (cursos ?? []).length === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📚</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("book-open", 28)}</span>
           <h3 class="empty-state__titulo">Sin cursos asignados todavía</h3>
           <p class="empty-state__bajada">Cuando te asignen un curso, va a aparecer acá.</p>
         </div>`
@@ -141,7 +142,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $entregas.innerHTML = np === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">🎯</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("target", 28)}</span>
           <h3 class="empty-state__titulo">¡Todo al día!</h3>
           <p class="empty-state__bajada">No tienes entregas esperando devolución por ahora.</p>
         </div>`

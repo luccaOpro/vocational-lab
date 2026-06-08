@@ -11,6 +11,7 @@
 */
 
 import AulaLayout from "../../layouts/AulaLayout.astro";
+import Icon from "../../components/aula/Icon.astro";
 ---
 
 <AulaLayout title="Mis cursos · Aula Vocational Lab">
@@ -35,7 +36,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         {/* Estado: sin cursos. */}
         <div id="cursos-vacio" hidden>
           <div class="empty-state">
-            <span class="empty-state__icono" aria-hidden="true">📚</span>
+            <span class="empty-state__icono" aria-hidden="true"><Icon name="book-open" size={28} /></span>
             <h3 class="empty-state__titulo">Todavía no tienes cursos</h3>
             <p class="empty-state__bajada">
               Si recién pagaste, espera a que activemos tu acceso —

@@ -35,6 +35,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
+  import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("entregas-loader") as HTMLElement;
   const $contenido = document.getElementById("entregas-contenido") as HTMLElement;
@@ -94,7 +95,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $pendientes.innerHTML = pend.length === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">🎯</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("target", 28)}</span>
           <h3 class="empty-state__titulo">¡Al día!</h3>
           <p class="empty-state__bajada">No tienes entregas para corregir por ahora.</p>
         </div>`
@@ -102,7 +103,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     $corregidas.innerHTML = corr.length === 0
       ? `<div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📝</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("file-text", 28)}</span>
           <h3 class="empty-state__titulo">Sin correcciones todavía</h3>
           <p class="empty-state__bajada">Cuando empieces a corregir entregas, van a aparecer acá.</p>
         </div>`

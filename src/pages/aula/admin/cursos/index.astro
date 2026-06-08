@@ -39,6 +39,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
   import { supabase } from "../../../../lib/supabase";
   import { requireRol } from "../../../../lib/auth-guard";
   import { traducirError } from "../../../../lib/ui";
+  import { iconHtml } from "../../../../lib/icons";
 
   const $loader = document.getElementById("cursos-loader") as HTMLElement;
   const $grid = document.getElementById("cursos-grid") as HTMLElement;
@@ -93,7 +94,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     if (total === 0) {
       $grid.innerHTML = `
         <div class="empty-state">
-          <span class="empty-state__icono" aria-hidden="true">📚</span>
+          <span class="empty-state__icono" aria-hidden="true">${iconHtml("book-open", 28)}</span>
           <h3 class="empty-state__titulo">Sin cursos cargados</h3>
           <p class="empty-state__bajada">Empezá creando el primer curso del aula.</p>
           <a href="/aula/admin/cursos/editor" class="empty-state__cta">+ Crear curso</a>

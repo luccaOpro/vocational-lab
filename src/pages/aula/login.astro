@@ -37,7 +37,23 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
           </label>
           <label class="login__label">
             <span>Contraseña</span>
-            <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password" />
+            <div class="login__pass-wrap">
+              <input type="password" name="pass" placeholder="••••••••" required autocomplete="current-password" />
+              <button type="button" class="login__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                {/* Ojo abierto — visible cuando la contraseña está oculta */}
+                <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                {/* Ojo tachado — visible cuando la contraseña está visible */}
+                <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
           </label>
           <p id="login-error" class="login__msg-error" hidden></p>
           <button type="submit" id="login-submit" class="login__submit">Entrar</button>
@@ -68,7 +84,21 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
           </label>
           <label class="login__label">
             <span>Contraseña</span>
-            <input type="password" name="pass" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" />
+            <div class="login__pass-wrap">
+              <input type="password" name="pass" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" />
+              <button type="button" class="login__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
           </label>
           <p id="signup-error" class="login__msg-error" hidden></p>
           <p id="signup-ok" class="login__msg-ok" hidden></p>
@@ -108,6 +138,28 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   // Toggles
   const $irARegistro = document.getElementById("ir-a-registro") as HTMLAnchorElement;
   const $irALogin = document.getElementById("ir-a-login") as HTMLAnchorElement;
+
+  // ============ Ojito mostrar/ocultar contraseña ============
+  // Cada botón [data-toggle-pass] está al lado de un <input type="password">.
+  // Al cliquearlo cambia el type del input y el icono visible (ojo / ojo tachado).
+  // Usamos toggleAttribute en lugar de .hidden porque en <svg> la propiedad
+  // hidden no siempre refleja el atributo, y el selector CSS [hidden] no
+  // engancha si no está el atributo.
+  document.querySelectorAll<HTMLButtonElement>("[data-toggle-pass]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const wrap = btn.closest(".login__pass-wrap");
+      const input = wrap?.querySelector("input") as HTMLInputElement | null;
+      if (!input) return;
+      const yaVisible = input.type === "text";
+      input.type = yaVisible ? "password" : "text";
+      const ahoraVisible = !yaVisible;
+      btn.setAttribute("aria-pressed", String(ahoraVisible));
+      btn.setAttribute("aria-label", ahoraVisible ? "Ocultar contraseña" : "Mostrar contraseña");
+      // Cuando la pass está visible, muestro el ojo tachado (sugiere "ocultar").
+      btn.querySelector(".icono-ojo")?.toggleAttribute("hidden", ahoraVisible);
+      btn.querySelector(".icono-ojo-tachado")?.toggleAttribute("hidden", !ahoraVisible);
+    });
+  });
 
   // ============ Toggle entre vistas ============
   $irARegistro.addEventListener("click", (e) => {
@@ -325,12 +377,46 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     background: var(--color-bg);
     color: var(--color-ink);
     transition: border-color 0.15s ease, background 0.15s ease;
+    width: 100%;
   }
   .login__label input:focus {
     outline: none;
     border-color: var(--color-deep);
     background: #fff;
   }
+
+  /* Wrap para el input de contraseña + botón de mostrar/ocultar. */
+  .login__pass-wrap {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+  }
+  .login__pass-wrap input {
+    padding-right: 2.6rem; /* hace espacio para el ojito */
+  }
+  .login__pass-toggle {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: grid;
+    place-items: center;
+    width: 2.4rem;
+    background: transparent;
+    border: 0;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .login__pass-toggle:hover { color: var(--color-ink); background: rgba(19, 27, 61, 0.04); }
+  .login__pass-toggle:focus-visible {
+    outline: 2px solid var(--color-deep);
+    outline-offset: -2px;
+  }
+  /* El atributo `hidden` no siempre oculta los <svg> en todos los navegadores —
+     forzamos con CSS para que solo se vea el icono activo (ojo / ojo tachado). */
+  .login__pass-toggle svg[hidden] { display: none; }
 
   .login__msg-error,
   .login__msg-ok {
