@@ -39,7 +39,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
       {/* ============ HEADER ============ */}
       <header class="inscripcion__head" data-animate>
         <p class="eyebrow">Inscripción y contacto</p>
-        <h1>Reserva tu lugar.</h1>
+        <h1>Reserva tu lugar</h1>
         <p class="inscripcion__sub">
           Próxima edición — Agosto 2026 · Grupos reducidos · 100% online
         </p>
@@ -271,9 +271,13 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
             </div>
           </fieldset>
 
-          {/* Protocolo + checkbox */}
-          <fieldset class="ins-form__fieldset ins-form__fieldset--protocolo">
-            <legend class="ins-form__legend">Protocolo</legend>
+          {/* Protocolo + checkbox.
+              Usamos un h3 en vez de <legend> porque este fieldset tiene fondo
+              y borde, y el <legend> nativo se renderiza cortando el borde
+              superior — quedaba sobresaliendo del cuadro. El fieldset usa
+              aria-labelledby para mantener la accesibilidad. */}
+          <fieldset class="ins-form__fieldset ins-form__fieldset--protocolo" aria-labelledby="protocolo-titulo">
+            <h3 id="protocolo-titulo" class="ins-form__legend">Protocolo</h3>
 
             <p class="ins-form__nota">
               Lee el protocolo del programa. Cubre la modalidad, cómo
@@ -663,7 +667,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     // Confirmación adaptada a la intención + canal preferido.
     const canalTexto = canalPreferido === "whatsapp" ? "por WhatsApp" : "por mail";
     const textosConfirmacion: Record<string, string> = {
-      info: `Recibimos tu pedido. En las próximas 48hs te enviamos toda la información del programa ${canalTexto}.`,
+      info: `Recibimos tu interés en Vocational Lab. En las próximas 24hs te enviamos toda la información del programa ${canalTexto}.`,
       inscripcion: `Recibimos tu solicitud de inscripción. Te contactamos ${canalTexto} para coordinar el pago y confirmar tu lugar.`,
     };
     $confirmTexto.textContent = textosConfirmacion[intencion] ?? `Recibimos tu mensaje. Te contactamos ${canalTexto} pronto.`;

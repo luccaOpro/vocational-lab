@@ -28,7 +28,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
       <div id="cursos-contenido" hidden>
         <header class="cursos__head">
           <p class="cursos__eyebrow">Aula · Hola de nuevo</p>
-          <h1 class="cursos__titulo" id="saludo">Hola.</h1>
+          <h1 class="cursos__titulo" id="saludo">Hola</h1>
           <p class="cursos__bajada" id="bajada">Estos son tus cursos activos.</p>
         </header>
 
@@ -65,7 +65,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   function saludoSegunHora(nombre: string): string {
     const h = new Date().getHours();
     const momento = h < 13 ? "Buen día" : h < 20 ? "Buenas tardes" : "Buenas noches";
-    return `${momento}, ${nombre}.`;
+    return `${momento}, ${nombre}`;
   }
 
   async function cargar() {

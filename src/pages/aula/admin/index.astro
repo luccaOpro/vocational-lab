@@ -126,7 +126,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const auth = await requireRol(["admin"]);
     if (!auth) return;
 
-    $titulo.textContent = `Hola, ${auth.profile.nombre.split(" ")[0]}.`;
+    $titulo.textContent = `Hola, ${auth.profile.nombre.split(" ")[0]}`;
 
     // Consultas en paralelo para acelerar.
     const [profilesRes, cursosRes, entregasRes, sinCursoRes, solicitudesRes] = await Promise.all([

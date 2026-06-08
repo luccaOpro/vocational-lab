@@ -34,11 +34,6 @@
   <header class="prot__meta">
     <p class="prot__titulo">Protocolo de Confidencialidad y Consentimiento Informado</p>
     <p class="prot__subtitulo">Programa de Orientación Vocacional Online</p>
-    <dl class="prot__ficha">
-      <div><dt>Versión</dt><dd>1.0 — Junio 2026</dd></div>
-      <div><dt>Revisión</dt><dd>Julia Vargas — Co-directora, Vocational Lab</dd></div>
-      <div><dt>Aprobación</dt><dd>Laura Pires — Co-directora / Dirección Clínica, Vocational Lab</dd></div>
-    </dl>
   </header>
 
   {/* ───────────────────────── 1 ───────────────────────── */}
@@ -662,11 +657,6 @@
     </li>
   </ul>
 
-  <p class="prot__nota-final">
-    Se recomienda complementar este protocolo con un documento separado de
-    Términos y Condiciones que incluya las condiciones de precio,
-    modalidades de pago y política de cancelación.
-  </p>
 </div>
 
 <style>
@@ -695,27 +685,6 @@
     color: var(--color-ink-soft);
     font-size: 1.05rem;
   }
-  .prot__ficha {
-    margin: 0;
-    display: grid;
-    gap: 0.35rem;
-    font-size: 0.85rem;
-  }
-  .prot__ficha div {
-    display: flex;
-    gap: 0.5rem;
-  }
-  .prot__ficha dt {
-    flex-shrink: 0;
-    min-width: 5.5rem;
-    color: var(--color-ink-soft);
-    font-weight: 500;
-  }
-  .prot__ficha dd {
-    margin: 0;
-    color: var(--color-ink);
-  }
-
   .prot__h2 {
     font-family: var(--font-serif);
     font-size: 1.2rem;
@@ -728,10 +697,12 @@
   }
 
   .prot__h3 {
-    font-size: 1rem;
+    font-family: var(--font-serif);
+    font-size: 1.02rem;
     font-weight: 600;
     margin: 1.4rem 0 0.4rem;
     color: var(--color-ink);
+    line-height: 1.3;
   }
 
   .prot p {
@@ -776,12 +747,4 @@
     color: var(--color-accent-dark);
   }
 
-  .prot__nota-final {
-    margin-top: 1.5rem;
-    padding-top: 1.2rem;
-    border-top: 1px solid var(--color-line);
-    color: var(--color-ink-soft);
-    font-size: 0.9rem;
-    font-style: italic;
-  }
 </style>
