@@ -59,7 +59,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
         {/* ─── PASO 1 · Intención ─── */}
         <fieldset class="ins-form__fieldset">
-          <legend class="ins-form__legend">¿Qué te trae por acá?</legend>
+          <legend class="ins-form__legend">¿Qué te trae por acá? <span class="ins-form__required" aria-hidden="true">*</span></legend>
 
           <div class="ins-form__radios" role="radiogroup">
             <label class="ins-form__radio">
@@ -86,20 +86,22 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
           <div class="ins-form__grid">
             <label class="ins-form__field">
-              <span class="ins-form__label">Nombre y apellido</span>
-              <input type="text" name="nombre" required autocomplete="name" minlength="2" maxlength="60" />
+              <span class="ins-form__label">Nombre y apellido <span class="ins-form__required" aria-hidden="true">*</span></span>
+              <input type="text" name="nombre" required autocomplete="name" minlength="3" maxlength="60" />
             </label>
 
             <label class="ins-form__field">
-              <span class="ins-form__label">Email</span>
-              <input type="email" name="email" required autocomplete="email" />
+              <span class="ins-form__label">Email <span class="ins-form__required" aria-hidden="true">*</span></span>
+              <input type="email" name="email" required autocomplete="email" maxlength="80" />
             </label>
 
             {/* Teléfono internacional: select de país (código) + input numérico.
                 El código y el número se concatenan al enviar el form para
-                guardarlo como un solo string formateado en la base. */}
+                guardarlo como un solo string formateado en la base.
+                El asterisco "*" se muestra/oculta por JS según el canal
+                preferido elegido (obligatorio solo si eligen WhatsApp). */}
             <div class="ins-form__field">
-              <span class="ins-form__label">Teléfono</span>
+              <span class="ins-form__label">Teléfono <span class="ins-form__required" id="tel-asterisco" aria-hidden="true" hidden>*</span></span>
               <div class="ins-form__tel-grid">
                 <select name="telefono_codigo" class="ins-form__tel-codigo" aria-label="Código de país">
                   <option value="+54">🇦🇷 Argentina (+54)</option>
@@ -150,7 +152,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
         {/* ─── PASO 3 · Canal preferido para recibir respuesta ─── */}
         <fieldset class="ins-form__fieldset">
-          <legend class="ins-form__legend">¿Cómo prefieres que te contactemos?</legend>
+          <legend class="ins-form__legend">¿Cómo prefieres que te contactemos? <span class="ins-form__required" aria-hidden="true">*</span></legend>
 
           <div class="ins-form__radios" role="radiogroup">
             <label class="ins-form__radio">
@@ -174,7 +176,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         {/* ─── PASO 4 · Bloque condicional (solo cuando intencion = inscripcion) ─── */}
         <div id="bloque-inscripcion" hidden>
           <fieldset class="ins-form__fieldset">
-            <legend class="ins-form__legend">¿Quién se inscribe?</legend>
+            <legend class="ins-form__legend">¿Quién se inscribe? <span class="ins-form__required" aria-hidden="true">*</span></legend>
 
             <div class="ins-form__radios" role="radiogroup">
               <label class="ins-form__radio">
@@ -203,7 +205,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
             <div class="ins-form__grid">
               <label class="ins-form__field">
-                <span class="ins-form__label">Edad</span>
+                <span class="ins-form__label">Edad <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="text" name="edad" inputmode="numeric" maxlength="3" autocomplete="off" />
               </label>
             </div>
@@ -218,12 +220,12 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
             <div class="ins-form__grid">
               <label class="ins-form__field">
-                <span class="ins-form__label">Nombre completo del menor</span>
+                <span class="ins-form__label">Nombre completo del menor <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="text" name="nombre_menor" autocomplete="off" maxlength="60" />
               </label>
 
               <label class="ins-form__field">
-                <span class="ins-form__label">Fecha de nacimiento</span>
+                <span class="ins-form__label">Fecha de nacimiento <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="date" name="fecha_nacimiento_menor" />
               </label>
             </div>
@@ -232,12 +234,12 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
             <div class="ins-form__grid">
               <label class="ins-form__field">
-                <span class="ins-form__label">Tu vínculo con el menor</span>
+                <span class="ins-form__label">Tu vínculo con el menor <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="text" name="vinculo_menor" placeholder="Madre, padre, tutor/a…" autocomplete="off" maxlength="30" />
               </label>
 
               <label class="ins-form__field">
-                <span class="ins-form__label">Tu DNI / documento</span>
+                <span class="ins-form__label">Tu DNI / documento <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="text" name="dni_tutor" inputmode="text" autocomplete="off" maxlength="15" placeholder="Sin puntos ni espacios" />
               </label>
             </div>
@@ -247,6 +249,10 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               sección 11). Para menores el tutor ya es el contacto principal,
               así que este es un contacto ADICIONAL y opcional (sección 12).
               El texto del legend y la nota se ajustan por JS según el rol. */}
+          {/* Las clases de los asteriscos del contacto de emergencia
+              se togglean por JS según el rol: para mayor son obligatorios,
+              para responsable_menor son opcionales (el tutor ya es el
+              contacto principal). */}
           <fieldset id="bloque-emergencia" class="ins-form__fieldset" hidden>
             <legend class="ins-form__legend" id="emergencia-legend">Contacto de emergencia</legend>
             <p class="ins-form__nota" id="emergencia-nota">
@@ -255,17 +261,17 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
             <div class="ins-form__grid">
               <label class="ins-form__field">
-                <span class="ins-form__label">Nombre y apellido</span>
+                <span class="ins-form__label">Nombre y apellido <span class="ins-form__required" data-emergencia-asterisco aria-hidden="true">*</span></span>
                 <input type="text" name="contacto_emergencia_nombre" autocomplete="off" maxlength="60" />
               </label>
 
               <label class="ins-form__field">
-                <span class="ins-form__label">Teléfono</span>
+                <span class="ins-form__label">Teléfono <span class="ins-form__required" data-emergencia-asterisco aria-hidden="true">*</span></span>
                 <input type="tel" name="contacto_emergencia_telefono" inputmode="tel" autocomplete="off" placeholder="+54 11 5555 5555" maxlength="20" />
               </label>
 
               <label class="ins-form__field ins-form__field--full">
-                <span class="ins-form__label">Vínculo</span>
+                <span class="ins-form__label">Vínculo <span class="ins-form__required" data-emergencia-asterisco aria-hidden="true">*</span></span>
                 <input type="text" name="contacto_emergencia_vinculo" placeholder="Madre, pareja, amigo/a…" autocomplete="off" maxlength="30" />
               </label>
             </div>
@@ -277,7 +283,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               superior — quedaba sobresaliendo del cuadro. El fieldset usa
               aria-labelledby para mantener la accesibilidad. */}
           <fieldset class="ins-form__fieldset ins-form__fieldset--protocolo" aria-labelledby="protocolo-titulo">
-            <h3 id="protocolo-titulo" class="ins-form__legend">Protocolo</h3>
+            <h3 id="protocolo-titulo" class="ins-form__legend">Protocolo <span class="ins-form__required" aria-hidden="true">*</span></h3>
 
             <p class="ins-form__nota">
               Lee el protocolo del programa. Cubre la modalidad, cómo
@@ -466,6 +472,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
   function actualizarVisibilidad() {
     const intencion = ($form.elements.namedItem("intencion") as RadioNodeList)?.value;
     const rol = ($form.elements.namedItem("rol_solicitante") as RadioNodeList)?.value;
+    const canalPreferido = ($form.elements.namedItem("canal_preferido_respuesta") as RadioNodeList)?.value;
 
     // Bloque grande de inscripción solo si la intención es "inscripcion"
     const inscripcionVisible = intencion === "inscripcion";
@@ -480,8 +487,8 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
     // Contacto de emergencia: visible apenas se elige un rol. El texto y la
     // obligatoriedad cambian según quién se inscribe.
-    //  - Mayor: contacto obligatorio.
-    //  - Menor: el tutor ya es el contacto principal → este es adicional y opcional.
+    //  - Mayor: contacto obligatorio → asteriscos visibles.
+    //  - Menor: el tutor ya es el contacto principal → este es adicional y opcional → asteriscos ocultos.
     $bloqueEmergencia.hidden = !(esMayor || esMenor);
     if (esMenor) {
       $emergenciaLegend.textContent = "Contacto de emergencia adicional (opcional)";
@@ -492,6 +499,13 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
       $emergenciaNota.textContent =
         "Una persona a la que podamos contactar si hiciera falta durante el programa.";
     }
+    document.querySelectorAll<HTMLElement>("[data-emergencia-asterisco]").forEach((a) => {
+      a.hidden = !esMayor;
+    });
+
+    // Asterisco del teléfono: solo obligatorio si canal preferido = whatsapp.
+    const $telAst = document.getElementById("tel-asterisco");
+    if ($telAst) $telAst.hidden = canalPreferido !== "whatsapp";
 
     // Si recién se hizo visible el bloque, chequeamos si el panel
     // del protocolo entra entero en pantalla sin necesidad de scroll.
@@ -502,10 +516,44 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
   $form.addEventListener("change", actualizarVisibilidad);
 
+  // ============ Validadores ============
+  /** Email: regex pragmático que cubre 99% de los casos reales. */
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  /**
+   * Nombre completo: al menos 2 palabras separadas por espacio,
+   * cada una con al menos 2 caracteres. Solo acepta letras (incluye
+   * acentos y ñ), apóstrofo y guión.
+   */
+  const NOMBRE_COMPLETO_REGEX = /^[\p{L}][\p{L}'\-]+(\s+[\p{L}][\p{L}'\-]+)+$/u;
+
   // ============ Helpers de mensaje ============
-  function mostrarError(msg: string) {
+  /**
+   * Muestra el mensaje de error y, si se pasa el `campoName`, scrollea
+   * hasta el campo problemático y le da focus.
+   *
+   * @param msg        texto a mostrar
+   * @param campoName  atributo name del input/select/checkbox/radio
+   */
+  function mostrarError(msg: string, campoName?: string) {
     $error.textContent = msg;
     $error.hidden = false;
+
+    if (campoName) {
+      const el = $form.querySelector<HTMLElement>(`[name="${campoName}"]`);
+      if (el) {
+        const contenedor =
+          el.closest(".ins-form__field, .ins-form__fieldset, .ins-form__fieldset--protocolo, .ins-form__radio") ?? el;
+        contenedor.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Focus después del scroll para que el browser no nos recentre.
+        setTimeout(() => {
+          try {
+            (el as HTMLInputElement).focus({ preventScroll: true });
+          } catch { /* algunos elementos no aceptan focus */ }
+        }, 350);
+        return;
+      }
+    }
     $error.scrollIntoView({ behavior: "smooth", block: "center" });
   }
   function ocultarError() {
@@ -548,19 +596,25 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     const origen = String(fd.get("origen") ?? "").trim() || null;
     const canalPreferido = String(fd.get("canal_preferido_respuesta") ?? "");
 
-    // Validaciones básicas
-    if (!intencion) return mostrarError("Elige qué te trae por aquí.");
-    if (!nombre) return mostrarError("Necesitamos tu nombre.");
-    if (!email) return mostrarError("Necesitamos tu mail para contactarte.");
+    // Validaciones básicas — cada error scrollea al campo problemático.
+    if (!intencion) return mostrarError("Elige qué te trae por acá.", "intencion");
+    if (!nombre) return mostrarError("Necesitamos tu nombre.", "nombre");
+    if (!NOMBRE_COMPLETO_REGEX.test(nombre)) {
+      return mostrarError("Completa tu nombre y apellido (al menos 2 palabras).", "nombre");
+    }
+    if (!email) return mostrarError("Necesitamos tu mail para contactarte.", "email");
+    if (!EMAIL_REGEX.test(email)) {
+      return mostrarError("El mail no parece válido. Revisa si te falta algo.", "email");
+    }
     if (canalPreferido !== "mail" && canalPreferido !== "whatsapp") {
-      return mostrarError("Decinos por dónde prefieres que te contactemos.");
+      return mostrarError("Indícanos por dónde prefieres que te contactemos.", "canal_preferido_respuesta");
     }
     if (canalPreferido === "whatsapp" && !telefono) {
-      return mostrarError("Si elegiste WhatsApp, necesitamos tu número de teléfono.");
+      return mostrarError("Si elegiste WhatsApp, necesitamos tu número de teléfono.", "telefono_numero");
     }
     // Si cargó teléfono, validamos que tenga una cantidad razonable de dígitos.
     if (telNumero && (contarDigitos(telNumero) < 6 || contarDigitos(telNumero) > 15)) {
-      return mostrarError("El teléfono no parece válido. Escribí solo el número, sin el código de país.");
+      return mostrarError("El teléfono no parece válido. Escribe solo el número, sin el código de país.", "telefono_numero");
     }
 
     // Si es inscripción: validar los campos extra del consentimiento.
@@ -580,7 +634,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     if (intencion === "inscripcion") {
       rolSolicitante = String(fd.get("rol_solicitante") ?? "");
       if (rolSolicitante !== "mayor" && rolSolicitante !== "responsable_menor") {
-        return mostrarError("Indicá si te inscribes tú o si eres responsable de un menor.");
+        return mostrarError("Indica si te inscribes tú o si eres responsable de un menor.", "rol_solicitante");
       }
 
       // Contacto de emergencia (se completa en ambos roles, con distinta
@@ -592,15 +646,24 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
       if (rolSolicitante === "mayor") {
         const edadStr = String(fd.get("edad") ?? "").trim();
         edad = edadStr ? parseInt(edadStr, 10) : null;
-        if (edad === null || Number.isNaN(edad) || edad < 18 || edad > 120) {
-          return mostrarError("Para inscribirte a ti mismo/a necesitamos una edad válida (18 o más).");
+        if (edad === null || Number.isNaN(edad) || edad < 18 || edad > 100) {
+          return mostrarError("Para inscribirte tú mismo/a necesitamos una edad válida (entre 18 y 100).", "edad");
         }
         // Para mayores el contacto de emergencia es obligatorio.
-        if (!contactoEmergenciaNombre || !contactoEmergenciaTelefono || !contactoEmergenciaVinculo) {
-          return mostrarError("Completá el contacto de emergencia: nombre, teléfono y vínculo.");
+        if (!contactoEmergenciaNombre) {
+          return mostrarError("Completa el nombre del contacto de emergencia.", "contacto_emergencia_nombre");
+        }
+        if (!NOMBRE_COMPLETO_REGEX.test(contactoEmergenciaNombre)) {
+          return mostrarError("El contacto de emergencia necesita nombre y apellido.", "contacto_emergencia_nombre");
+        }
+        if (!contactoEmergenciaTelefono) {
+          return mostrarError("Completa el teléfono del contacto de emergencia.", "contacto_emergencia_telefono");
         }
         if (contarDigitos(contactoEmergenciaTelefono) < 6 || contarDigitos(contactoEmergenciaTelefono) > 16) {
-          return mostrarError("El teléfono del contacto de emergencia no parece válido.");
+          return mostrarError("El teléfono del contacto de emergencia no parece válido.", "contacto_emergencia_telefono");
+        }
+        if (!contactoEmergenciaVinculo) {
+          return mostrarError("Indica tu vínculo con el contacto de emergencia.", "contacto_emergencia_vinculo");
         }
       }
 
@@ -610,16 +673,29 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         vinculoMenor = String(fd.get("vinculo_menor") ?? "").trim() || null;
         dniTutor = String(fd.get("dni_tutor") ?? "").trim() || null;
 
-        if (!nombreMenor) return mostrarError("Necesitamos el nombre completo del menor que se inscribe.");
-        if (!fechaNacimientoMenor) return mostrarError("Necesitamos la fecha de nacimiento del menor.");
-        if (!vinculoMenor) return mostrarError("Indicá tu vínculo con el menor (madre, padre, tutor/a…).");
-        if (!dniTutor) return mostrarError("Necesitamos tu DNI o documento como representante legal.");
-        if (dniTutor.length < 6) return mostrarError("El DNI o documento parece incompleto.");
+        if (!nombreMenor) {
+          return mostrarError("Necesitamos el nombre completo del menor que se inscribe.", "nombre_menor");
+        }
+        if (!NOMBRE_COMPLETO_REGEX.test(nombreMenor)) {
+          return mostrarError("Completa el nombre y apellido del menor.", "nombre_menor");
+        }
+        if (!fechaNacimientoMenor) {
+          return mostrarError("Necesitamos la fecha de nacimiento del menor.", "fecha_nacimiento_menor");
+        }
+        if (!vinculoMenor) {
+          return mostrarError("Indica tu vínculo con el menor (madre, padre, tutor/a…).", "vinculo_menor");
+        }
+        if (!dniTutor) {
+          return mostrarError("Necesitamos tu DNI o documento como representante legal.", "dni_tutor");
+        }
+        if (dniTutor.length < 6) {
+          return mostrarError("El DNI o documento parece incompleto.", "dni_tutor");
+        }
       }
 
       const checkbox = $form.elements.namedItem("protocolo_aceptado") as HTMLInputElement;
       if (!checkbox.checked) {
-        return mostrarError("Tienes que leer y aceptar el Protocolo para anotarte.");
+        return mostrarError("Tienes que leer y aceptar el Protocolo para anotarte.", "protocolo_aceptado");
       }
       protocoloAceptado = true;
       protocoloVersion = PROTOCOLO_VERSION_ACTUAL;
@@ -658,7 +734,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
     if (dbError) {
       console.error("[inscripcion]", dbError);
-      mostrarError("Hubo un problema al guardar tu solicitud. Probá de nuevo en un momento.");
+      mostrarError("Hubo un problema al guardar tu solicitud. Prueba de nuevo en un momento.");
       $submit.disabled = false;
       $submit.textContent = "Enviar →";
       return;
@@ -810,6 +886,15 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     font-size: 0.85rem;
     font-weight: 500;
     color: var(--color-ink-soft);
+  }
+
+  /* Asterisco "*" rojo que marca un campo obligatorio. Se usa en labels
+     de inputs y en legends de fieldsets de radios. Aria-hidden porque
+     el campo ya tiene atributo `required` o se valida vía JS. */
+  .ins-form__required {
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-left: 0.15em;
   }
   .ins-form input[type="text"],
   .ins-form input[type="email"],
