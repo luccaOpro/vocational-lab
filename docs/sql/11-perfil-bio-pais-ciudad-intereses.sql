@@ -14,6 +14,13 @@
 --   2) Validaciones por CHECK constraint para los largos / cantidad.
 --   3) Comments para la documentación viva del schema.
 --
+-- Nota: el largo por elemento del array intereses (max 30 chars y
+-- no vacío) NO se valida en la base — Postgres no permite subqueries
+-- en CHECK y la función IMMUTABLE no termina de pasar el editor de
+-- Supabase. Esa validación la enforza el cliente (LIMITES.interes +
+-- limpiar() en src/pages/aula/perfil.astro). Si en algún momento
+-- queremos moverla a la base, hacerlo con un trigger BEFORE INSERT/UPDATE.
+--
 -- Las 4 columnas son nullable: el perfil arranca vacío y el
 -- usuario decide qué llenar. Nada es obligatorio.
 --
@@ -35,45 +42,24 @@ alter table public.profiles
 
 
 -- ============================================================
--- 2) Validaciones de largo / cantidad
--- ------------------------------------------------------------
--- Hechas con CHECK para no depender de validación del cliente.
--- Si el constraint ya existe, lo dropeamos y lo recreamos por
--- idempotencia.
+-- 2) Validaciones de largo / cantidad (sin subqueries)
 -- ============================================================
 
-alter table public.profiles
-  drop constraint if exists profiles_bio_largo;
-alter table public.profiles
-  add constraint profiles_bio_largo
-    check (bio is null or char_length(bio) <= 280);
+alter table public.profiles drop constraint if exists profiles_bio_largo;
+alter table public.profiles add constraint profiles_bio_largo
+  check (bio is null or char_length(bio) <= 280);
 
-alter table public.profiles
-  drop constraint if exists profiles_pais_largo;
-alter table public.profiles
-  add constraint profiles_pais_largo
-    check (pais is null or char_length(pais) <= 40);
+alter table public.profiles drop constraint if exists profiles_pais_largo;
+alter table public.profiles add constraint profiles_pais_largo
+  check (pais is null or char_length(pais) <= 40);
 
-alter table public.profiles
-  drop constraint if exists profiles_ciudad_largo;
-alter table public.profiles
-  add constraint profiles_ciudad_largo
-    check (ciudad is null or char_length(ciudad) <= 60);
+alter table public.profiles drop constraint if exists profiles_ciudad_largo;
+alter table public.profiles add constraint profiles_ciudad_largo
+  check (ciudad is null or char_length(ciudad) <= 60);
 
-alter table public.profiles
-  drop constraint if exists profiles_intereses_cantidad;
-alter table public.profiles
-  add constraint profiles_intereses_cantidad
-    check (
-      intereses is null
-      or (
-        array_length(intereses, 1) <= 10
-        and not exists (
-          select 1 from unnest(intereses) as i
-          where char_length(i) > 30 or char_length(trim(i)) = 0
-        )
-      )
-    );
+alter table public.profiles drop constraint if exists profiles_intereses_cantidad;
+alter table public.profiles add constraint profiles_intereses_cantidad
+  check (intereses is null or array_length(intereses, 1) <= 10);
 
 
 -- ============================================================
@@ -87,7 +73,7 @@ comment on column public.profiles.pais is
 comment on column public.profiles.ciudad is
   'Ciudad / localidad de residencia (texto libre, hasta 60 chars).';
 comment on column public.profiles.intereses is
-  'Tags libres de intereses del usuario (max 10, cada uno hasta 30 chars). Útil para vinculación grupal.';
+  'Tags libres de intereses del usuario (max 10, cada uno hasta 30 chars). Útil para vinculación grupal. Largo por elemento validado en el cliente.';
 
 
 -- ============================================================
