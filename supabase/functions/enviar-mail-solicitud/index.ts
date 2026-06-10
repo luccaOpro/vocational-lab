@@ -35,7 +35,7 @@ const MAIL_FROM_NAME = "Vocational Lab";
 const WSP_LINK = "https://wa.me/5491123145518";
 const WSP_VISIBLE = "+54 9 11 2314-5518";
 const INSCRIPCION_URL = "https://vlab.com.ar/inscripcion";
-const LOGO_URL = "https://vlab.com.ar/email-logo.png";
+const LOGO_URL = "https://vlab.com.ar/email-logo-v2.png";
 
 // ── Secrets (vienen del panel de Supabase) ──
 const SMTP_PASSWORD = Deno.env.get("SMTP_PASSWORD") ?? "";
