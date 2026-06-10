@@ -30,6 +30,9 @@ export function traducirError(error: unknown): string {
   if (msg.includes("rate limit") || msg.includes("Too many requests")) {
     return "Demasiados intentos. Esperá un minuto y volvé a intentar.";
   }
+  if (msg.includes("Auth session missing") || msg.includes("session_not_found") || msg.includes("Session from session_id")) {
+    return "El enlace venció o ya se usó. Volvé a pedir uno nuevo desde 'Olvidé mi contraseña'.";
+  }
 
   // Red
   if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("network")) {

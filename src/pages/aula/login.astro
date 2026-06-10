@@ -116,6 +116,78 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
           <a href="#" id="ir-a-login">Inicia sesión</a>
         </p>
       </div>
+
+      {/* ============ MODO RECUPERAR — pedir el enlace ============ */}
+      <div id="modo-recuperar" hidden>
+        <h1 class="login__titulo">Recuperar contraseña</h1>
+        <p class="login__bajada">
+          Ingresa tu mail y te enviamos un enlace para crear una contraseña nueva.
+        </p>
+
+        <form id="recover-form" class="login__form">
+          <label class="login__label">
+            <span>Mail</span>
+            <input type="email" name="mail" placeholder="tu@mail.com" required autocomplete="email" />
+          </label>
+          <p id="recover-error" class="login__msg-error" hidden></p>
+          <p id="recover-ok" class="login__msg-ok" hidden></p>
+          <button type="submit" id="recover-submit" class="login__submit">Enviar enlace</button>
+        </form>
+
+        <p class="login__ayuda">
+          <a href="#" id="volver-a-login">Volver a iniciar sesión</a>
+        </p>
+      </div>
+
+      {/* ============ MODO NUEVA CONTRASEÑA — vuelta desde el mail ============ */}
+      <div id="modo-nueva-pass" hidden>
+        <h1 class="login__titulo">Crea tu contraseña nueva</h1>
+        <p class="login__bajada">
+          Elige una contraseña nueva para tu cuenta. Después entras directo al aula.
+        </p>
+
+        <form id="nuevapass-form" class="login__form">
+          <label class="login__label">
+            <span>Contraseña nueva</span>
+            <div class="login__pass-wrap">
+              <input type="password" name="pass" placeholder="Mínimo 8 caracteres" required autocomplete="new-password" minlength="8" />
+              <button type="button" class="login__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+          </label>
+          <label class="login__label">
+            <span>Repetir contraseña</span>
+            <div class="login__pass-wrap">
+              <input type="password" name="pass2" placeholder="Repite la contraseña" required autocomplete="new-password" minlength="8" />
+              <button type="button" class="login__pass-toggle" data-toggle-pass aria-label="Mostrar contraseña" aria-pressed="false">
+                <svg class="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="icono-ojo-tachado" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" hidden>
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+          </label>
+          <p id="nuevapass-error" class="login__msg-error" hidden></p>
+          <p id="nuevapass-ok" class="login__msg-ok" hidden></p>
+          <button type="submit" id="nuevapass-submit" class="login__submit">Guardar contraseña</button>
+        </form>
+      </div>
     </div>
   </main>
 </AulaLayout>
@@ -125,9 +197,17 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   import { homePorRol, type Rol } from "../../lib/auth-guard";
   import { traducirError } from "../../lib/ui";
 
+  // Si llegamos desde el enlace del mail de recuperación, la URL trae
+  // "type=recovery" en el hash. Lo leemos AHORA, antes de que el cliente de
+  // Supabase procese y borre el hash: nos sirve para saber que NO hay que
+  // auto-redirigir al aula, sino mostrar la pantalla de "nueva contraseña".
+  const veniaDeRecovery = window.location.hash.includes("type=recovery");
+
   // ============ Referencias DOM ============
   const $modoLogin = document.getElementById("modo-login") as HTMLElement;
   const $modoRegistro = document.getElementById("modo-registro") as HTMLElement;
+  const $modoRecuperar = document.getElementById("modo-recuperar") as HTMLElement;
+  const $modoNuevaPass = document.getElementById("modo-nueva-pass") as HTMLElement;
 
   // Login
   const $loginForm = document.getElementById("login-form") as HTMLFormElement;
@@ -141,9 +221,22 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   const $signupOk = document.getElementById("signup-ok") as HTMLElement;
   const $signupSubmit = document.getElementById("signup-submit") as HTMLButtonElement;
 
+  // Recuperar contraseña (pedir el enlace)
+  const $recoverForm = document.getElementById("recover-form") as HTMLFormElement;
+  const $recoverError = document.getElementById("recover-error") as HTMLElement;
+  const $recoverOk = document.getElementById("recover-ok") as HTMLElement;
+  const $recoverSubmit = document.getElementById("recover-submit") as HTMLButtonElement;
+
+  // Nueva contraseña (vuelta desde el mail)
+  const $nuevaPassForm = document.getElementById("nuevapass-form") as HTMLFormElement;
+  const $nuevaPassError = document.getElementById("nuevapass-error") as HTMLElement;
+  const $nuevaPassOk = document.getElementById("nuevapass-ok") as HTMLElement;
+  const $nuevaPassSubmit = document.getElementById("nuevapass-submit") as HTMLButtonElement;
+
   // Toggles
   const $irARegistro = document.getElementById("ir-a-registro") as HTMLAnchorElement;
   const $irALogin = document.getElementById("ir-a-login") as HTMLAnchorElement;
+  const $volverALogin = document.getElementById("volver-a-login") as HTMLAnchorElement;
 
   // ============ Ojito mostrar/ocultar contraseña ============
   // Cada botón [data-toggle-pass] está al lado de un <input type="password">.
@@ -167,25 +260,50 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     });
   });
 
-  // ============ Toggle entre vistas ============
+  // ============ Cambiar entre vistas ============
+  // Hay 4 vistas en la misma página; mostramos una y ocultamos el resto.
+  type Vista = "login" | "registro" | "recuperar" | "nueva-pass";
+  function mostrarVista(cual: Vista) {
+    $modoLogin.hidden = cual !== "login";
+    $modoRegistro.hidden = cual !== "registro";
+    $modoRecuperar.hidden = cual !== "recuperar";
+    $modoNuevaPass.hidden = cual !== "nueva-pass";
+  }
+
   $irARegistro.addEventListener("click", (e) => {
     e.preventDefault();
-    $modoLogin.hidden = true;
-    $modoRegistro.hidden = false;
+    mostrarVista("registro");
     history.replaceState(null, "", "#registro");
   });
 
   $irALogin.addEventListener("click", (e) => {
     e.preventDefault();
-    $modoLogin.hidden = false;
-    $modoRegistro.hidden = true;
+    mostrarVista("login");
     history.replaceState(null, "", window.location.pathname);
+  });
+
+  // "Olvidé mi contraseña" → pantalla para pedir el enlace.
+  $loginRecover.addEventListener("click", (e) => {
+    e.preventDefault();
+    // Arrastramos el mail que ya hubiera escrito en el login, así no lo retipea.
+    const mailLogin = ((new FormData($loginForm).get("mail") as string) ?? "").trim();
+    const inputRecover = $recoverForm.elements.namedItem("mail") as HTMLInputElement;
+    if (mailLogin) inputRecover.value = mailLogin;
+    ocultarMensaje($recoverError);
+    ocultarMensaje($recoverOk);
+    mostrarVista("recuperar");
+    inputRecover.focus();
+  });
+
+  // "Volver a iniciar sesión" desde la pantalla de recuperar.
+  $volverALogin.addEventListener("click", (e) => {
+    e.preventDefault();
+    mostrarVista("login");
   });
 
   // Si la URL tiene #registro, arrancamos en esa vista.
   if (window.location.hash === "#registro") {
-    $modoLogin.hidden = true;
-    $modoRegistro.hidden = false;
+    mostrarVista("registro");
   }
 
   // ============ Helpers ============
@@ -215,13 +333,29 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     el.textContent = "";
   }
 
-  // ============ Si ya hay sesión, redirigimos ============
-  (async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) {
-      await redirigirSegunRol(data.session.user.id);
+  // ============ Sesión existente / vuelta del mail de recuperación ============
+  // Al procesar el enlace de recuperación, el cliente fija una sesión y dispara
+  // el evento PASSWORD_RECOVERY. En ese caso NO entramos al aula: mostramos la
+  // pantalla para elegir una contraseña nueva.
+  supabase.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      mostrarVista("nueva-pass");
     }
-  })();
+  });
+
+  if (veniaDeRecovery) {
+    // Mostramos ya la pantalla de nueva contraseña (por si el evento de arriba
+    // se disparó antes de que engancháramos el listener).
+    mostrarVista("nueva-pass");
+  } else {
+    // Flujo normal: si ya hay sesión activa, derecho al aula.
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        await redirigirSegunRol(data.session.user.id);
+      }
+    })();
+  }
 
   // ============ LOGIN ============
   $loginForm.addEventListener("submit", async (e) => {
@@ -256,24 +390,76 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     }
   });
 
-  // "Olvidé mi contraseña" — envía mail de recuperación.
-  $loginRecover.addEventListener("click", async (e) => {
+  // ============ RECUPERAR — pedir el enlace por mail ============
+  $recoverForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    ocultarMensaje($loginError);
-    const mail = (new FormData($loginForm).get("mail") as string)?.trim();
+    ocultarMensaje($recoverError);
+    ocultarMensaje($recoverOk);
+    const mail = ((new FormData($recoverForm).get("mail") as string) ?? "").trim();
     if (!mail) {
-      mostrarMensaje($loginError, "Escribí tu mail arriba y volvé a apretar 'Olvidé mi contraseña'.");
+      mostrarMensaje($recoverError, "Escribe tu mail para enviarte el enlace.");
       return;
     }
+
+    $recoverSubmit.disabled = true;
+    $recoverSubmit.textContent = "Enviando…";
+
     const { error } = await supabase.auth.resetPasswordForEmail(mail, {
       redirectTo: `${window.location.origin}/aula/login`,
     });
+
+    $recoverSubmit.disabled = false;
+    $recoverSubmit.textContent = "Enviar enlace";
+
     if (error) {
-      mostrarMensaje($loginError, `No pudimos enviar el mail: ${error.message}`);
+      mostrarMensaje($recoverError, traducirError(error));
       return;
     }
-    $loginError.style.color = "var(--color-deep)";
-    mostrarMensaje($loginError, `Te enviamos un mail a ${mail} para resetear la contraseña.`);
+
+    // Mensaje a propósito genérico: no revelamos si el mail tiene cuenta o no.
+    mostrarMensaje(
+      $recoverOk,
+      `Si ${mail} tiene una cuenta, te enviamos un enlace para crear una contraseña nueva. Revisa tu casilla (y la carpeta de spam). El enlace vence en una hora.`
+    );
+  });
+
+  // ============ NUEVA CONTRASEÑA — al volver del enlace del mail ============
+  $nuevaPassForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    ocultarMensaje($nuevaPassError);
+    ocultarMensaje($nuevaPassOk);
+
+    const fd = new FormData($nuevaPassForm);
+    const pass = String(fd.get("pass"));
+    const pass2 = String(fd.get("pass2"));
+
+    if (pass.length < 8) {
+      mostrarMensaje($nuevaPassError, "La contraseña tiene que tener al menos 8 caracteres.");
+      return;
+    }
+    if (pass !== pass2) {
+      mostrarMensaje($nuevaPassError, "Las dos contraseñas no coinciden.");
+      return;
+    }
+
+    $nuevaPassSubmit.disabled = true;
+    $nuevaPassSubmit.textContent = "Guardando…";
+
+    const { data, error } = await supabase.auth.updateUser({ password: pass });
+
+    if (error) {
+      mostrarMensaje($nuevaPassError, traducirError(error));
+      $nuevaPassSubmit.disabled = false;
+      $nuevaPassSubmit.textContent = "Guardar contraseña";
+      return;
+    }
+
+    mostrarMensaje($nuevaPassOk, "¡Listo! Tu contraseña quedó actualizada. Entrando al aula…");
+    const userId = data.user?.id;
+    setTimeout(() => {
+      if (userId) redirigirSegunRol(userId);
+      else window.location.href = "/aula/mis-cursos";
+    }, 1200);
   });
 
   // ============ REGISTRO ============
