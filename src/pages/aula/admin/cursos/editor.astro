@@ -243,7 +243,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
     if (resPosibles.error || resAsignados.error) {
       $grid.innerHTML = `<p class="profes-grid__error">Error al cargar profes: ${
-        traducirError(resPosibles.error ?? resAsignados.error)
+        esc(traducirError(resPosibles.error ?? resAsignados.error))
       }</p>`;
       return;
     }
@@ -430,7 +430,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
     if (resTodos.error || resInscriptos.error) {
       $grid.innerHTML = `<p class="alumnos-grid__error">Error al cargar protagonistas: ${
-        traducirError(resTodos.error ?? resInscriptos.error)
+        esc(traducirError(resTodos.error ?? resInscriptos.error))
       }</p>`;
       return;
     }

@@ -51,7 +51,13 @@ export async function requireSession(): Promise<AuthInfo | null> {
     .single();
 
   if (error || !profile) {
+    // Sesión válida pero sin profile legible: estado roto (ej: profile
+    // borrado a mano, RLS mal aplicada). Antes retornábamos null sin
+    // redirigir y la página quedaba colgada en el loader para siempre.
+    // Cerramos la sesión rota y mandamos al login para empezar de cero.
     console.error("[auth-guard] No se pudo cargar el profile:", error);
+    await supabase.auth.signOut();
+    window.location.href = "/aula/login";
     return null;
   }
 

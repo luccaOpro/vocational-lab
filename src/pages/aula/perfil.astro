@@ -244,14 +244,6 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     admin: "Administrador/a",
   };
 
-  // Mantiene los mensajes inline como fallback,
-  // pero los principales ahora usan showToast() (mejor UX).
-  function mostrarMsg(el: HTMLElement, mensaje: string) {
-    el.textContent = mensaje;
-    el.hidden = false;
-    setTimeout(() => { el.hidden = true; }, 4000);
-  }
-
   type ProfileFull = {
     id: string;
     nombre: string;

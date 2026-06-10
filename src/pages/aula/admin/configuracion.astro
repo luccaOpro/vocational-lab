@@ -129,6 +129,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   $form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
+    // La URL del botón solo puede ser un ancla (#...), una ruta interna (/...)
+    // o un link http(s). Cualquier otra cosa (ej: javascript:) se rechaza —
+    // esa URL termina como href en la home pública.
+    const ctaUrl = String(new FormData($form).get("popup_cta_url")).trim() || "#contacto";
+    if (!/^(#|\/(?!\/)|https?:\/\/)/i.test(ctaUrl)) {
+      showToast("La URL del botón tiene que empezar con #, / o https://", "error");
+      return;
+    }
+
     $submit.disabled = true;
     $submit.textContent = "Guardando…";
 
@@ -138,7 +148,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       { clave: "popup_titulo",    valor: String(fd.get("popup_titulo")).trim()   || "Próxima edición" },
       { clave: "popup_fecha",     valor: String(fd.get("popup_fecha")).trim()    || "Agosto 2026" },
       { clave: "popup_cta_texto", valor: String(fd.get("popup_cta_texto")).trim() || "Reserva tu lugar →" },
-      { clave: "popup_cta_url",   valor: String(fd.get("popup_cta_url")).trim()   || "#contacto" },
+      { clave: "popup_cta_url",   valor: ctaUrl },
     ];
 
     const { error } = await supabase

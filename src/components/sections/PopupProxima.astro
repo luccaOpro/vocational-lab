@@ -54,7 +54,13 @@
     (document.getElementById("popup-sub") as HTMLElement).textContent = config.popup_fecha;
     const $cta = document.getElementById("popup-cta") as HTMLAnchorElement;
     $cta.textContent = config.popup_cta_texto;
-    $cta.href = config.popup_cta_url;
+    // Solo aceptamos URLs seguras: anclas (#...), rutas internas (/...)
+    // o http(s). Bloquea esquemas peligrosos tipo javascript: por si la
+    // config viniera comprometida — defensa en profundidad, la RLS de
+    // site_config ya restringe la escritura a admins (migración 12).
+    const url = config.popup_cta_url.trim();
+    const urlSegura = /^(#|\/(?!\/)|https?:\/\/)/i.test(url) ? url : DEFAULTS.popup_cta_url;
+    $cta.href = urlSegura;
 
     const onScroll = () => {
       if (window.scrollY > 400) {
