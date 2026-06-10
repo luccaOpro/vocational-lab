@@ -1,86 +1,26 @@
 # Pendientes del classroom
 
 > Cómo usar este archivo: cada ítem tiene `[ ]` cuando está pendiente y `[x]` cuando está hecho. Actualizamos a medida que avanzamos.
-> Última actualización: 2026-06-06
+> Última actualización: 2026-06-10 — puesta al día general: el código avanzó más rápido que este archivo, así que tildamos todo lo ya construido (ver "Hecho" al final) y reordenamos lo que queda según prioridad de lanzamiento.
 
-## Inscripción y firma del protocolo (nuevo, 2026-06-03)
+## Para lanzar (en orden sugerido)
 
-Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ver `DECISIONES.md`). El código de la página `/inscripcion`, la tabla SQL, la sección Contacto del sitio y el panel de admin para ver las solicitudes (`/aula/admin/solicitudes`) ya están armados. Lo que falta es lo que Lucas tiene que hacer manualmente en Supabase + redactar copy.
+- [ ] **Testing manual del flujo completo** con datos de prueba: alguien completa `/inscripcion` → la solicitud aparece en `/aula/admin/solicitudes` → admin registra la transferencia y crea/inscribe al alumno → el alumno entra al aula, descarga material y sube una entrega → el profe corrige (nota + comentario) → el alumno ve la devolución. Es el último pendiente real de Fase 1: el aula está construida pero nunca se recorrió de punta a punta.
+- [ ] **Confirmar que las migraciones `docs/sql/01` a `12` están corridas en Supabase.** Este archivo tenía la 06 marcada como crítica sin correr; como después se aplicaron la 07 a la 12 y el aula funciona, casi seguro están todas — pero hay que confirmarlo y tildar. Chequeo rápido: en Table Editor, `solicitudes_inscripcion` tiene que tener las columnas del consentimiento (edad, fecha de nacimiento del menor, vínculo, DNI del tutor, contacto de emergencia).
+- [ ] **SMTP propio para los mails de Supabase** (recuperar contraseña, invitaciones). Hoy salen por el SMTP default de Supabase: ~2-4 mails por hora y remitente genérico — no alcanza con alumnos reales. Candidatos: Resend (plan gratis) o la casilla de cPanel de `vlab.com.ar`. Ojo: esto no es lo mismo que los mails automáticos de confirmación (eso sigue pateado a propósito, ver más abajo).
+- [ ] Documento "cómo se usa el aula" para Julia y Laura.
+- [ ] Documento "cómo se usa el aula" para los alumnos.
+- [ ] Que Julia y Laura revisen el texto del checkbox ("He leído y acepto el Protocolo del programa.") por si prefieren otra redacción.
 
-**Panel de admin (hecho 2026-06-06):** Julia y Laura ven las solicitudes que entran por el form en `/aula/admin/solicitudes` (link en el menú del aula y acceso/ KPI en el dashboard del admin). Pueden filtrar por estado, cambiar el estado (nueva/contactada/convertida/descartada) y dejar notas internas. Las solicitudes también se pueden ver crudas en Supabase → Table Editor → `solicitudes_inscripcion`.
+## Después del lanzamiento / cuando haga falta
 
-**En Supabase (Lucas):**
-- [x] Correr `docs/sql/04-solicitudes-inscripcion.sql` en el SQL Editor del proyecto
-- [x] Verificar que aparezca la tabla `solicitudes_inscripcion` en Table Editor
-- [x] ~~Verificar que aparezca el bucket `protocolos` en Storage (público)~~ — el bucket queda creado pero **ya no se usa**, el protocolo pasó a ser HTML embebido. Se puede borrar desde Storage si querés limpiar, o dejarlo (no rompe nada).
-- [x] ~~Subir el PDF del protocolo al bucket~~ — descartado, ahora es HTML versionado en código.
-- [ ] **⚠️ Correr `docs/sql/06-datos-consentimiento.sql`** (suma las columnas del consentimiento: edad, fecha_nacimiento_menor, vínculo, DNI del tutor, contacto de emergencia). **Hasta que se corra, el form de `/inscripcion` no guarda nada** — el INSERT manda columnas que todavía no existen.
-
-**Copy / contenido (Lucas + Julia/Laura):**
-- [x] **Reemplazar el borrador de `src/components/ProtocoloContenido.astro`** — hecho el 2026-06-06: se cargó la transcripción fiel del documento legal aprobado (Protocolo_VL_062026, v1.0). `PROTOCOLO_VERSION_ACTUAL` queda en `"v1"`.
-- [x] **Dato sensible público:** el protocolo (sección 1) incluye CUILs y domicilios particulares de Julia y Laura. Resuelto el 2026-06-06 con `noindex` en `/protocolo` (meta robots + excluida del sitemap + `Disallow` en robots.txt): la página sigue accesible por link pero no la indexa Google. Queda abierto, si ellas lo prefieren, reemplazar los domicilios particulares por un domicilio único de contacto en el texto.
-- [ ] Revisar el texto del checkbox ("He leído y acepto el Protocolo del programa.") por si Julia y Laura prefieren otra redacción.
+- [ ] Mails automáticos (la decisión 4 que pateamos): mail de confirmación al inscripto cuando se crea la solicitud + aviso al admin cuando entra una nueva. Reusar el servicio que elijamos para el SMTP.
+- [ ] Seguridad nivel siguiente del form: captcha (Cloudflare Turnstile) o rate-limit por IP vía Edge Function, si el honeypot deja de alcanzar.
+- [ ] Trackeo de canal: links de WhatsApp/Instagram apuntando a `/inscripcion?canal=whatsapp` y `?canal=instagram` para registrar el origen.
 - [ ] (Opcional) Redactar el documento separado de Términos y Condiciones (precio, pago, cancelación) que el propio protocolo recomienda.
-
-**Seguridad del form:**
-- [x] Honeypot anti-bot + tiempo mínimo en `/inscripcion` (2026-06-06). Frena el spam automático de formularios.
-- [ ] Nivel siguiente (cuando haga falta): captcha (Cloudflare Turnstile) o rate-limit por IP vía Edge Function, para frenar ataques directos a la API que saltean el form.
-
-**Cuando sea hora de mails automáticos (decisión 4 que pateamos):**
-- [ ] Elegir servicio (Resend / SendGrid / etc.) y sumar al stack
-- [ ] Disparar mail de confirmación al inscripto cuando se crea la solicitud
-- [ ] Disparar mail al admin cuando entra una nueva solicitud
-
-**Trackeo de canal (opcional, mejora):**
-- [ ] Definir links de WhatsApp/Instagram que apunten a `/inscripcion?canal=whatsapp` y `?canal=instagram` para registrar el origen
-
-## Setup técnico inicial
-
-- [x] Configurar Git + GitHub para el repo `vocational-lab`
-- [x] Conectar Netlify al repo de GitHub (auto-deploy)
-- [x] Diseñar el esquema de la base de datos → ver `docs/SCHEMA.md`
-- [ ] Crear cuenta de Supabase
-- [ ] Crear proyecto de Supabase para Vocational Lab
-- [ ] Aplicar el SQL del esquema en Supabase (tablas + RLS + buckets)
-- [ ] Cargar datos de prueba para verificar el esquema
-- [ ] Instalar y configurar cliente de Supabase en el proyecto Astro
-- [ ] Guardar credenciales del proyecto en `.env`
-
-## Fase 1 — V1 del classroom
-
-### Autenticación
-- [ ] Página de login (mail + contraseña)
-- [ ] Recuperar contraseña por mail
-- [ ] Cerrar sesión
-- [ ] Reglas de acceso: que solo alumnos inscriptos vean sus cursos
-
-### Vista de alumno
-- [ ] Página "Mis cursos" con la lista de cursos donde está inscripto
-- [ ] Vista del curso: módulos y archivos descargables
-- [ ] Descargar archivos
-- [ ] Subir entrega de tarea
-- [ ] Ver estado de la entrega (entregada / corregida / pendiente)
-- [ ] Ver devolución del profe (nota + comentario)
-
-### Vista de profesor
-- [ ] Crear / editar cursos
-- [ ] Crear / editar módulos dentro de un curso
-- [ ] Subir material a un módulo
-- [ ] Ver lista de alumnos inscriptos en cada curso
-- [ ] Ver lista de entregas pendientes de corregir
-- [ ] Corregir entrega: poner nota + comentario
-
-### Vista de admin
-- [ ] Crear cuenta de alumno cuando llega una transferencia
-- [ ] Inscribir alumno en un curso específico
-- [ ] Ver lista general de alumnos y su estado de pago
-- [ ] Dar de alta nuevos profesores
-
-### Otros
-- [ ] Permisos y reglas de seguridad (que un alumno no vea entregas de otro)
-- [ ] Testing manual del flujo completo
-- [ ] Documento "cómo se usa el aula" para Julia y Laura
-- [ ] Documento "cómo se usa el aula" para los alumnos
+- [ ] Automatización del formulario de contacto — el plan de 3 capas quedó deferido hasta cerca del lanzamiento. Ojo: se pensó con Netlify Forms y ahora estamos en Cloudflare Pages; la capa 1 probablemente ya la cubre `/inscripcion` + Supabase, repensar antes de arrancar.
+- [ ] Si Julia y Laura lo prefieren: reemplazar los domicilios particulares del protocolo por un domicilio único de contacto (hoy la página está protegida con `noindex`, ver "Hecho").
+- [ ] (Limpieza opcional) Borrar el bucket `protocolos` de Supabase Storage: quedó creado pero no se usa desde que el protocolo es HTML embebido.
 
 ## Fase 2 — V2 (para después)
 
@@ -91,8 +31,31 @@ Estos pendientes corresponden a la decisión de flujo de firma del protocolo (ve
 - [ ] Calendario de fechas de entrega
 - [ ] PWA (app móvil)
 
-## Mejoras continuas (heredadas del sitio público)
+## Hecho
 
-- [ ] Reemplazar OG image placeholder (`public/og-image.png`) por imagen real
-- [ ] Reemplazar dominio placeholder por dominio real en `Layout.astro` y `robots.txt`
-- [ ] Decidir e implementar las 3 capas de automatización del formulario de contacto (Netlify Forms → Zapier → WhatsApp)
+### Sitio público e inscripción
+
+- [x] Página `/inscripcion` unificada (los 3 canales redirigen ahí) con consentimiento completo: flujo mayor/menor de 18, datos del tutor, validaciones estrictas con scroll al error
+- [x] Protocolo legal v1 (Protocolo_VL_062026) transcripto en `src/components/ProtocoloContenido.astro`; `PROTOCOLO_VERSION_ACTUAL = "v1"` en `inscripcion.astro`
+- [x] `/protocolo` con `noindex` + excluida del sitemap + `Disallow` en robots.txt — tiene CUILs y domicilios de Julia y Laura, accesible por link pero no indexada
+- [x] Anti-spam del form: honeypot + tiempo mínimo (2026-06-06)
+- [x] Imagen OG real (1200×630, ícono del logo sobre crema de marca) y dominio `vlab.com.ar` unificado en `Layout.astro`, `astro.config.mjs` y `robots.txt`
+- [x] Accesibilidad del sitio público: foco de teclado, skip link, nav inerte
+- [x] Feedback de Julia del 2026-06-07 aplicado (copys, ítems, bug del legend del Protocolo)
+
+### Setup técnico
+
+- [x] Git + GitHub configurados, auto-deploy a Cloudflare Pages (`vocational-lab.pages.dev` → `vlab.com.ar`)
+- [x] Esquema de la base diseñado → `docs/SCHEMA.md`
+- [x] Cuenta y proyecto de Supabase creados; 12 migraciones SQL escritas en `docs/sql/`
+- [x] Cliente de Supabase configurado en el proyecto (`src/lib/supabase.ts`), credenciales en `.env`
+
+### Aula — Fase 1 construida (falta solo el test de punta a punta)
+
+- [x] **Autenticación**: login con mail + contraseña, "olvidé mi contraseña" (mail de recuperación), cerrar sesión, recordar sesión. Guards por rol en el cliente (UX) + RLS de Supabase como seguridad real, incluido el fix de escalada de rol (migración 07)
+- [x] **Alumno**: `/aula/mis-cursos`, vista del curso con módulos y materiales descargables, subida de entregas con drag&drop, estado de la entrega y devolución del profe (nota + comentario). Perfil con foto (modal de recorte), bio, país, ciudad e intereses
+- [x] **Profe**: lista de entregas pendientes, corrección con nota + comentario, ve los perfiles de sus alumnos (migraciones 08/09), sube material a sus cursos (dropzones)
+- [x] **Admin**: dashboard con KPIs, panel de solicitudes (filtros por estado, notas internas, resumen por canal, eliminar spam), transferencias con auto-inscripción al confirmar (migración 03), gestión de usuarios (alta de alumnos y profes, eliminar), gestión de cursos (crear/editar, asignar profes, inscribir protagonistas, cargar contenido), configuración del sitio (migración 12)
+- [x] `/aula` con redirect inteligente según rol, avatar en el nav, skeletons de carga, tablas adaptadas a móvil
+
+> Nota sobre el plan original: la **creación y edición de cursos quedó del lado del rol admin** (`/aula/admin/cursos`), no del profe como decía el plan. El profe asignado a un curso corrige entregas y sube material; el alta del curso la hace quien tenga rol admin.

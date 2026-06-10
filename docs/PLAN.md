@@ -1,6 +1,6 @@
 # Plan del classroom de Vocational Lab
 
-> Última actualización: 2026-05-26
+> Última actualización: 2026-06-10
 
 ## Visión general
 
@@ -17,9 +17,9 @@ La experiencia debe sentirse 100% Vocational Lab — la marca y el dominio nuest
 
 - **Frontend**: Astro (lo que ya tenemos) + nuevas páginas privadas para el aula.
 - **Backend** (base de datos, autenticación, almacenamiento de archivos): **Supabase** (plan gratuito al inicio).
-- **Hosting**: Netlify (sin cambios).
+- **Hosting**: Cloudflare Pages con auto-deploy desde GitHub (decisión 2026-06-03; arrancamos en Netlify y migramos por costo y free tier).
 - **Cobro**: por transferencia bancaria + pantalla de admin para activar alumnos manualmente.
-- **Mail transaccional** (recuperar contraseña, etc.): por definir — probablemente Supabase + un servicio gratis tipo Resend.
+- **Mail transaccional** (recuperar contraseña, etc.): hoy sale por el SMTP default de Supabase (limitado); antes de lanzar hay que pasar a SMTP propio, probablemente Resend o la casilla de cPanel de `vlab.com.ar`. Ver `PENDIENTES.md`.
 
 ## Roles del sistema
 
@@ -30,6 +30,8 @@ La experiencia debe sentirse 100% Vocational Lab — la marca y el dominio nuest
 ## Fases
 
 ### Fase 1 — V1 (objetivo: ~6-8 semanas desde 2026-05-26)
+
+> **Estado 2026-06-10: construida en código, en ~2 semanas.** Todas las funciones de abajo existen y están commiteadas. Lo que falta para darla por cerrada: el test manual de punta a punta, confirmar las migraciones en Supabase, SMTP propio para los mails y las guías de uso — el detalle vive en `PENDIENTES.md`.
 
 Funciones mínimas para tener un aula utilizable:
 
