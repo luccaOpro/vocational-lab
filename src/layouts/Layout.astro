@@ -27,7 +27,10 @@ interface Props {
 }
 
 const {
-  title = "Vocational Lab · Donde futuro y vocación se encuentran",
+  // El title lleva la keyword principal ("orientación vocacional"): es lo
+  // que más pesa para Google. El tagline poético sigue en el hero y el
+  // footer, donde lo lee una persona y no un buscador.
+  title = "Vocational Lab · Orientación vocacional online para jóvenes",
   description = "Programa de orientación vocacional para jóvenes que quieren explorar su futuro con método, con pares y desde el rol protagonista de su propia historia.",
   noindex = false,
 } = Astro.props;
