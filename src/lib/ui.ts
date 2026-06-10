@@ -222,6 +222,42 @@ export function spinnerHTML(label?: string): string {
   `;
 }
 
+/**
+ * Convierte el contenedor [data-dropzone] que envuelve a un <input type="file">
+ * en zona de drag & drop: soltar un archivo equivale a elegirlo con el picker
+ * (asigna los files al input y dispara "change", así la página reutiliza su
+ * propia lógica de validación/subida sin duplicar nada).
+ *
+ * Es seguro llamarla en cada re-render: marca el contenedor para no
+ * engancharle los listeners dos veces.
+ */
+export function setupDropzone(input: HTMLInputElement): void {
+  const zona = input.closest<HTMLElement>("[data-dropzone]");
+  if (!zona || zona.dataset.dropzoneListo === "true") return;
+  zona.dataset.dropzoneListo = "true";
+
+  ["dragover", "dragenter"].forEach((ev) => {
+    zona.addEventListener(ev, (e) => {
+      e.preventDefault();
+      zona.classList.add("is-dragover");
+    });
+  });
+  ["dragleave", "drop"].forEach((ev) => {
+    zona.addEventListener(ev, () => zona.classList.remove("is-dragover"));
+  });
+  zona.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const files = (e as DragEvent).dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    if (files.length > 1) {
+      showToast("Subí un archivo por vez.", "info");
+      return;
+    }
+    input.files = files;
+    input.dispatchEvent(new Event("change", { bubbles: false }));
+  });
+}
+
 export type ToastTipo = "ok" | "error" | "info";
 
 /** Notificación efímera abajo a la derecha. Auto-desaparece. */

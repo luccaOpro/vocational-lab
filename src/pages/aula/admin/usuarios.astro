@@ -47,7 +47,9 @@ import Icon from "../../../components/aula/Icon.astro";
         </div>
       </div>
 
-      <div id="usuarios-wrap" class="tabla-wrap" hidden>
+      <div id="usuarios-wrap" hidden>
+        <p class="tabla-hint" aria-hidden="true">Desliza la tabla hacia los lados para ver todo →</p>
+        <div class="tabla-wrap">
         <table class="tabla">
           {/* Los th con data-sort son clickeables: ordenan por esa columna.
               Click repetido invierte el sentido. La flecha la pinta el JS. */}
@@ -62,6 +64,7 @@ import Icon from "../../../components/aula/Icon.astro";
           </thead>
           <tbody id="tabla-body"></tbody>
         </table>
+        </div>
       </div>
 
       <p id="usuarios-error" class="usuarios__error" hidden></p>
@@ -565,61 +568,25 @@ import Icon from "../../../components/aula/Icon.astro";
   :global(.rol-select--admin) { color: var(--color-accent); border-color: rgba(216, 85, 42, 0.4); background: rgba(216, 85, 42, 0.1); }
 
   /* ===== Mobile: la tabla pasa a card view ===== */
+  /* ===== Mobile: tabla con scroll horizontal ===== */
+  /* Antes la tabla se transformaba en tarjetas apiladas (td en grid con
+     data-label) y quedaba ilegible. Ahora la tabla sigue siendo tabla:
+     el wrap ya tiene overflow-x auto, solo le damos un ancho mínimo a
+     la tabla para que las columnas respiren y se deslice con el dedo. */
   @media (max-width: 640px) {
+    .tabla {
+      min-width: 640px; /* fuerza el scroll en vez de aplastar columnas */
+    }
     .tabla-wrap {
-      overflow-x: visible;
-      background: transparent;
-      border: 0;
-      border-radius: 0;
+      -webkit-overflow-scrolling: touch; /* inercia nativa en iOS */
     }
-    .tabla, .tabla tbody, .tabla tr {
-      display: block;
-      width: 100%;
-    }
-    .tabla thead { display: none; }
-    .tabla tr {
-      background: #fff;
-      border: 1px solid var(--color-line);
-      border-radius: var(--radius-md);
-      padding: 1rem 1.1rem;
-      margin-bottom: 0.7rem;
-    }
-    .tabla tr:hover { background: #fff; }
-    .tabla td {
-      display: grid;
-      grid-template-columns: 80px 1fr;
-      gap: 0.7rem;
-      align-items: center;
-      padding: 0.4rem 0;
-      border: 0;
-      white-space: normal;
-    }
-    .tabla td::before {
-      content: attr(data-label);
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--color-ink-muted);
-      font-weight: 500;
-    }
-    /* Primera celda (Usuario) ocupa todo el ancho, sin label visible. */
-    .tabla td:first-child {
-      grid-template-columns: 1fr;
-      padding-bottom: 0.7rem;
-      margin-bottom: 0.4rem;
-      border-bottom: 1px solid var(--color-line);
-    }
-    .tabla td:first-child::before { display: none; }
-    /* Mail puede ser largo: que rompa palabra. */
-    :global(.celda-meta) { word-break: break-word; }
-    /* El select de rol full-width en mobile. */
-    :global(.celda-rol .rol-select) { width: 100%; }
-    /* Empty state: que ocupe todo el ancho sin grid. */
-    .tabla td[colspan] {
-      display: block;
-      grid-template-columns: none;
-      padding: 0;
-    }
-    .tabla td[colspan]::before { display: none; }
+    /* Pista de que la tabla se desliza — solo visible en móvil. */
+    .tabla-hint { display: block; }
+  }
+  .tabla-hint {
+    display: none;
+    margin: 0 0 0.6rem;
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
   }
 </style>

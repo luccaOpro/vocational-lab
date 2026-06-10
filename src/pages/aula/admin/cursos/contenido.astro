@@ -55,7 +55,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../../lib/supabase";
   import { requireRol } from "../../../../lib/auth-guard";
-  import { showToast, confirmModal, formModal, traducirError } from "../../../../lib/ui";
+  import { showToast, confirmModal, formModal, traducirError, setupDropzone } from "../../../../lib/ui";
   import { iconHtml } from "../../../../lib/icons";
 
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB para material del profe
@@ -229,10 +229,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
                   ).join("")}
               </ul>
               <div class="bloque__acciones">
-                <label class="bloque__upload">
+                <label class="bloque__upload" data-dropzone>
                   <input type="file" data-modulo-id="${esc(m.id)}" />
                   <span class="bloque__upload-btn">+ Subir archivo</span>
-                  <span class="bloque__upload-hint">Hasta 25 MB</span>
+                  <span class="bloque__upload-hint">Hasta 25 MB · o arrastra el archivo aquí</span>
                 </label>
                 <button type="button" class="bloque__link-btn" data-agregar-video="${esc(m.id)}">+ Agregar video</button>
               </div>
@@ -261,7 +261,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
                         <button type="button" class="archivo__borrar" data-borrar-adjunto-tarea="${esc(tarea.id)}" data-adjunto-path="${esc(tarea.adjunto_path)}" aria-label="Borrar adjunto">×</button>
                       </div>
                     ` : `
-                      <label class="bloque__upload bloque__upload--mini">
+                      <label class="bloque__upload bloque__upload--mini" data-dropzone>
                         <input type="file" data-adjunto-tarea-id="${esc(tarea.id)}" />
                         <span class="bloque__upload-btn">+ Adjunto</span>
                       </label>
@@ -298,9 +298,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-modulo]").forEach((btn) => {
       btn.addEventListener("click", () => borrarModulo(btn.dataset.borrarModulo!));
     });
-    // Subir archivo
+    // Subir archivo (clic o drag & drop sobre el label)
     $modulos.querySelectorAll<HTMLInputElement>('input[type="file"][data-modulo-id]').forEach((input) => {
       input.addEventListener("change", () => subirArchivo(input));
+      setupDropzone(input);
     });
     // Borrar archivo
     $modulos.querySelectorAll<HTMLButtonElement>("[data-archivo-id]").forEach((btn) => {
@@ -322,9 +323,10 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     $modulos.querySelectorAll<HTMLButtonElement>("[data-agregar-video]").forEach((btn) => {
       btn.addEventListener("click", () => agregarVideoModulo(btn.dataset.agregarVideo!));
     });
-    // Subir adjunto a tarea
+    // Subir adjunto a tarea (clic o drag & drop sobre el label)
     $modulos.querySelectorAll<HTMLInputElement>('input[type="file"][data-adjunto-tarea-id]').forEach((input) => {
       input.addEventListener("change", () => subirAdjuntoTarea(input));
+      setupDropzone(input);
     });
     // Borrar adjunto de tarea
     $modulos.querySelectorAll<HTMLButtonElement>("[data-borrar-adjunto-tarea]").forEach((btn) => {
@@ -907,6 +909,16 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     align-items: center;
     gap: 0.7rem;
     cursor: pointer;
+    /* Borde invisible que se "enciende" al arrastrar un archivo encima —
+       reserva el espacio para que el layout no salte. */
+    border: 2px dashed transparent;
+    border-radius: var(--radius-sm);
+    padding: 0.25rem;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  :global(.bloque__upload.is-dragover) {
+    border-color: var(--color-deep);
+    background: rgba(36, 58, 130, 0.06);
   }
   :global(.bloque__upload--mini) { gap: 0; }
   :global(.bloque__upload input) { display: none; }

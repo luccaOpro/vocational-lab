@@ -21,4 +21,42 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+/*
+  "Mantener la sesión iniciada" (checkbox del login):
+  ---
+  · Marcado (default)  → la sesión se guarda en localStorage: sobrevive
+    al cierre del navegador, como siempre.
+  · Desmarcado         → la sesión se guarda en sessionStorage: muere al
+    cerrar el navegador. Pensado para computadoras compartidas.
+
+  El login guarda la preferencia en PERSISTENCIA_KEY ANTES de hacer el
+  signIn, y este adaptador decide dónde escribir los tokens según eso.
+  La lectura mira ambos lados (el token está en uno solo); el borrado
+  limpia ambos por las dudas.
+*/
+export const PERSISTENCIA_KEY = "vl_sesion_persistencia";
+
+const storageAdapter = {
+  getItem: (key: string): string | null =>
+    window.sessionStorage.getItem(key) ?? window.localStorage.getItem(key),
+  setItem: (key: string, value: string): void => {
+    if (window.localStorage.getItem(PERSISTENCIA_KEY) === "session") {
+      window.sessionStorage.setItem(key, value);
+    } else {
+      window.localStorage.setItem(key, value);
+    }
+  },
+  removeItem: (key: string): void => {
+    window.sessionStorage.removeItem(key);
+    window.localStorage.removeItem(key);
+  },
+};
+
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    storage: storageAdapter,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});

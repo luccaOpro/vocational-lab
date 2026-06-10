@@ -55,6 +55,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
               </button>
             </div>
           </label>
+          {/* Recordar sesión: desmarcado, la sesión muere al cerrar el
+              navegador (para computadoras compartidas). */}
+          <label class="login__recordar">
+            <input type="checkbox" name="recordar" checked />
+            <span>Mantener la sesión iniciada en este dispositivo</span>
+          </label>
           <p id="login-error" class="login__msg-error" hidden></p>
           <button type="submit" id="login-submit" class="login__submit">Entrar</button>
           <a href="#" class="login__olvido" id="login-recover">Olvidé mi contraseña</a>
@@ -115,7 +121,7 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 </AulaLayout>
 
 <script>
-  import { supabase } from "../../lib/supabase";
+  import { supabase, PERSISTENCIA_KEY } from "../../lib/supabase";
   import { homePorRol, type Rol } from "../../lib/auth-guard";
   import { traducirError } from "../../lib/ui";
 
@@ -227,6 +233,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     const formData = new FormData($loginForm);
     const email = String(formData.get("mail"));
     const password = String(formData.get("pass"));
+
+    // Guardar la preferencia ANTES del signIn: el adaptador de storage de
+    // lib/supabase.ts la lee para decidir dónde persistir los tokens
+    // (localStorage = recordar / sessionStorage = solo esta sesión).
+    const recordar = formData.get("recordar") !== null;
+    window.localStorage.setItem(PERSISTENCIA_KEY, recordar ? "local" : "session");
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
@@ -417,6 +429,24 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   /* El atributo `hidden` no siempre oculta los <svg> en todos los navegadores —
      forzamos con CSS para que solo se vea el icono activo (ojo / ojo tachado). */
   .login__pass-toggle svg[hidden] { display: none; }
+
+  /* Checkbox "mantener sesión iniciada" */
+  .login__recordar {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    line-height: 1.35;
+  }
+  .login__recordar input[type="checkbox"] {
+    margin-top: 0.15rem;
+    accent-color: var(--color-accent);
+    flex-shrink: 0;
+    width: 1rem;
+    height: 1rem;
+  }
 
   .login__msg-error,
   .login__msg-ok {

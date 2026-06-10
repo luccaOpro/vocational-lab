@@ -49,7 +49,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireSession } from "../../../lib/auth-guard";
-  import { showToast, confirmModal, traducirError } from "../../../lib/ui";
+  import { showToast, confirmModal, traducirError, setupDropzone } from "../../../lib/ui";
   import { iconHtml } from "../../../lib/icons";
 
   // Tamaño máximo de archivo permitido (en bytes). 10 MB.
@@ -357,33 +357,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         }
       });
 
-      // ── Drag & drop ──
-      // Si el input vive dentro de una dropzone, soltar un archivo encima
-      // equivale a elegirlo con el picker: asignamos los files al input y
-      // disparamos "change" para reusar exactamente la misma lógica.
-      const zona = input.closest<HTMLElement>("[data-dropzone]");
-      if (zona) {
-        ["dragover", "dragenter"].forEach((ev) => {
-          zona.addEventListener(ev, (e) => {
-            e.preventDefault();
-            zona.classList.add("is-dragover");
-          });
-        });
-        ["dragleave", "drop"].forEach((ev) => {
-          zona.addEventListener(ev, () => zona.classList.remove("is-dragover"));
-        });
-        zona.addEventListener("drop", (e) => {
-          e.preventDefault();
-          const files = (e as DragEvent).dataTransfer?.files;
-          if (!files || files.length === 0) return;
-          if (files.length > 1) {
-            showToast("Subí un archivo por vez.", "info");
-            return;
-          }
-          input.files = files;
-          input.dispatchEvent(new Event("change", { bubbles: false }));
-        });
-      }
+      // Drag & drop sobre la dropzone que envuelve al input (helper de ui.ts).
+      setupDropzone(input);
     });
   }
 
