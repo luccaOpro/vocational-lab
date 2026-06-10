@@ -14,7 +14,8 @@
 
 ## Después del lanzamiento / cuando haga falta
 
-- [ ] Mails automáticos (la decisión 4 que pateamos): mail de confirmación al inscripto cuando se crea la solicitud + aviso al admin cuando entra una nueva. Reusar el servicio que elijamos para el SMTP.
+- [x] **Mail automático de respuesta al inscripto** (hecho 2026-06-10): cuando alguien manda `/inscripcion` le llega solo el mail que corresponde (W1A "más info" / W1B "anotarme") desde `hola@vlab.com.ar`. Implementado con la Edge Function `enviar-mail-solicitud` + un Database Webhook sobre `solicitudes_inscripcion`. Ver `docs/MAILS-AUTOMATICOS.md`.
+- [ ] Mails automáticos que faltan (reusar la misma función): aviso al admin cuando entra una solicitud, y los mails BIENVENIDA / FAMILIA al confirmar el pago por transferencia. Ojo: los textos del documento Carril E que mencionan "link de pago" hay que pasarlos a "transferencia".
 - [ ] Seguridad nivel siguiente del form: captcha (Cloudflare Turnstile) o rate-limit por IP vía Edge Function, si el honeypot deja de alcanzar.
 - [ ] Trackeo de canal: links de WhatsApp/Instagram apuntando a `/inscripcion?canal=whatsapp` y `?canal=instagram` para registrar el origen.
 - [ ] (Opcional) Redactar el documento separado de Términos y Condiciones (precio, pago, cancelación) que el propio protocolo recomienda.
