@@ -94,10 +94,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
             </label>
 
             <div class="form__label">
-              <span>Tus intereses <small class="form__hint">Escribí y apretá Enter. Máximo 10.</small></span>
+              <span>Tus intereses <small class="form__hint">Toca uno para sumarlo, o escribe el tuyo. Máximo 10.</small></span>
               <div class="chips" id="chips-intereses">
-                <input type="text" id="input-interes" class="chips__input" maxlength="30" placeholder="Música, ciencia, diseño, lectura…" />
+                <input type="text" id="input-interes" class="chips__input" maxlength="30" placeholder="Escribe un interés y presiona Enter…" />
               </div>
+              {/* Sugerencias de un toque — el JS oculta las que ya elegiste. */}
+              <div class="chips-sugerencias" id="sugerencias-intereses"></div>
             </div>
 
             <button type="submit" class="form__submit">Guardar cambios</button>
@@ -677,10 +679,31 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
    * datos personales se envían junto con el resto. Acá solo manejamos
    * agregar/quitar y re-render local.
    */
+  // Intereses típicos para elegir de un toque. Curados para el público
+  // del programa (jóvenes explorando su vocación). El usuario siempre
+  // puede escribir uno propio en el input.
+  const INTERESES_SUGERIDOS = [
+    "Música", "Deporte", "Arte", "Lectura", "Ciencia", "Tecnología",
+    "Videojuegos", "Cine y series", "Diseño", "Fotografía", "Cocina",
+    "Viajes", "Naturaleza", "Emprender", "Escribir", "Teatro",
+  ];
+
   function enchufarIntereses(profile: ProfileFull) {
     const $cont = document.getElementById("chips-intereses") as HTMLElement;
     const $input = document.getElementById("input-interes") as HTMLInputElement;
+    const $sugerencias = document.getElementById("sugerencias-intereses") as HTMLElement;
     if (!profile.intereses) profile.intereses = [];
+
+    function renderSugerencias() {
+      const elegidos = new Set((profile.intereses ?? []).map((t) => t.toLowerCase()));
+      const llenó = (profile.intereses ?? []).length >= LIMITES.cantidadIntereses;
+      $sugerencias.innerHTML = llenó
+        ? ""
+        : INTERESES_SUGERIDOS
+            .filter((s) => !elegidos.has(s.toLowerCase()))
+            .map((s) => `<button type="button" class="chips-sugerencia" data-sug="${esc(s)}">+ ${esc(s)}</button>`)
+            .join("");
+    }
 
     function render() {
       // Limpiar todo menos el input.
@@ -692,8 +715,9 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         $cont.insertBefore(chip, $input);
       });
       $input.placeholder = (profile.intereses ?? []).length === 0
-        ? "Música, ciencia, diseño, lectura…"
-        : "Sumá otro…";
+        ? "Escribe un interés y presiona Enter…"
+        : "Suma otro…";
+      renderSugerencias();
     }
 
     function agregar(raw: string) {
@@ -732,6 +756,12 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
         profile.intereses!.splice(i, 1);
         render();
       }
+    });
+
+    // Click en una sugerencia → se agrega como si la hubieras tipeado.
+    $sugerencias.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest("button[data-sug]");
+      if (btn) agregar(btn.getAttribute("data-sug") ?? "");
     });
 
     render();
@@ -1093,6 +1123,32 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     padding: 0.25rem 0 !important;
     font-size: 0.95rem;
     outline: none !important;
+  }
+
+  /* Sugerencias de intereses: pills "fantasma" debajo del campo.
+     Un toque las suma; las ya elegidas desaparecen de la lista. */
+  .chips-sugerencias {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+  }
+  .chips-sugerencia {
+    padding: 0.28rem 0.7rem;
+    background: transparent;
+    border: 1px dashed var(--color-line);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    line-height: 1.2;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  }
+  .chips-sugerencia:hover {
+    border-color: var(--color-deep);
+    color: var(--color-deep);
+    background: rgba(36, 58, 130, 0.06);
   }
 
   /* Wrap input password + ojito */
