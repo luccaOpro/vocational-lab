@@ -36,15 +36,16 @@ const etiquetaPorRol = {
   admin: "Vocational Lab · Admin",
 };
 
+// "Mi perfil" ya no va como link de texto en desktop: lo reemplaza el
+// avatar circular de la derecha (ver .navaula__perfil). En el panel
+// mobile sigue como item de texto, agregado a mano abajo.
 const linksPorRol = {
   alumno: [
     { href: "/aula/mis-cursos", label: "Mis cursos", match: ["/aula/mis-cursos", "/aula/curso"] },
-    { href: "/aula/perfil", label: "Mi perfil", match: ["/aula/perfil"] },
   ],
   profe: [
     { href: "/aula/profe", label: "Dashboard", match: ["/aula/profe"] },
     { href: "/aula/profe/entregas", label: "Entregas", match: ["/aula/profe/entregas"] },
-    { href: "/aula/perfil", label: "Mi perfil", match: ["/aula/perfil"] },
   ],
   admin: [
     { href: "/aula/admin", label: "Dashboard", match: ["/aula/admin"] },
@@ -53,7 +54,6 @@ const linksPorRol = {
     { href: "/aula/admin/transferencias", label: "Pagos", match: ["/aula/admin/transferencias"] },
     { href: "/aula/admin/usuarios", label: "Usuarios", match: ["/aula/admin/usuarios"] },
     { href: "/aula/admin/configuracion", label: "Ajustes", match: ["/aula/admin/configuracion"] },
-    { href: "/aula/perfil", label: "Mi perfil", match: ["/aula/perfil"] },
   ],
 };
 
@@ -85,6 +85,16 @@ const etiqueta = etiquetaPorRol[rol];
         <a href={l.href} class={activo(...l.match)}>{l.label}</a>
       ))}
       <a href="/aula/login" class="navaula__logout" data-aula-logout>Cerrar sesión</a>
+      {/* Avatar → Mi perfil. El JS de abajo lo llena con la foto del
+          usuario (o sus iniciales). Arranca vacío para no mostrar datos
+          de un rol equivocado mientras carga. */}
+      <a
+        href="/aula/perfil"
+        class={`navaula__perfil ${activo("/aula/perfil")}`}
+        id="navaula-perfil"
+        aria-label="Mi perfil"
+        title="Mi perfil"
+      ></a>
     </nav>
 
     {/* Hamburguesa para mobile */}
@@ -131,6 +141,7 @@ const etiqueta = etiquetaPorRol[rol];
     {links.map((l) => (
       <a href={l.href} data-aula-link>{l.label}</a>
     ))}
+    <a href="/aula/perfil" data-aula-link>Mi perfil</a>
     <a href="/aula/login" data-aula-link data-aula-logout class="navaula__panel-logout">Cerrar sesión</a>
   </nav>
 </aside>
@@ -200,6 +211,38 @@ const etiqueta = etiquetaPorRol[rol];
     border-color: rgba(242, 234, 215, 0.6);
     color: var(--color-bg) !important;
   }
+
+  /* ===== Avatar → Mi perfil (solo desktop) ===== */
+  /* Círculo con la foto del usuario o sus iniciales. Arranca invisible
+     (sin --listo) para que no haya un circulito vacío mientras carga. */
+  .navaula__perfil {
+    display: none;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--color-gold);
+    color: var(--color-ink) !important;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .navaula__perfil--listo { display: grid; }
+  .navaula__perfil:hover { transform: scale(1.06); border-color: rgba(242, 234, 215, 0.6); }
+  .navaula__perfil.is-active { border-color: var(--color-bg); }
+  .navaula__perfil--con-foto { background: transparent; }
+  .navaula__perfil img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* En mobile el nav de links está oculto (menú hamburguesa) — el avatar
+     se oculta junto con su contenedor, "Mi perfil" vive en el panel. */
 
   /* ===== Hamburguesa ===== */
   .navaula__burger {
@@ -351,9 +394,27 @@ const etiqueta = etiquetaPorRol[rol];
     if (!uid) return;
 
     const { data: perfil } = await supabase
-      .from("profiles").select("rol").eq("id", uid).single();
+      .from("profiles").select("rol, nombre, avatar_url").eq("id", uid).single();
     const rolReal = perfil?.rol as "alumno" | "profe" | "admin" | undefined;
     if (!rolReal) return;
+
+    // 0) Avatar del nav (desktop): foto si subió una, iniciales si no.
+    //    El <a> arranca vacío para no mostrar datos incorrectos en el flash
+    //    de carga; recién acá sabemos quién es de verdad.
+    const $perfil = document.getElementById("navaula-perfil");
+    if ($perfil && perfil) {
+      if (perfil.avatar_url) {
+        const img = document.createElement("img");
+        img.src = perfil.avatar_url;
+        img.alt = "";
+        $perfil.appendChild(img);
+        $perfil.classList.add("navaula__perfil--con-foto");
+      } else {
+        $perfil.textContent = (perfil.nombre ?? "?")
+          .split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase();
+      }
+      $perfil.classList.add("navaula__perfil--listo");
+    }
 
     const homePorRol = {
       alumno: "/aula/mis-cursos",

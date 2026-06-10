@@ -1,0 +1,56 @@
+---
+/*
+  /aula — página índice del aula.
+  ---
+  Antes esta ruta daba 404 (no existía). Es una URL que la gente
+  va a tipear de memoria o guardar en favoritos, así que ahora:
+    · Si hay sesión → redirige al panel del rol (mis-cursos / profe / admin).
+    · Si no hay sesión → redirige al login.
+  Mientras resuelve muestra el mismo loader que el resto del aula.
+*/
+
+import AulaLayout from "../../layouts/AulaLayout.astro";
+---
+
+<AulaLayout title="Aula · Vocational Lab" nav={false}>
+  <main class="aula-index">
+    <div class="loader" role="status">
+      <span class="loader__spinner" aria-hidden="true"></span>
+      <span class="loader__label">Entrando al aula…</span>
+    </div>
+  </main>
+</AulaLayout>
+
+<script>
+  import { supabase } from "../../lib/supabase";
+  import { homePorRol, type Rol } from "../../lib/auth-guard";
+
+  async function redirigir() {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      window.location.replace("/aula/login");
+      return;
+    }
+    // Con sesión: buscamos el rol para mandarlo a su panel.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("rol")
+      .eq("id", data.session.user.id)
+      .single();
+
+    const rol = (profile?.rol ?? "alumno") as Rol;
+    // replace() en vez de href para que "volver atrás" no caiga acá de nuevo.
+    window.location.replace(homePorRol[rol]);
+  }
+
+  redirigir();
+</script>
+
+<style>
+  .aula-index {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 3rem 1.5rem;
+  }
+</style>
