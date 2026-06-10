@@ -12,10 +12,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <AulaLayout title="Profe · Aula Vocational Lab" rol="profe">
   <main class="profe">
     <div class="container">
-      <div id="profe-loader" class="profe__loader">
-        <div class="loader" role="status">
-          <span class="loader__spinner" aria-hidden="true"></span>
-          <span class="loader__label">Cargando tu panel…</span>
+      {/* Skeleton que imita el panel del profe (saludo + KPIs + listas). */}
+      <div id="profe-loader" class="profe__loader" role="status" aria-label="Cargando tu panel…">
+        <div class="skeleton-stack" aria-hidden="true">
+          <span class="skeleton skeleton--text" style="width: 80px;"></span>
+          <span class="skeleton skeleton--title"></span>
+          <div class="skeleton-row" style="margin-top: 0.5rem;">
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+          </div>
+          <span class="skeleton skeleton--card" style="margin-top: 1rem;"></span>
         </div>
       </div>
 

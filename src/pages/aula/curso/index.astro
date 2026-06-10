@@ -18,7 +18,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     <div class="container">
       <a href="/aula/mis-cursos" class="curso__volver">← Volver a mis cursos</a>
 
-      <div id="curso-loader" class="curso__loader">Cargando curso…</div>
+      {/* Skeleton que imita el layout del curso (header + módulos). */}
+      <div id="curso-loader" class="curso__loader" role="status" aria-label="Cargando curso…">
+        <div class="skeleton-stack" aria-hidden="true">
+          <span class="skeleton skeleton--text" style="width: 100px;"></span>
+          <span class="skeleton skeleton--title" style="width: 55%;"></span>
+          <span class="skeleton skeleton--text" style="width: 320px; margin-bottom: 1.5rem;"></span>
+          <span class="skeleton skeleton--card"></span>
+          <span class="skeleton skeleton--card"></span>
+        </div>
+      </div>
 
       <div id="curso-contenido" hidden>
         <header class="curso__head">
@@ -300,8 +309,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         const file = input.files?.[0];
         if (!file) return;
 
-        const $boton = input.parentElement?.querySelector(".tarea__btn") as HTMLElement | null;
-        const $hint = input.parentElement?.querySelector(".tarea__hint") as HTMLElement | null;
+        // El botón vive dentro del label; el hint es hermano del label
+        // (por eso se busca desde .tarea__accion, no desde el label).
+        const $accion = input.closest(".tarea__accion");
+        const $boton = $accion?.querySelector(".tarea__btn") as HTMLElement | null;
+        const $hint = $accion?.querySelector(".tarea__hint") as HTMLElement | null;
         const labelOriginal = $boton?.textContent ?? "Subir entrega";
 
         // 1. Validar tamaño.
@@ -344,6 +356,34 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           input.value = ""; // permite reintentar
         }
       });
+
+      // ── Drag & drop ──
+      // Si el input vive dentro de una dropzone, soltar un archivo encima
+      // equivale a elegirlo con el picker: asignamos los files al input y
+      // disparamos "change" para reusar exactamente la misma lógica.
+      const zona = input.closest<HTMLElement>("[data-dropzone]");
+      if (zona) {
+        ["dragover", "dragenter"].forEach((ev) => {
+          zona.addEventListener(ev, (e) => {
+            e.preventDefault();
+            zona.classList.add("is-dragover");
+          });
+        });
+        ["dragleave", "drop"].forEach((ev) => {
+          zona.addEventListener(ev, () => zona.classList.remove("is-dragover"));
+        });
+        zona.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const files = (e as DragEvent).dataTransfer?.files;
+          if (!files || files.length === 0) return;
+          if (files.length > 1) {
+            showToast("Subí un archivo por vez.", "info");
+            return;
+          }
+          input.files = files;
+          input.dispatchEvent(new Event("change", { bubbles: false }));
+        });
+      }
     });
   }
 
@@ -514,10 +554,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   function renderEstadoTarea(estado: string, entrega: EntregaRow | undefined, tareaId: string, tareaNombre: string): string {
     const nombreEsc = escape(tareaNombre);
     if (estado === "pendiente") {
+      // Dropzone: se puede arrastrar el archivo encima O hacer clic para
+      // elegirlo. El drop le asigna los files al input y dispara "change",
+      // así reutiliza la misma validación/subida que el clic (ver
+      // enchufarUploads — cero lógica duplicada).
       return `
         <div class="tarea__accion">
-          <label class="tarea__upload">
+          <label class="tarea__dropzone" data-dropzone>
             <input type="file" data-tarea-id="${tareaId}" data-tarea-nombre="${nombreEsc}" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="tarea__dropzone-texto"><strong>Arrastra tu archivo aquí</strong> o haz clic para elegirlo</span>
             <span class="tarea__btn">Subir entrega</span>
           </label>
           <p class="tarea__hint">Tamaño máximo: 10 MB.</p>
@@ -823,6 +869,36 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.tarea__fecha strong) { color: var(--color-ink); font-weight: 500; }
 
   :global(.tarea__upload input) { display: none; }
+
+  /* ── Dropzone de entrega ── */
+  /* Zona punteada: arrastrar el archivo encima o clic para elegirlo.
+     El input file real va oculto (el label entero dispara el picker). */
+  :global(.tarea__dropzone) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 1.5rem 1.25rem;
+    border: 2px dashed var(--color-line);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-ink-muted);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  :global(.tarea__dropzone input) { display: none; }
+  :global(.tarea__dropzone:hover) { border-color: var(--color-accent); }
+  :global(.tarea__dropzone.is-dragover) {
+    border-color: var(--color-accent);
+    background: rgba(216, 85, 42, 0.06);
+    color: var(--color-accent);
+  }
+  :global(.tarea__dropzone-texto) {
+    font-size: 0.92rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.tarea__dropzone-texto strong) { color: var(--color-ink); font-weight: 500; }
   :global(.tarea__btn) {
     display: inline-block;
     padding: 0.55rem 1rem;

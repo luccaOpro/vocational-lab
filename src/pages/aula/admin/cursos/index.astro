@@ -21,10 +21,24 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
         <a href="/aula/admin/cursos/editor" class="cursos-admin__nuevo">+ Crear curso</a>
       </header>
 
-      <div id="cursos-loader" class="cursos-admin__loader">
-        <div class="loader" role="status">
-          <span class="loader__spinner" aria-hidden="true"></span>
-          <span class="loader__label">Cargando cursos…</span>
+      {/* Buscador — solo aparece cuando hay más de 5 cursos (con pocos
+          no aporta y mete ruido visual). Filtra en vivo, sin recargar. */}
+      <label class="cursos-admin__buscar" id="cursos-buscar-wrap" hidden>
+        <span class="cursos-admin__buscar-icono" aria-hidden="true"></span>
+        <input
+          type="search"
+          id="cursos-buscar"
+          placeholder="Buscar curso por título, resumen o periodo…"
+          autocomplete="off"
+          aria-label="Buscar curso"
+        />
+      </label>
+
+      <div id="cursos-loader" class="cursos-admin__loader" role="status" aria-label="Cargando cursos…">
+        <div class="skeleton-grid" aria-hidden="true">
+          <span class="skeleton skeleton--card"></span>
+          <span class="skeleton skeleton--card"></span>
+          <span class="skeleton skeleton--card"></span>
         </div>
       </div>
 
@@ -90,6 +104,25 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     $bajada.textContent = total === 0
       ? "Todavía no hay cursos."
       : `${total} curso${total === 1 ? "" : "s"} · ${pub} publicado${pub === 1 ? "" : "s"}`;
+
+    // Buscador en vivo — solo tiene sentido con varios cursos.
+    if (total > 5) {
+      const $wrap = document.getElementById("cursos-buscar-wrap") as HTMLElement;
+      const $buscar = document.getElementById("cursos-buscar") as HTMLInputElement;
+      $wrap.querySelector(".cursos-admin__buscar-icono")!.innerHTML = iconHtml("search", 18);
+      $wrap.hidden = false;
+      $buscar.addEventListener("input", () => {
+        const q = $buscar.value.trim().toLowerCase();
+        const visibles = q === ""
+          ? cursos
+          : cursos.filter((c) =>
+              `${c.titulo} ${c.resumen ?? ""} ${c.periodo ?? ""}`.toLowerCase().includes(q)
+            );
+        $grid.innerHTML = visibles.length === 0
+          ? `<p class="cursos-admin__sin-resultados">Ningún curso coincide con "${esc(q)}".</p>`
+          : `<div class="cursos-admin__grid">${visibles.map(renderCard).join("")}</div>`;
+      });
+    }
 
     if (total === 0) {
       $grid.innerHTML = `
@@ -182,6 +215,33 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
 
   .cursos-admin__loader { padding: 1.5rem 0; color: var(--color-ink-soft); }
   .cursos-admin__error { color: var(--color-accent); padding: 1rem 0; }
+
+  /* Buscador de cursos (aparece con más de 5). */
+  .cursos-admin__buscar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.9rem;
+    margin-bottom: 1.5rem;
+    max-width: 420px;
+  }
+  .cursos-admin__buscar:focus-within { border-color: var(--color-deep); }
+  .cursos-admin__buscar-icono { color: var(--color-ink-muted); display: inline-flex; }
+  .cursos-admin__buscar input {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    color: var(--color-ink);
+    outline: none;
+  }
+  :global(.cursos-admin__sin-resultados) {
+    color: var(--color-ink-soft);
+    padding: 1.5rem 0;
+  }
 
   :global(.cursos-admin__grid) {
     display: grid;

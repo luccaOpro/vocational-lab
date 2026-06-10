@@ -22,10 +22,16 @@ import Icon from "../../../components/aula/Icon.astro";
         <p class="admin__bajada" id="admin-bajada">Cargando…</p>
       </header>
 
-      <div id="admin-loader" class="admin__loader">
-        <div class="loader" role="status">
-          <span class="loader__spinner" aria-hidden="true"></span>
-          <span class="loader__label">Cargando datos…</span>
+      {/* Skeleton que imita el dashboard (KPIs + accesos). */}
+      <div id="admin-loader" class="admin__loader" role="status" aria-label="Cargando datos…">
+        <div class="skeleton-stack" aria-hidden="true">
+          <div class="skeleton-row">
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+            <span class="skeleton skeleton--kpi" style="flex:1"></span>
+          </div>
+          <span class="skeleton skeleton--card" style="margin-top: 1rem;"></span>
         </div>
       </div>
 

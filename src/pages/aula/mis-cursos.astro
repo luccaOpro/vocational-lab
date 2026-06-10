@@ -17,11 +17,17 @@ import Icon from "../../components/aula/Icon.astro";
 <AulaLayout title="Mis cursos · Aula Vocational Lab">
   <main class="cursos">
     <div class="container">
-      {/* Loader inicial — se oculta cuando llegan los datos. */}
-      <div id="cursos-loader" class="cursos__loader">
-        <div class="loader" role="status">
-          <span class="loader__spinner" aria-hidden="true"></span>
-          <span class="loader__label">Cargando tus cursos…</span>
+      {/* Loader inicial — skeleton que imita el layout real (saludo + cards). */}
+      <div id="cursos-loader" class="cursos__loader" role="status" aria-label="Cargando tus cursos…">
+        <div class="skeleton-stack" aria-hidden="true">
+          <span class="skeleton skeleton--text" style="width: 120px;"></span>
+          <span class="skeleton skeleton--title"></span>
+          <span class="skeleton skeleton--text" style="width: 220px; margin-bottom: 1.5rem;"></span>
+          <div class="skeleton-grid">
+            <span class="skeleton skeleton--card"></span>
+            <span class="skeleton skeleton--card"></span>
+            <span class="skeleton skeleton--card"></span>
+          </div>
         </div>
       </div>
 

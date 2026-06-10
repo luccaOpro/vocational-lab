@@ -49,12 +49,14 @@ import Icon from "../../../components/aula/Icon.astro";
 
       <div id="usuarios-wrap" class="tabla-wrap" hidden>
         <table class="tabla">
+          {/* Los th con data-sort son clickeables: ordenan por esa columna.
+              Click repetido invierte el sentido. La flecha la pinta el JS. */}
           <thead>
             <tr>
-              <th scope="col">Usuario</th>
-              <th scope="col">Mail</th>
-              <th scope="col">Creado</th>
-              <th scope="col">Rol</th>
+              <th scope="col"><button type="button" class="tabla__sort" data-sort="nombre">Usuario <span aria-hidden="true" data-sort-flecha></span></button></th>
+              <th scope="col"><button type="button" class="tabla__sort" data-sort="email">Mail <span aria-hidden="true" data-sort-flecha></span></button></th>
+              <th scope="col"><button type="button" class="tabla__sort" data-sort="creado_en">Creado <span aria-hidden="true" data-sort-flecha></span></button></th>
+              <th scope="col"><button type="button" class="tabla__sort" data-sort="rol">Rol <span aria-hidden="true" data-sort-flecha></span></button></th>
               <th scope="col" aria-label="Acciones"></th>
             </tr>
           </thead>
@@ -120,6 +122,44 @@ import Icon from "../../../components/aula/Icon.astro";
   let todos: UsuarioRow[] = [];
   let miUserId: string | null = null;
 
+  // ── Ordenamiento de la tabla ──
+  // Default: más recientes primero (igual que antes del feature).
+  type SortCampo = "nombre" | "email" | "creado_en" | "rol";
+  let sortCampo: SortCampo = "creado_en";
+  let sortAsc = false;
+
+  function compararUsuarios(a: UsuarioRow, b: UsuarioRow): number {
+    const va = a[sortCampo] ?? "";
+    const vb = b[sortCampo] ?? "";
+    // localeCompare para que los acentos ordenen bien (Ávila antes que Bravo).
+    const r = String(va).localeCompare(String(vb), "es", { sensitivity: "base" });
+    return sortAsc ? r : -r;
+  }
+
+  function pintarFlechas() {
+    document.querySelectorAll<HTMLElement>("[data-sort-flecha]").forEach((f) => {
+      const esActivo = (f.closest(".tabla__sort") as HTMLElement)?.dataset.sort === sortCampo;
+      f.textContent = esActivo ? (sortAsc ? "↑" : "↓") : "";
+    });
+  }
+
+  function enchufarSort() {
+    pintarFlechas(); // flecha inicial en "Creado" (el orden por defecto)
+    document.querySelectorAll<HTMLButtonElement>(".tabla__sort").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const campo = btn.dataset.sort as SortCampo;
+        if (campo === sortCampo) {
+          sortAsc = !sortAsc; // mismo campo → invierte el sentido
+        } else {
+          sortCampo = campo;
+          sortAsc = true;
+        }
+        pintarFlechas();
+        renderTabla();
+      });
+    });
+  }
+
   async function cargar() {
     // Solo admin puede ver esta pantalla.
     const auth = await requireRol(["admin"]);
@@ -140,6 +180,7 @@ import Icon from "../../../components/aula/Icon.astro";
 
     todos = (data ?? []) as UsuarioRow[];
     $bajada.textContent = `${todos.length} usuario${todos.length === 1 ? "" : "s"} registrado${todos.length === 1 ? "" : "s"}`;
+    enchufarSort();
     renderTabla();
     $loader.hidden = true;
     $wrap.hidden = false;
@@ -149,14 +190,16 @@ import Icon from "../../../components/aula/Icon.astro";
     const query = $buscar.value.trim().toLowerCase();
     const rolFiltro = $filtroRol.value;
 
-    const filtrados = todos.filter((u) => {
-      if (rolFiltro && u.rol !== rolFiltro) return false;
-      if (query) {
-        const haystack = `${u.nombre} ${u.email}`.toLowerCase();
-        if (!haystack.includes(query)) return false;
-      }
-      return true;
-    });
+    const filtrados = todos
+      .filter((u) => {
+        if (rolFiltro && u.rol !== rolFiltro) return false;
+        if (query) {
+          const haystack = `${u.nombre} ${u.email}`.toLowerCase();
+          if (!haystack.includes(query)) return false;
+        }
+        return true;
+      })
+      .sort(compararUsuarios);
 
     if (filtrados.length === 0) {
       const vacio = todos.length === 0
@@ -420,6 +463,24 @@ import Icon from "../../../components/aula/Icon.astro";
     font-weight: 500;
     background: var(--color-bg);
   }
+
+  /* Botón de ordenamiento dentro del th: hereda la tipografía del header
+     y suma cursor + flecha. */
+  .tabla__sort {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .tabla__sort:hover { color: var(--color-ink); }
+  .tabla__sort [data-sort-flecha] { font-size: 0.9em; }
   .tabla tbody tr:last-child td { border-bottom: 0; }
   .tabla tbody tr:hover { background: var(--color-bg); }
   :global(.tabla__vacio) {
