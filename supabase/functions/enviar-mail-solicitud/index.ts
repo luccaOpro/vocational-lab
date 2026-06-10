@@ -67,7 +67,7 @@ const p = (t: string) =>
   `<p style="color:#3F4870;font-size:15px;line-height:1.7;margin:0 0 16px;">${t}</p>`;
 
 const label = (t: string) =>
-  `<div style="color:#243A82;font-size:11px;font-weight:bold;letter-spacing:.12em;text-transform:uppercase;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #DDD2B4;">${t}</div>`;
+  `<p style="color:#243A82;font-size:13px;font-weight:bold;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid #DDD2B4;">${t}</p>`;
 
 const lista = (items: string[]) =>
   `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;width:100%;">` +
@@ -87,17 +87,17 @@ function layout(contenidoHtml: string): string {
   return `<!doctype html><html lang="es"><body style="margin:0;padding:0;background:#E9DEC1;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#E9DEC1;padding:30px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #DDD2B4;border-radius:14px;overflow:hidden;">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #DDD2B4;border-radius:14px;overflow:hidden;">
         <tr><td style="background:#131B3D;padding:28px 28px 22px;text-align:center;">
           <img src="${LOGO_URL}" width="44" alt="Vocational Lab" style="display:inline-block;border:0;outline:none;text-decoration:none;width:44px;height:auto;" />
           <div style="color:#F2EAD7;font-family:Georgia,'Times New Roman',serif;font-size:15px;letter-spacing:.26em;margin-top:10px;text-transform:uppercase;">Vocational&nbsp;Lab</div>
         </td></tr>
         <tr><td style="height:3px;background:#D8552A;font-size:0;line-height:0;">&nbsp;</td></tr>
         <tr><td style="padding:32px 36px 8px;">${contenidoHtml}</td></tr>
-        <tr><td style="background:#E9DEC1;padding:24px 36px;border-top:1px solid #DDD2B4;">
-          <div style="color:#131B3D;font-family:Georgia,'Times New Roman',serif;font-size:16px;margin:0 0 5px;">Julia y Laura</div>
-          <div style="color:#3F4870;font-size:12px;line-height:1.8;">Vocational Lab &middot; <a href="mailto:hola@vlab.com.ar" style="color:#243A82;text-decoration:none;">hola@vlab.com.ar</a> &middot; <a href="https://instagram.com/vocationallab" style="color:#243A82;text-decoration:none;">@vocationallab</a></div>
-          <div style="color:#7B829D;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-top:12px;">Próxima edición — Agosto 2026</div>
+        <tr><td style="background:#131B3D;padding:26px 36px;">
+          <div style="color:#F2EAD7;font-family:Georgia,'Times New Roman',serif;font-size:16px;margin:0 0 5px;">Julia y Laura</div>
+          <div style="color:#9AA0BD;font-size:12px;line-height:1.8;">Vocational Lab &middot; <a href="mailto:hola@vlab.com.ar" style="color:#E9DEC1;text-decoration:none;">hola@vlab.com.ar</a> &middot; <a href="https://instagram.com/vocationallab" style="color:#E9DEC1;text-decoration:none;">@vocationallab</a></div>
+          <div style="color:#6F7596;font-size:11px;letter-spacing:.1em;text-transform:uppercase;margin-top:12px;">Próxima edición — Agosto 2026</div>
         </td></tr>
       </table>
     </td></tr>
