@@ -110,8 +110,8 @@ La combinación (curso_id, profesor_id) es la clave primaria.
 | `id`          | uuid (PK)    | Identificador único.                                       |
 | `modulo_id`   | uuid (FK)    | A qué módulo pertenece.                                    |
 | `nombre`      | text         | Cómo lo ve el alumno: "Manual del programa.pdf".           |
-| `tipo`        | text         | `pdf`, `video`, `audio` o `link`. Sólo afecta el ícono.    |
-| `storage_path`| text         | Ruta del archivo en Supabase Storage.                      |
+| `tipo`        | text         | `pdf`, `video`, `audio`, `link` o `youtube` (migración 13). |
+| `storage_path`| text         | Ruta del archivo en Storage. Si `tipo = youtube`, acá va la URL externa del video. |
 | `peso_kb`     | int          | Tamaño aproximado para mostrar.                            |
 | `creado_en`   | timestamptz  | Cuándo se subió.                                           |
 

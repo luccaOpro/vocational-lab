@@ -96,3 +96,15 @@
 **Lo que NO cambia**:
 - Comentarios del código (`// ...`, `/* ... */`) siguen en español argentino — son comunicación con devs.
 - Handles de Instagram (`@vocationallab`) se mantienen porque cambiar handle es lío y no estaba en la tabla.
+
+## 2026-06-11 — Videos solo en el material del módulo (no en tareas)
+
+**Decisión**: los videos de YouTube/Vimeo van únicamente como material del módulo (botón "+ Agregar video" del panel de contenido). Se elimina el campo "Video de referencia" del formulario de tareas y su visualización en el aula.
+
+**Por qué**:
+- Lucas lo pidió explícitamente: un solo lugar para los videos, menos confusión para Julia y Laura al cargar contenido.
+- La tarea queda enfocada en la consigna + adjunto opcional; el material audiovisual vive junto al resto del material del módulo.
+
+**Además, fix relacionado**: el alta de videos en módulos nunca había funcionado — el CHECK de `archivos_modulo.tipo` (migración 01) no aceptaba el valor `youtube` que inserta el panel, así que el INSERT fallaba siempre. Se corrige con la migración `13-video-youtube-en-modulos.sql`. De paso, el aula ahora reproduce los videos embebidos (YouTube nocookie / Vimeo player) sin salir de la página; si la URL no es de YouTube/Vimeo, se muestra como link externo igual que antes.
+
+**Nota**: la columna `tareas.video_url` queda en la base (existe en producción, agregada a mano en su momento) pero ya no se usa desde el código. Si algún día molesta, se puede borrar con un `alter table`.

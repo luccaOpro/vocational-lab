@@ -96,7 +96,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     titulo: string;
     consigna: string;
     fecha_entrega: string | null;
-    video_url: string | null;
     adjunto_path: string | null;
     adjunto_nombre: string | null;
   };
@@ -181,7 +180,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       .select(`
         id, numero, titulo, descripcion,
         archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
-        tareas (id, titulo, consigna, fecha_entrega, video_url, adjunto_path, adjunto_nombre)
+        tareas (id, titulo, consigna, fecha_entrega, adjunto_path, adjunto_nombre)
       `)
       .eq("curso_id", curso.id)
       .order("numero");
@@ -262,6 +261,31 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
     setupUploads();
     setupDescargas();
+    setupVideos();
+  }
+
+  /**
+   * Conecta los botones "Ver acá" de los videos: el primer clic inyecta
+   * el iframe (no se carga nada de YouTube hasta que alguien lo pide) y
+   * los siguientes alternan mostrar/ocultar. Ocultar vacía el iframe,
+   * así el video también deja de sonar.
+   */
+  function setupVideos() {
+    document.querySelectorAll<HTMLButtonElement>("[data-video-embed]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const player = btn.closest(".archivo")?.querySelector<HTMLElement>(".archivo__player");
+        if (!player) return;
+        if (player.hidden) {
+          player.innerHTML = `<iframe src="${btn.dataset.videoEmbed}" title="${btn.dataset.videoNombre ?? "Video del módulo"}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe>`;
+          player.hidden = false;
+          btn.textContent = "Ocultar";
+        } else {
+          player.hidden = true;
+          player.innerHTML = "";
+          btn.textContent = "Ver acá";
+        }
+      });
+    });
   }
 
   /**
@@ -459,13 +483,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
                 </div>
                 <p class="tarea__consigna">${escape(tarea.consigna)}</p>
 
-                ${tarea.video_url ? `
-                  <a href="${escape(tarea.video_url)}" target="_blank" rel="noopener noreferrer" class="tarea__video-ref">
-                    <span aria-hidden="true">▶</span>
-                    <span>Ver video de referencia</span>
-                  </a>
-                ` : ""}
-
                 ${tarea.adjunto_path ? `
                   <div class="tarea__adjunto-ref">
                     <span aria-hidden="true">📎</span>
@@ -492,6 +509,34 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     `;
   }
 
+  /**
+   * Convierte una URL de YouTube o Vimeo en su versión embebible (iframe).
+   * Devuelve null si no la reconoce — en ese caso se muestra como link
+   * externo igual que antes.
+   */
+  function videoEmbedUrl(url: string): string | null {
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^(www\.|m\.)/, "");
+      if (host === "youtube.com" || host === "youtube-nocookie.com") {
+        const id = u.searchParams.get("v")
+          ?? u.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]{6,})/)?.[1];
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+      }
+      if (host === "youtu.be") {
+        const id = u.pathname.slice(1).split("/")[0];
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+      }
+      if (host === "vimeo.com") {
+        const id = u.pathname.match(/\/(\d+)/)?.[1];
+        return id ? `https://player.vimeo.com/video/${id}` : null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   function renderArchivos(archivos: ArchivoRow[]): string {
     if (archivos.length === 0) {
       return `<p class="bloque__vacio">Sin material todavía.</p>`;
@@ -500,6 +545,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       <ul class="archivos">
         ${archivos.map((a) => {
           if (a.tipo === "youtube") {
+            // Si reconocemos la URL (YouTube/Vimeo), el video se reproduce
+            // acá mismo, sin salir del aula. Si no, link externo como antes.
+            const embed = videoEmbedUrl(a.storage_path);
+            const accion = embed
+              ? `<button type="button" class="archivo__btn" data-video-embed="${escape(embed)}" data-video-nombre="${escape(a.nombre)}">Ver acá</button>`
+              : `<a href="${escape(a.storage_path)}" target="_blank" rel="noopener noreferrer" class="archivo__btn">Ver →</a>`;
             return `
               <li class="archivo">
                 <span class="archivo__icono archivo__icono--yt" aria-hidden="true">▶</span>
@@ -507,7 +558,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
                   <span class="archivo__nombre">${escape(a.nombre)}</span>
                   <span class="archivo__meta">Video</span>
                 </div>
-                <a href="${escape(a.storage_path)}" target="_blank" rel="noopener noreferrer" class="archivo__btn">Ver →</a>
+                ${accion}
+                ${embed ? `<div class="archivo__player" hidden></div>` : ""}
               </li>
             `;
           }
@@ -923,23 +975,20 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     line-height: 1.5;
   }
 
-  /* Video de referencia en tarea */
-  :global(.tarea__video-ref) {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.38rem 0.75rem;
-    margin-bottom: 0.7rem;
-    background: rgba(216, 85, 42, 0.07);
-    border: 1px solid rgba(216, 85, 42, 0.22);
-    border-radius: var(--radius-sm);
-    color: var(--color-accent);
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-decoration: none;
-    transition: background 0.15s ease;
+  /* Reproductor de video embebido dentro de la lista de material.
+     Ocupa el ancho completo de la fila, debajo del nombre del video. */
+  :global(.archivo__player) {
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
   }
-  :global(.tarea__video-ref:hover) { background: rgba(216, 85, 42, 0.13); }
+  :global(.archivo__player iframe) {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: var(--radius-sm);
+    display: block;
+    background: #000;
+  }
 
   /* Adjunto descargable de tarea */
   :global(.tarea__adjunto-ref) {

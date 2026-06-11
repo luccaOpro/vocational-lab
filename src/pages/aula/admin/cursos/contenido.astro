@@ -109,7 +109,6 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     titulo: string;
     consigna: string;
     fecha_entrega: string | null;
-    video_url: string | null;
     adjunto_path: string | null;
     adjunto_nombre: string | null;
   };
@@ -149,7 +148,7 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
       .select(`
         id, numero, titulo, descripcion,
         archivos_modulo (id, nombre, tipo, storage_path, peso_kb),
-        tareas (id, titulo, consigna, fecha_entrega, video_url, adjunto_path, adjunto_nombre)
+        tareas (id, titulo, consigna, fecha_entrega, adjunto_path, adjunto_nombre)
       `)
       .eq("curso_id", cursoId)
       .order("numero");
@@ -246,13 +245,6 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
                     <span class="tarea-mini__titulo">${esc(tarea.titulo)}</span>
                     <p class="tarea-mini__consigna">${esc(tarea.consigna)}</p>
                     <span class="tarea-mini__fecha">Entrega: ${esc(formatoFecha(tarea.fecha_entrega))}</span>
-
-                    ${tarea.video_url ? `
-                      <a href="${esc(tarea.video_url)}" target="_blank" rel="noopener" class="tarea-mini__video">
-                        <span class="tarea-mini__video-icono">▶</span>
-                        <span class="tarea-mini__video-label">Ver video de referencia</span>
-                      </a>
-                    ` : ""}
 
                     ${tarea.adjunto_path ? `
                       <div class="tarea-mini__adjunto">
@@ -535,25 +527,18 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
           value: fechaActual,
           hint: "Opcional. Si no la ponés, la tarea no tiene fecha límite.",
         },
-        {
-          name: "video_url",
-          label: "Video de referencia",
-          type: "text",
-          value: existente?.video_url ?? "",
-          placeholder: "https://www.youtube.com/watch?v=… (opcional)",
-          hint: "YouTube, Vimeo o cualquier URL de video. Se muestra al protagonista junto a la consigna.",
-        },
       ],
       confirmLabel: existente ? "Guardar cambios" : "Crear tarea",
     });
 
     if (!result) return;
 
+    // Los videos van solo en el material del módulo ("+ Agregar video"),
+    // no en la tarea — decisión 2026-06-11.
     const payload = {
       titulo: result.titulo,
       consigna: result.consigna,
       fecha_entrega: result.fecha_entrega || null,
-      video_url: result.video_url?.trim() || null,
     };
 
     const { error } = tareaId
@@ -1001,23 +986,6 @@ import AulaLayout from "../../../../layouts/AulaLayout.astro";
     font-size: 0.82rem;
     color: var(--color-ink-muted);
   }
-  :global(.tarea-mini__video) {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.35rem 0.65rem;
-    background: rgba(216, 85, 42, 0.07);
-    border: 1px solid rgba(216, 85, 42, 0.2);
-    border-radius: var(--radius-sm);
-    text-decoration: none;
-    color: var(--color-accent);
-    font-size: 0.82rem;
-    font-weight: 500;
-    transition: background 0.15s ease;
-    align-self: flex-start;
-  }
-  :global(.tarea-mini__video:hover) { background: rgba(216, 85, 42, 0.13); }
-  :global(.tarea-mini__video-icono) { font-size: 0.75rem; }
   :global(.tarea-mini__adjunto) {
     display: inline-flex;
     align-items: center;
