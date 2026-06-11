@@ -162,6 +162,27 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     return soloDigitos.length >= 8 ? `https://wa.me/${soloDigitos}` : null;
   }
 
+  // Mensaje pre-cargado para iniciar el chat de WhatsApp, según la intención.
+  // Se abre escrito; Julia/Laura lo revisan y mandan. Tuteo neutro, sin emojis.
+  function mensajeWpp(s: Solicitud): string {
+    const nom = (s.nombre || "").trim().split(/\s+/)[0] || "";
+    const hola = nom ? `Hola ${nom}, ` : "Hola, ";
+    if (s.intencion === "inscripcion") {
+      return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu inscripción al próximo grupo, ¡qué alegría! Para confirmar tu lugar coordinamos el pago por transferencia. ¿Te enviamos los datos?`;
+    }
+    if (s.intencion === "info") {
+      return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu consulta desde la web y te escribimos por aquí como pediste. ¿Quieres que te contemos más sobre el programa o prefieres que coordinemos una charla?`;
+    }
+    return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu mensaje desde la web y te escribimos por aquí como pediste. ¿En qué te podemos ayudar?`;
+  }
+
+  // waLink + el mensaje pre-cargado (?text=...).
+  function waLinkMsg(s: Solicitud): string | null {
+    const base = waLink(s.telefono);
+    if (!base) return null;
+    return `${base}?text=${encodeURIComponent(mensajeWpp(s))}`;
+  }
+
   // ============ Carga ============
   async function cargar() {
     const auth = await requireRol(["admin"]);
@@ -237,8 +258,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   function renderCard(s: Solicitud): string {
     const esInscripcion = s.intencion === "inscripcion";
     const intLabel = esInscripcion ? "Quiere anotarse" : "Quiere info";
-    const wa = waLink(s.telefono);
-    const prefiere = s.canal_preferido_respuesta === "whatsapp" ? "Prefiere WhatsApp"
+    const waMsg = waLinkMsg(s);
+    const prefiereWpp = s.canal_preferido_respuesta === "whatsapp";
+    const prefiere = prefiereWpp ? "Prefiere WhatsApp"
       : s.canal_preferido_respuesta === "mail" ? "Prefiere mail" : null;
 
     // Bloque de consentimiento (solo si es inscripción).
@@ -300,7 +322,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           <span class="sol-card__bloque-titulo">Contacto</span>
           <dl class="sol-card__datos">
             ${fila("Mail", `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`)}
-            ${s.telefono ? fila("Teléfono", `${esc(s.telefono)}${wa ? ` · <a href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}`) : ""}
+            ${s.telefono ? fila("Teléfono", esc(s.telefono)) : ""}
             ${s.pais ? fila("País", esc(s.pais)) : ""}
             ${prefiere ? fila("Respuesta", esc(prefiere)) : ""}
             ${s.como_nos_encontraste ? fila("Nos encontró por", esc(s.como_nos_encontraste)) : ""}
@@ -317,6 +339,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             <select data-estado="${esc(s.id)}">${opcionesEstado}</select>
           </label>
           <div class="sol-card__botones">
+            ${waMsg ? `<a class="sol-wpp${prefiereWpp ? " sol-wpp--destacado" : ""}" href="${esc(waMsg)}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ""}
             <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">
               ${s.notas_admin ? "Editar nota" : "Agregar nota"}
             </button>
@@ -661,6 +684,26 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     background: rgba(216, 85, 42, 0.06);
   }
   :global(.sol-eliminar:disabled) { opacity: 0.6; cursor: wait; }
+
+  /* Botón "Escribir por WhatsApp": outline verde normal; relleno verde
+     cuando la persona pidió que la contacten por WhatsApp. */
+  :global(.sol-wpp) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid #1F8528;
+    color: #1A7A26;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  :global(.sol-wpp:hover) { background: rgba(31, 133, 40, 0.08); }
+  :global(.sol-wpp--destacado) { background: #1F8528; color: #fff; border-color: #1F8528; }
+  :global(.sol-wpp--destacado:hover) { background: #186A20; color: #fff; }
 
   @media (max-width: 540px) {
     :global(.sol-fila) { grid-template-columns: 1fr; gap: 0.1rem; }
