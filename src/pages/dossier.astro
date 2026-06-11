@@ -384,8 +384,8 @@ const pasos = [
         </header>
         {/* Mapa nativo (HTML/CSS): se anima por capas al entrar al viewport.
             En pantallas chicas el contenedor scrollea horizontal, con pista. */}
-        <p class="mapaweb-hint" aria-hidden="true">Desliza para recorrer el mapa →</p>
-        <div class="mapaweb-scroll">
+        <p class="mapaweb-hint mapa-breakout" aria-hidden="true">Desliza para recorrer el mapa →</p>
+        <div class="mapaweb-scroll mapa-breakout">
           <div class="mapaweb" data-mapa role="img" aria-label="Mapa del programa: cinco etapas, ocho encuentros y las líneas de trabajo de mundo interno, mundo externo y emoción.">
 
             {/* Fila 1 — las bandas de etapas */}
@@ -403,6 +403,7 @@ const pasos = [
               <span
                 class={`mw-nodo mw-nodo--${nodo.tipo}`}
                 data-anim
+                data-col={nodo.n}
                 style={`grid-column: ${nodo.n + 1} / ${nodo.n + 2}; grid-row: 2; --d: ${480 + i * 80}ms`}
               >
                 <span class="mw-nodo__circulo">{nodo.n}</span>
@@ -423,6 +424,7 @@ const pasos = [
                   <span
                     class={`mw-celda ${c.pausa ? "mw-celda--pausa" : ""} ${fila.emocion ? "mw-celda--emocion" : ""}`}
                     data-anim
+                    data-col={c.col}
                     style={`grid-column: ${c.col + 1} / ${c.col + 2}; grid-row: ${3 + f}; --d: ${960 + f * 220 + j * 70}ms`}
                   >
                     {c.pausa
@@ -453,7 +455,7 @@ const pasos = [
         </div>
 
         {/* Leyenda del mapa */}
-        <p class="mw-leyenda" data-animate>
+        <p class="mw-leyenda mapa-breakout" data-animate>
           <span class="mw-leyenda__item"><span class="mw-punto mw-punto--grupal" aria-hidden="true"></span> grupal</span>
           <span class="mw-leyenda__item"><span class="mw-punto mw-punto--individual" aria-hidden="true"></span> individual</span>
           <span class="mw-leyenda__item"><span class="mw-punto mw-punto--hito" aria-hidden="true"></span> hito clave</span>
@@ -723,9 +725,28 @@ const pasos = [
           obsMapa.unobserve(entry.target);
           entry.target.classList.add("visible");
         }
-      }, { threshold: 0.15 });
+      }, { threshold: 0.3 });
       obsMapa.observe(mapa);
     }
+
+    /*
+      Foco por columna: al pasar el mouse por un nodo, se encienden las
+      celdas de ese encuentro (mundo interno + externo + emoción) y el
+      resto del mapa se atenúa. Hace legible la lectura vertical:
+      "¿qué pasa en el encuentro 3?".
+    */
+    const celdas = mapa.querySelectorAll<HTMLElement>(".mw-celda[data-col]");
+    mapa.querySelectorAll<HTMLElement>(".mw-nodo[data-col]").forEach((nodo) => {
+      const col = nodo.dataset.col;
+      nodo.addEventListener("mouseenter", () => {
+        mapa.classList.add("mapaweb--foco");
+        celdas.forEach((c) => c.classList.toggle("is-foco", c.dataset.col === col));
+      });
+      nodo.addEventListener("mouseleave", () => {
+        mapa.classList.remove("mapaweb--foco");
+        celdas.forEach((c) => c.classList.remove("is-foco"));
+      });
+    });
   }
 </script>
 
@@ -1099,6 +1120,15 @@ const pasos = [
   @media (max-width: 1100px) {
     .mapaweb-hint { display: block; }
   }
+  /* En desktop el mapa se ensancha más allá de la columna de texto
+     (hasta 1320px) para verse completo sin scroll; en pantallas chicas
+     vuelve al ancho normal y scrollea horizontal. */
+  .mapa-breakout {
+    width: min(1320px, calc(100vw - 2.4rem));
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+  }
   .mapaweb-scroll {
     margin-top: 2.5rem;
     overflow-x: auto;
@@ -1141,6 +1171,8 @@ const pasos = [
   .mw-etapa--busqueda { background: var(--color-deep); }
   .mw-etapa--flecha   { background: var(--color-accent); }
   .mw-etapa--tesoros  { background: #56608C; }
+  .mw-etapa { transition: transform 0.2s ease, filter 0.2s ease; }
+  .mw-etapa:hover { transform: translateY(-2px); filter: brightness(1.15); }
 
   /* La línea del viaje, detrás de los nodos. Se dibuja al aparecer. */
   .mw-linea {
@@ -1177,6 +1209,7 @@ const pasos = [
     align-items: center;
     text-align: center;
     gap: 0.4rem;
+    transition: opacity 0.25s ease;
   }
   .mw-nodo__circulo {
     display: grid;
@@ -1189,6 +1222,25 @@ const pasos = [
     background: var(--color-ink);
     color: var(--color-bg);
     box-shadow: 0 0 0 5px #faf6ee; /* recorta la línea alrededor */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+  }
+  /* Hover del nodo: el círculo crece con un anillo coral y el nombre
+     se enciende. El JS además resalta la columna de ese encuentro. */
+  .mw-nodo:hover .mw-nodo__circulo {
+    transform: scale(1.16);
+    box-shadow: 0 0 0 5px #faf6ee, 0 0 0 8px rgba(216, 85, 42, 0.3);
+  }
+  .mw-nodo__nombre { transition: color 0.2s ease; }
+  .mw-nodo:hover .mw-nodo__nombre { color: var(--color-accent); }
+  /* Los hitos clave laten suave, invitan a mirar. */
+  @media (prefers-reduced-motion: no-preference) {
+    .mw-nodo--hito .mw-nodo__circulo {
+      animation: mw-latido 3.2s ease-in-out 3s infinite;
+    }
+  }
+  @keyframes mw-latido {
+    0%, 100% { box-shadow: 0 0 0 5px #faf6ee, 0 0 0 6px rgba(216, 85, 42, 0); }
+    50%      { box-shadow: 0 0 0 5px #faf6ee, 0 0 0 13px rgba(216, 85, 42, 0.18); }
   }
   .mw-nodo--individual .mw-nodo__circulo {
     background: #faf6ee;
@@ -1243,13 +1295,35 @@ const pasos = [
     padding: 0.75rem 0.8rem;
     text-align: center;
     min-height: 100%;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease,
+      border-color 0.2s ease, opacity 0.25s ease;
   }
   .mw-celda:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 28px -22px rgba(19, 27, 61, 0.5);
+    transform: translateY(-3px);
+    border-color: var(--color-accent);
+    box-shadow: 0 14px 30px -22px rgba(216, 85, 42, 0.45);
   }
-  .mw-celda__titulo { font-size: 0.88rem; color: var(--color-ink); }
+  /* Foco por columna (lo activa el JS al pasar por un nodo): la columna
+     del encuentro se enciende y el resto se atenúa. */
+  .mapaweb--foco .mw-celda:not(.is-foco) { opacity: 0.3; }
+  .mapaweb--foco .mw-nodo:not(:hover) { opacity: 0.45; }
+  .mw-celda.is-foco {
+    transform: translateY(-3px);
+    border-color: var(--color-accent);
+    box-shadow: 0 14px 30px -22px rgba(216, 85, 42, 0.5);
+  }
+  .mw-celda.is-foco .mw-celda__titulo { color: var(--color-accent); }
+  .mw-celda--pausa.is-foco,
+  .mw-celda--emocion.is-foco {
+    transform: scale(1.07);
+    border: 0;
+    box-shadow: none;
+  }
+  .mw-celda__titulo {
+    font-size: 0.88rem;
+    color: var(--color-ink);
+    transition: color 0.2s ease;
+  }
   .mw-celda__detalle {
     font-size: 0.74rem;
     color: var(--color-ink-soft);
@@ -1276,7 +1350,7 @@ const pasos = [
   .mw-celda__palabra {
     font-family: var(--font-serif);
     font-style: italic;
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     color: var(--color-accent);
   }
 
@@ -1336,16 +1410,30 @@ const pasos = [
   .mw-punto--hito { background: var(--color-accent); }
   .mw-punto--integracion { border: 2px solid var(--color-accent); background: rgba(216, 85, 42, 0.1); }
 
-  /* Entrada por capas: cada pieza con su delay (--d, seteado inline). */
+  /* Entrada por capas: cada pieza con su delay (--d, seteado inline).
+     OJO: fill-mode "backwards", NO "both" — "both" deja los valores
+     finales clavados con prioridad de animación y eso mata los hovers
+     (transform/opacity del hover nunca aplican). Con "backwards" la
+     pieza espera oculta su turno y al terminar queda libre. */
   @media (prefers-reduced-motion: no-preference) {
-    .mapaweb [data-anim] { opacity: 0; }
+    .mapaweb:not(.visible) [data-anim] { opacity: 0; }
     .mapaweb.visible [data-anim] {
-      animation: mw-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+      animation: mw-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
       animation-delay: var(--d, 0ms);
+    }
+    /* Los nodos entran con un "pop" elástico, no con fade. */
+    .mapaweb.visible .mw-nodo[data-anim] {
+      animation-name: mw-pop;
+      animation-duration: 0.7s;
+      animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
     }
   }
   @keyframes mw-in {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes mw-pop {
+    from { opacity: 0; transform: scale(0.3) translateY(10px); }
     to   { opacity: 1; transform: none; }
   }
 
