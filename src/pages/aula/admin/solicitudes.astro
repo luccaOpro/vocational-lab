@@ -41,6 +41,23 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
       </div>
 
+      {/* Envío manual: filtro por intención + copiar los mails de lo visible.
+          Pensado para que Julia/Laura armen un mail grupal en su correo:
+          filtran acá, copian las direcciones y las pegan en CCO. */}
+      <div class="sols__envio" id="sols-envio" hidden>
+        <div class="sols__filtros sols__envio-filtros" role="group" aria-label="Filtrar por intención">
+          <button type="button" class="sols__filtro is-activo" data-intencion="todas">Todas las intenciones</button>
+          <button type="button" class="sols__filtro" data-intencion="info">Quieren info</button>
+          <button type="button" class="sols__filtro" data-intencion="inscripcion">Quieren anotarse</button>
+        </div>
+        <div class="sols__envio-acciones">
+          <span class="sols__envio-resumen" id="envio-resumen"></span>
+          <button type="button" class="sols__envio-btn" id="envio-copiar">Copiar mails</button>
+          <a class="sols__envio-btn sols__envio-btn--sec" id="envio-mailto" href="#" hidden>Abrir en el correo (CCO)</a>
+        </div>
+        <p class="sols__envio-hint">Se copian los mails de las solicitudes visibles según los filtros, sin repetidos. Pégalos en <strong>CCO</strong> para no exponer las direcciones entre sí.</p>
+      </div>
+
       {/* Resumen de origen (de qué canal vino cada solicitud) */}
       <p class="sols__canales" id="sols-canales" hidden></p>
 
@@ -70,6 +87,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   const $errorBox = document.getElementById("sols-error") as HTMLElement;
   const $filtros = document.getElementById("sols-filtros") as HTMLElement;
   const $canales = document.getElementById("sols-canales") as HTMLElement;
+  const $envio = document.getElementById("sols-envio") as HTMLElement;
+  const $envioResumen = document.getElementById("envio-resumen") as HTMLElement;
+  const $envioCopiar = document.getElementById("envio-copiar") as HTMLButtonElement;
+  const $envioMailto = document.getElementById("envio-mailto") as HTMLAnchorElement;
 
   // ============ Tipos ============
   type Estado = "nueva" | "contactada" | "convertida" | "descartada";
@@ -113,6 +134,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   let solicitudes: Solicitud[] = [];
   let filtroActivo: "todas" | Estado = "todas";
+  let filtroIntencion: "todas" | "info" | "inscripcion" = "todas";
+  let emailsVisibles: string[] = [];
 
   // ============ Helpers ============
   function esc(s: string | null | undefined) {
@@ -203,14 +226,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     solicitudes = (data ?? []) as Solicitud[];
     $loader.hidden = true;
     $filtros.hidden = false;
+    $envio.hidden = false;
     render();
   }
 
   // ============ Render ============
   function render() {
-    const visibles = filtroActivo === "todas"
-      ? solicitudes
-      : solicitudes.filter((s) => s.estado === filtroActivo);
+    const visibles = solicitudes.filter((s) =>
+      (filtroActivo === "todas" || s.estado === filtroActivo) &&
+      (filtroIntencion === "todas" || s.intencion === filtroIntencion)
+    );
 
     // Resumen en la bajada.
     const nuevas = solicitudes.filter((s) => s.estado === "nueva").length;
@@ -232,14 +257,35 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       $canales.hidden = false;
     }
 
-    // Contadores en los filtros.
-    document.querySelectorAll<HTMLButtonElement>(".sols__filtro").forEach((btn) => {
+    // Contadores en los filtros de estado (ojo: scopeado a #sols-filtros para
+    // no pisar los botones de intención, que comparten la clase visual).
+    document.querySelectorAll<HTMLButtonElement>("#sols-filtros .sols__filtro").forEach((btn) => {
       const f = btn.dataset.filtro as "todas" | Estado;
       const n = f === "todas" ? total : solicitudes.filter((s) => s.estado === f).length;
       const base = btn.textContent?.replace(/\s*\(\d+\)$/, "") ?? "";
       btn.textContent = `${base} (${n})`;
       btn.classList.toggle("is-activo", f === filtroActivo);
     });
+
+    // Botones de intención: solo marcamos el activo.
+    document.querySelectorAll<HTMLButtonElement>("[data-intencion]").forEach((btn) => {
+      btn.classList.toggle("is-activo", btn.dataset.intencion === filtroIntencion);
+    });
+
+    // Barra de envío manual: mails únicos de lo visible.
+    const emails = [...new Set(visibles.map((s) => s.email.trim().toLowerCase()).filter(Boolean))];
+    $envioResumen.textContent = emails.length === 0
+      ? "Sin destinatarios con estos filtros."
+      : `${emails.length} destinatario${emails.length === 1 ? "" : "s"}`;
+    $envioCopiar.disabled = emails.length === 0;
+    // mailto con CCO pre-cargado. Si la lista es muy larga el mailto se rompe
+    // (límite de URL de los clientes de correo), así que lo ocultamos y queda
+    // solo "Copiar mails".
+    const mailtoHref = `mailto:hola@vlab.com.ar?bcc=${encodeURIComponent(emails.join(","))}`;
+    const mailtoUsable = emails.length > 0 && mailtoHref.length <= 1800;
+    $envioMailto.hidden = !mailtoUsable;
+    if (mailtoUsable) $envioMailto.href = mailtoHref;
+    emailsVisibles = emails;
 
     if (visibles.length === 0) {
       $lista.innerHTML = `
@@ -471,6 +517,27 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     render();
   });
 
+  $envio.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-intencion]");
+    if (!btn) return;
+    filtroIntencion = btn.dataset.intencion as "todas" | "info" | "inscripcion";
+    render();
+  });
+
+  // Copiar los mails visibles al portapapeles (separados por coma, listos
+  // para pegar en el campo CCO de cualquier cliente de correo).
+  $envioCopiar.addEventListener("click", async () => {
+    if (emailsVisibles.length === 0) return;
+    const texto = emailsVisibles.join(", ");
+    try {
+      await navigator.clipboard.writeText(texto);
+      showToast(`${emailsVisibles.length} mail${emailsVisibles.length === 1 ? "" : "s"} copiados. Pégalos en CCO.`);
+    } catch {
+      // Fallback para navegadores sin permiso de clipboard: prompt copiable.
+      window.prompt("Copia los mails con Ctrl+C:", texto);
+    }
+  });
+
   cargar().catch((err) => {
     console.error("[solicitudes]", err);
     $loader.hidden = true;
@@ -514,6 +581,56 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   .sols__loader { padding: 1.5rem 0; }
   .sols__error { color: var(--color-accent); padding: 1rem 0; }
+
+  /* ===== Barra de envío manual ===== */
+  .sols__envio {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.2rem;
+    margin: -0.6rem 0 1.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .sols__envio-filtros { margin-bottom: 0; }
+  .sols__envio-acciones {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .sols__envio-resumen {
+    font-size: 0.9rem;
+    color: var(--color-ink-soft);
+    font-weight: 500;
+  }
+  .sols__envio-btn {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-deep);
+    background: var(--color-deep);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .sols__envio-btn:hover:not(:disabled) { background: #1b2c63; }
+  .sols__envio-btn:disabled { opacity: 0.5; cursor: default; }
+  .sols__envio-btn--sec {
+    background: transparent;
+    color: var(--color-deep);
+  }
+  .sols__envio-btn--sec:hover { background: rgba(36, 58, 130, 0.07); }
+  .sols__envio-hint {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    line-height: 1.5;
+  }
 
   /* ===== Filtros ===== */
   .sols__filtros {
