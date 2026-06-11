@@ -164,7 +164,10 @@ const caminos = [
     font-weight: 500;
     color: var(--color-accent);
     align-self: flex-start;
+    display: inline-block;
+    transition: transform 0.18s ease, color 0.15s ease;
   }
+  .camino__cta:hover { transform: translateX(4px); }
   .camino--destacado .camino__cta {
     color: var(--color-bg);
     border-bottom: 1px solid currentColor;

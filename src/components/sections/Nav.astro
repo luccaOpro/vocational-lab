@@ -54,6 +54,10 @@
       </button>
     </div>
   </div>
+
+  {/* Barra de progreso de lectura: una línea coral que crece a medida
+      que se recorre la página. Decorativa (aria-hidden). */}
+  <span class="nav__progreso" data-nav-progreso aria-hidden="true"></span>
 </header>
 
 {/* Backdrop oscurecido detrás del panel */}
@@ -113,17 +117,31 @@
   }
 
   /* Logo completo: alto fijo para que el texto VOCATIONAL LAB
-     se lea bien. El ancho lo calcula el SVG en base al viewBox
-     (proporción 697:546 ≈ 1.27:1). */
+     se lea bien. El ancho lo calcula el SVG en base al viewBox.
+     Achicado (96→64) para que el nav sticky no se coma la pantalla:
+     la marca sigue presente pero el contenido respira. */
   .nav__brand-logo {
     width: auto;
-    height: 96px;
+    height: 64px;
     display: block;
     flex-shrink: 0;
   }
 
   @media (max-width: 720px) {
-    .nav__brand-logo { height: 72px; }
+    .nav__brand-logo { height: 56px; }
+  }
+
+  /* ===== Barra de progreso de lectura ===== */
+  .nav__progreso {
+    position: absolute;
+    left: 0;
+    bottom: -1px; /* pisa la línea del borde inferior */
+    width: 100%;
+    height: 2px;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
   }
 
   /* Links del nav superior (desktop) */
@@ -137,8 +155,18 @@
   .nav__links a {
     color: var(--color-ink-soft);
     transition: color 0.15s ease;
+    /* Subrayado coral que aparece en hover y en la sección activa. */
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 6px;
+    transition: color 0.15s ease, text-decoration-color 0.2s ease;
   }
   .nav__links a:hover { color: var(--color-ink); }
+  .nav__links a.is-active {
+    color: var(--color-ink);
+    text-decoration-color: var(--color-accent);
+  }
 
   .nav__cta {
     padding: 0.55rem 1rem;
@@ -403,4 +431,57 @@
       setMenu(false, true);
     }
   });
+
+  // ============================================================
+  // Barra de progreso de lectura
+  // ------------------------------------------------------------
+  // Escala la línea coral del nav según cuánto se recorrió la página.
+  // Usamos transform (no width) + requestAnimationFrame: rendimiento
+  // fluido sin recalcular layout en cada scroll.
+  // ============================================================
+  const progreso = document.querySelector<HTMLElement>('[data-nav-progreso]');
+  if (progreso) {
+    let pedido = false;
+    const pintar = () => {
+      pedido = false;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      const avance = total > 0 ? Math.min(window.scrollY / total, 1) : 0;
+      progreso.style.transform = `scaleX(${avance})`;
+    };
+    window.addEventListener('scroll', () => {
+      if (!pedido) { pedido = true; requestAnimationFrame(pintar); }
+    }, { passive: true });
+    pintar();
+  }
+
+  // ============================================================
+  // Sección activa en el nav (scrollspy)
+  // ------------------------------------------------------------
+  // Cuando una sección linkeada desde el nav está en pantalla, su link
+  // se marca con el subrayado coral. Ayuda a ubicarse en la página.
+  // ============================================================
+  const linksNav = Array.from(
+    document.querySelectorAll<HTMLAnchorElement>('.nav__links a[href^="#"]')
+  );
+  const secciones = linksNav
+    .map((l) => document.querySelector<HTMLElement>(l.hash))
+    .filter((s): s is HTMLElement => s !== null);
+
+  if (secciones.length > 0) {
+    const marcar = (id: string | null) => {
+      linksNav.forEach((l) => l.classList.toggle('is-active', l.hash === `#${id}`));
+    };
+    const spy = new IntersectionObserver(
+      (entradas) => {
+        // De las secciones visibles, gana la más cercana al tope.
+        const visibles = entradas.filter((e) => e.isIntersecting);
+        if (visibles.length > 0) {
+          marcar(visibles[0].target.id);
+        }
+      },
+      // Banda de detección: franja central-alta del viewport.
+      { rootMargin: '-25% 0px -65% 0px' }
+    );
+    secciones.forEach((s) => spy.observe(s));
+  }
 </script>

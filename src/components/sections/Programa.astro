@@ -129,7 +129,14 @@ const llevas = [
 
   .etapa {
     border-top: 2px solid var(--color-accent);
-    padding-top: 1rem;
+    padding: 1rem 0.9rem 1.1rem;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .etapa:hover {
+    background: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 36px -26px rgba(19, 27, 61, 0.4);
   }
   .etapa__n {
     display: block;

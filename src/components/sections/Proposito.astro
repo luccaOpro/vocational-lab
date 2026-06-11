@@ -7,8 +7,12 @@
 
 <section id="proposito" class="proposito section">
   <div class="proposito__inner container" data-animate>
+    {/* Estrella de marca como apertura editorial de la declaración. */}
+    <svg class="proposito__estrella" viewBox="235 -5 135 138" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="currentColor" d="M298.919,59.572c.276,3.224,1.168,6.074,2.204,9.026,2.16,6.156,4.711,11.974,7.4,17.959,6.086,13.543,12.882,26.533,19.526,39.841l-23.439-38.61c-4.11-6.442-8.219-12.707-12.752-18.811-1.875-2.524-3.751-4.794-5.971-6.944-4.892-4.739-13.586,2.872-17.91,7.246,3.126-5.608,8.67-14.951,3.291-19.349-3.952-3.231-9.751-4.655-14.659-5.984,4.837.167,14.61-.004,16.446-3.913,2.574-5.479-11.443-32.405-14.854-40.032,4.469,6.811,8.531,13.575,13.323,20.097,3.24,4.318,7.109,9.638,11.451,12.579,1.286.871,2.775.931,4.205.328,5.04-2.126,10.72-7.591,14.833-11.63,6.152-6.041,11.61-12.426,17.388-18.918-4.544,6.896-9.014,13.503-12.92,20.714-2.467,4.671-5.647,10.714-5.955,15.79-.099,1.628.557,2.988,1.887,3.893,1.342.913,2.811,1.678,4.364,2.294,9.163,3.639,19.708,5.764,29.429,7.928l30.791,5.675c-13-1.19-25.692-2.499-38.701-3.088-6.689-.303-13.097-.497-19.708-.122-2.697.153-5.285.46-7.791,1.277-1.195.389-2.002,1.319-1.879,2.757Z"/>
+    </svg>
     <h2 class="proposito__title">
-      Creemos en el poder de cada persona de construir su propio futuro
+      Creemos en el poder de cada persona de construir <em>su propio futuro</em>
     </h2>
     <p class="proposito__body">
       Vocational Lab existe para que ese poder deje de ser una idea y
@@ -22,8 +26,18 @@
     max-width: 820px;
     text-align: center;
   }
+  .proposito__estrella {
+    width: 30px;
+    height: auto;
+    margin: 0 auto 1.5rem;
+    color: var(--color-accent);
+  }
   .proposito__title {
     margin-bottom: 1.25rem;
+  }
+  .proposito__title em {
+    font-style: italic;
+    color: var(--color-accent);
   }
   .proposito__body {
     font-size: clamp(1.1rem, 1.6vw, 1.25rem);

@@ -61,6 +61,16 @@
 
 html { scroll-behavior: smooth; }
 
+/* Al navegar a un ancla (#programa, #equipo...), dejamos aire arriba
+   para que el título no quede tapado por el nav sticky. */
+[id] { scroll-margin-top: 96px; }
+
+/* Selección de texto con identidad de marca. */
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+
 body {
   margin: 0;
   background: var(--color-bg);
@@ -89,6 +99,9 @@ h1, h2, h3, h4 {
   letter-spacing: -0.01em;
   margin: 0;
   color: var(--color-ink);
+  /* Equilibra los renglones de los títulos multilínea (evita viudas).
+     Los navegadores viejos lo ignoran sin romper nada. */
+  text-wrap: balance;
 }
 
 h1 { font-size: clamp(2.4rem, 5.5vw, 4rem); }
@@ -106,7 +119,8 @@ p { margin: 0 0 1em; }
 .container {
   width: 100%;
   max-width: var(--container);
-  margin: 0 inherit;
+  margin-top: 0;
+  margin-bottom: 0;
   margin-left: auto;
   margin-right: auto;
   padding-left: var(--gutter);
