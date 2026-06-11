@@ -57,9 +57,18 @@ const { title = "Aula · Vocational Lab", nav = true, rol = "alumno" } = Astro.p
   </head>
 
   <body class="aula-body">
+    {/* Primer enfocable: permite a usuarios de teclado saltarse el nav.
+        El destino (#aula-contenido) se lo asigna el script de abajo al
+        primer <main> de la página. */}
+    <a href="#aula-contenido" class="skip-link">Saltar al contenido</a>
     {nav && <NavAula rol={rol} />}
     <slot />
     <UIRoot />
+    <script>
+      // Cada página del aula trae su propio <main> sin id; lo marcamos acá
+      // para que el skip-link tenga adónde saltar sin tocar 15 páginas.
+      document.querySelector("main")?.setAttribute("id", "aula-contenido");
+    </script>
   </body>
 </html>
 

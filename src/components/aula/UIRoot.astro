@@ -364,6 +364,19 @@
     background: var(--color-line);
     border-radius: var(--radius-sm);
     animation: skeleton-pulse 1.4s ease-in-out infinite;
+    /* Brillo que recorre la silueta de izquierda a derecha: da más
+       sensación de "está cargando" que el pulso solo. */
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.45) 50%,
+      transparent 70%
+    );
+    background-size: 220% 100%;
+    background-position: 180% 0;
+    animation:
+      skeleton-pulse 1.4s ease-in-out infinite,
+      skeleton-shimmer 1.8s ease-in-out infinite;
   }
   .skeleton--text  { height: 0.85rem; width: 100%; }
   .skeleton--title { height: 1.6rem; width: 40%; min-width: 180px; border-radius: var(--radius-sm); }
@@ -392,8 +405,12 @@
     0%, 100% { opacity: 1; }
     50% { opacity: 0.45; }
   }
+  @keyframes skeleton-shimmer {
+    from { background-position: 180% 0; }
+    to   { background-position: -80% 0; }
+  }
   @media (prefers-reduced-motion: reduce) {
-    .skeleton { animation: none; opacity: 0.7; }
+    .skeleton { animation: none; opacity: 0.7; background-image: none; }
   }
 
   /* ============ Fade-in para contenido del aula ============ */
@@ -458,6 +475,29 @@
     font-weight: 500;
   }
   .empty-state__cta:hover { background: #1a2c64; }
+
+  /* ============ Entrada escalonada (stagger) ============ */
+  /* Ponele la clase .stagger-in a un grid/lista y sus hijos aparecen
+     uno por uno (fade + slide-up) cuando el contenedor se hace visible.
+     Funciona sin JS: la animación arranca recién cuando el elemento se
+     pinta por primera vez (p. ej. al sacarle `hidden` al contenedor padre). */
+  @media (prefers-reduced-motion: no-preference) {
+    .stagger-in > * {
+      animation: stagger-item 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .stagger-in > *:nth-child(1) { animation-delay: 40ms; }
+    .stagger-in > *:nth-child(2) { animation-delay: 110ms; }
+    .stagger-in > *:nth-child(3) { animation-delay: 180ms; }
+    .stagger-in > *:nth-child(4) { animation-delay: 250ms; }
+    .stagger-in > *:nth-child(5) { animation-delay: 320ms; }
+    .stagger-in > *:nth-child(6) { animation-delay: 390ms; }
+    .stagger-in > *:nth-child(7) { animation-delay: 460ms; }
+    .stagger-in > *:nth-child(n + 8) { animation-delay: 520ms; }
+  }
+  @keyframes stagger-item {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
 
   /* ============ Focus accesible (consistente en todo el aula) ============ */
   .aula-body :focus-visible {

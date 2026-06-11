@@ -226,6 +226,32 @@ export function spinnerHTML(label?: string): string {
 }
 
 /**
+ * Anima un número de 0 hasta su valor final (ease-out, ~700ms).
+ * Para los KPIs de los dashboards: en vez de aparecer el número seco,
+ * se lo ve "subir" hasta el valor real. Respeta prefers-reduced-motion
+ * (en ese caso pone el valor directo, sin animar).
+ */
+export function countUp(el: HTMLElement, valor: number): void {
+  if (
+    valor <= 0 ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    el.textContent = String(valor);
+    return;
+  }
+  const duracion = 700; // ms
+  const inicio = performance.now();
+  function tick(ahora: number) {
+    const progreso = Math.min((ahora - inicio) / duracion, 1);
+    const eased = 1 - Math.pow(1 - progreso, 3); // ease-out cúbico
+    el.textContent = String(Math.round(eased * valor));
+    if (progreso < 1) requestAnimationFrame(tick);
+    else el.textContent = String(valor);
+  }
+  requestAnimationFrame(tick);
+}
+
+/**
  * Convierte el contenedor [data-dropzone] que envuelve a un <input type="file">
  * en zona de drag & drop: soltar un archivo equivale a elegirlo con el picker
  * (asigna los files al input y dispara "change", así la página reutiliza su

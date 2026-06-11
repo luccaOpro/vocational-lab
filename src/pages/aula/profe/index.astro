@@ -32,7 +32,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           <p class="profe__bajada" id="bajada">Cargando tu panel…</p>
         </header>
 
-        <section class="kpis">
+        <section class="kpis stagger-in">
           <article class="kpi">
             <span class="kpi__numero" id="kpi-cursos">0</span>
             <span class="kpi__label">Cursos activos</span>
@@ -60,7 +60,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
-  import { traducirError } from "../../../lib/ui";
+  import { traducirError, countUp } from "../../../lib/ui";
   import { iconHtml } from "../../../lib/icons";
 
   const $loader = document.getElementById("profe-loader") as HTMLElement;
@@ -135,8 +135,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     $bajada.textContent = np === 0
       ? "Estás al día. No tienes entregas para corregir."
       : `Tienes ${np} entrega${np === 1 ? "" : "s"} esperando devolución.`;
-    $kpiCursos.textContent = String(cursos?.length ?? 0);
-    $kpiPendientes.textContent = String(np);
+    // Números animados, como en el panel de admin.
+    countUp($kpiCursos, cursos?.length ?? 0);
+    countUp($kpiPendientes, np);
 
     $cursos.innerHTML = (cursos ?? []).length === 0
       ? `<div class="empty-state">

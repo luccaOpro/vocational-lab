@@ -174,10 +174,12 @@ const etiqueta = etiquetaPorRol[rol];
     line-height: 0;
   }
 
-  /* Logo completo (texto + ícono), versión light, para el fondo oscuro del aula. */
+  /* Logo completo (texto + ícono), versión light, para el fondo oscuro del aula.
+     Mismo alto que el nav del sitio público: la barra ocupa menos pantalla
+     y el contenido del aula respira más. */
   .navaula__brand-logo {
     width: auto;
-    height: 88px;
+    height: 64px;
     display: block;
   }
 
@@ -196,6 +198,30 @@ const etiqueta = etiquetaPorRol[rol];
   .navaula__links a:hover,
   .navaula__links a.is-active {
     color: var(--color-bg);
+  }
+
+  /* Subrayado coral en la sección activa (mismo lenguaje que el nav
+     del sitio público). Solo en los links de texto, no en el botón de
+     logout ni en el avatar. */
+  .navaula__links a:not(.navaula__logout):not(.navaula__perfil) {
+    position: relative;
+    padding-bottom: 2px;
+  }
+  .navaula__links a:not(.navaula__logout):not(.navaula__perfil)::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -3px;
+    height: 2px;
+    background: var(--color-accent);
+    border-radius: 2px;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .navaula__links a.is-active:not(.navaula__logout):not(.navaula__perfil)::after {
+    transform: scaleX(1);
   }
 
   /* "Cerrar sesión" se ve más sutil */
@@ -369,7 +395,7 @@ const etiqueta = etiquetaPorRol[rol];
   @media (max-width: 720px) {
     .navaula__links { display: none; }
     .navaula__burger { display: inline-flex; }
-    .navaula__brand-logo { height: 68px; }
+    .navaula__brand-logo { height: 56px; }
     .navaula__brand-rol { display: none; }
   }
 

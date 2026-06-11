@@ -51,8 +51,9 @@ import Icon from "../../components/aula/Icon.astro";
           </div>
         </div>
 
-        {/* Grid de cursos — lo llenamos desde JS. */}
-        <div id="cursos-grid" class="cursos__grid"></div>
+        {/* Grid de cursos — lo llenamos desde JS. Las cards entran
+            escalonadas (ver .stagger-in en UIRoot). */}
+        <div id="cursos-grid" class="cursos__grid stagger-in"></div>
       </div>
     </div>
   </main>
@@ -164,7 +165,7 @@ import Icon from "../../components/aula/Icon.astro";
         const progresoHTML = p.total > 0 ? `
           <div class="curso-card__progreso">
             <div class="curso-card__progreso-barra-wrap">
-              <div class="curso-card__progreso-barra" style="width:${pct}%"></div>
+              <div class="curso-card__progreso-barra${completo ? " curso-card__progreso-barra--completa" : ""}" style="width:${pct}%"></div>
             </div>
             <span class="curso-card__progreso-texto">
               ${p.entregadas} de ${p.total} tarea${p.total === 1 ? "" : "s"}
@@ -321,6 +322,19 @@ import Icon from "../../components/aula/Icon.astro";
     border-radius: 99px;
     transition: width 0.4s ease;
   }
+  /* La barra crece desde cero al aparecer la card: se "ve" el avance. */
+  @media (prefers-reduced-motion: no-preference) {
+    :global(.curso-card__progreso-barra) {
+      animation: barra-crece 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+    }
+  }
+  @keyframes barra-crece {
+    from { width: 0; }
+  }
+  /* Curso completado: la barra acompaña el verde del badge. */
+  :global(.curso-card__progreso-barra--completa) {
+    background: #1a6b3e;
+  }
   :global(.curso-card__progreso-texto) {
     font-size: 0.78rem;
     color: var(--color-ink-muted);
@@ -332,5 +346,13 @@ import Icon from "../../components/aula/Icon.astro";
     color: var(--color-accent);
     font-weight: 500;
     font-size: 0.95rem;
+    display: inline-block;
+    transition: transform 0.18s ease, color 0.15s ease;
+  }
+  /* La flecha se desliza cuando la card está en hover (mismo gesto que
+     los CTAs del sitio público). */
+  :global(.curso-card:hover .curso-card__entrar) {
+    transform: translateX(4px);
+    color: var(--color-accent-dark);
   }
 </style>

@@ -14,6 +14,10 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
 
 <AulaLayout title="Ingresar al aula · Vocational Lab" nav={false}>
   <main class="login">
+    {/* Estrella de marca flotando — el "tesoro" del viaje, igual que en el hero. */}
+    <svg class="login__estrella" viewBox="235 -5 135 138" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path fill="currentColor" d="M298.919,59.572c.276,3.224,1.168,6.074,2.204,9.026,2.16,6.156,4.711,11.974,7.4,17.959,6.086,13.543,12.882,26.533,19.526,39.841l-23.439-38.61c-4.11-6.442-8.219-12.707-12.752-18.811-1.875-2.524-3.751-4.794-5.971-6.944-4.892-4.739-13.586,2.872-17.91,7.246,3.126-5.608,8.67-14.951,3.291-19.349-3.952-3.231-9.751-4.655-14.659-5.984,4.837.167,14.61-.004,16.446-3.913,2.574-5.479-11.443-32.405-14.854-40.032,4.469,6.811,8.531,13.575,13.323,20.097,3.24,4.318,7.109,9.638,11.451,12.579,1.286.871,2.775.931,4.205.328,5.04-2.126,10.72-7.591,14.833-11.63,6.152-6.041,11.61-12.426,17.388-18.918-4.544,6.896-9.014,13.503-12.92,20.714-2.467,4.671-5.647,10.714-5.955,15.79-.099,1.628.557,2.988,1.887,3.893,1.342.913,2.811,1.678,4.364,2.294,9.163,3.639,19.708,5.764,29.429,7.928l30.791,5.675c-13-1.19-25.692-2.499-38.701-3.088-6.689-.303-13.097-.497-19.708-.122-2.697.153-5.285.46-7.791,1.277-1.195.389-2.002,1.319-1.879,2.757Z"/>
+    </svg>
     <div class="login__card">
       <a href="/" class="login__brand" aria-label="Vocational Lab — Inicio">
         {/* Solo el ícono, sin texto. Alineado a la izquierda del card. */}
@@ -517,9 +521,32 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     display: grid;
     place-items: center;
     padding: 3rem 1.5rem;
+    position: relative;
+    overflow: hidden;
     background:
       radial-gradient(ellipse at top, rgba(36, 58, 130, 0.06) 0%, transparent 60%),
       linear-gradient(180deg, var(--color-bg) 0%, var(--color-surface) 100%);
+  }
+
+  /* Estrella coral flotando arriba a la derecha, como en el hero del sitio. */
+  .login__estrella {
+    position: absolute;
+    top: 12%;
+    right: 10%;
+    width: clamp(28px, 3.5vw, 42px);
+    color: var(--color-accent);
+    opacity: 0.75;
+    pointer-events: none;
+  }
+  @keyframes login-flotar {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-12px) rotate(4deg); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .login__estrella { animation: login-flotar 8s ease-in-out infinite; }
+  }
+  @media (max-width: 720px) {
+    .login__estrella { top: 6%; right: 7%; }
   }
 
   .login__card {
@@ -527,9 +554,22 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
     max-width: 440px;
     background: #fff;
     border: 1px solid var(--color-line);
+    /* Filo coral de marca: mismo detalle que llevan los mails y el footer. */
+    border-top: 3px solid var(--color-accent);
     border-radius: var(--radius-md);
     padding: 2.5rem 2rem;
     box-shadow: 0 18px 60px rgba(19, 27, 61, 0.08);
+    position: relative; /* por encima de los ornamentos */
+  }
+  /* Entrada suave del card al cargar la página. */
+  @keyframes login-entra {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .login__card {
+      animation: login-entra 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
   }
 
   /* Ícono del logo, alineado a la izquierda del card. */

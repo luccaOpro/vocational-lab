@@ -36,7 +36,7 @@ import Icon from "../../../components/aula/Icon.astro";
       </div>
 
       <div id="admin-contenido" hidden>
-        <section class="kpis">
+        <section class="kpis stagger-in">
           <article class="kpi">
             <span class="kpi__numero" id="kpi-alumnos">0</span>
             <span class="kpi__label">Protagonistas</span>
@@ -73,7 +73,7 @@ import Icon from "../../../components/aula/Icon.astro";
           <div class="admin__seccion-head">
             <h2 class="admin__seccion-titulo">Accesos rápidos</h2>
           </div>
-          <div class="acciones">
+          <div class="acciones stagger-in">
             <a href="/aula/admin/cursos" class="accion">
               <span class="accion__icono"><Icon name="book-open" /></span>
               <div>
@@ -121,7 +121,7 @@ import Icon from "../../../components/aula/Icon.astro";
 <script>
   import { supabase } from "../../../lib/supabase";
   import { requireRol } from "../../../lib/auth-guard";
-  import { traducirError } from "../../../lib/ui";
+  import { traducirError, countUp } from "../../../lib/ui";
 
   const $loader = document.getElementById("admin-loader") as HTMLElement;
   const $contenido = document.getElementById("admin-contenido") as HTMLElement;
@@ -185,13 +185,15 @@ import Icon from "../../../components/aula/Icon.astro";
     // Solicitudes nuevas (si la consulta falló, lo tratamos como 0 sin romper el panel).
     const solicitudesNuevas = solicitudesRes.error ? 0 : (solicitudesRes.count ?? 0);
 
-    document.getElementById("kpi-alumnos")!.textContent = String(conteo.alumno);
-    document.getElementById("kpi-profes")!.textContent = String(conteo.profe);
-    document.getElementById("kpi-admins")!.textContent = String(conteo.admin);
-    document.getElementById("kpi-cursos")!.textContent = String(cursos.length);
-    document.getElementById("kpi-pendientes")!.textContent = String(entregas.length);
-    document.getElementById("kpi-sin-curso")!.textContent = String(sinCurso);
-    document.getElementById("kpi-solicitudes")!.textContent = String(solicitudesNuevas);
+    // Los números "suben" hasta su valor real (countUp respeta
+    // prefers-reduced-motion y pone el valor directo si hace falta).
+    countUp(document.getElementById("kpi-alumnos")!, conteo.alumno);
+    countUp(document.getElementById("kpi-profes")!, conteo.profe);
+    countUp(document.getElementById("kpi-admins")!, conteo.admin);
+    countUp(document.getElementById("kpi-cursos")!, cursos.length);
+    countUp(document.getElementById("kpi-pendientes")!, entregas.length);
+    countUp(document.getElementById("kpi-sin-curso")!, sinCurso);
+    countUp(document.getElementById("kpi-solicitudes")!, solicitudesNuevas);
 
     // Ocultamos los KPI que están en cero (no son prioritarios de ver).
     const $sinCursoWrap = document.getElementById("kpi-sin-curso-wrap")!;
@@ -345,6 +347,13 @@ import Icon from "../../../components/aula/Icon.astro";
     background: rgba(36, 58, 130, 0.08);
     color: var(--color-deep);
     flex-shrink: 0;
+    transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  }
+  /* El ícono acompaña el hover de la card: se tiñe coral y crece apenas. */
+  .accion:hover .accion__icono {
+    background: rgba(216, 85, 42, 0.12);
+    color: var(--color-accent);
+    transform: scale(1.08);
   }
   .accion__titulo {
     display: block;
