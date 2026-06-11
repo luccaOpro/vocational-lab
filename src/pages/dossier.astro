@@ -1144,7 +1144,11 @@ const pasos = [
     grid-template-columns: 108px repeat(8, minmax(112px, 1fr));
     gap: 0.9rem 0.7rem;
     align-items: start;
-    min-width: 1060px;
+    /* min-content: el panel nunca puede ser más angosto de lo que piden
+       sus columnas — así el fondo siempre contiene TODO el contenido.
+       (Antes era un número fijo en px que quedó corto y en mobile las
+       celdas se salían del panel.) */
+    min-width: min-content;
     padding: clamp(1.4rem, 3vw, 2.4rem);
     background: #faf6ee;
     border: 1px solid var(--color-line);
