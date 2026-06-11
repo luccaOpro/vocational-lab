@@ -7,4 +7,9 @@ Disallow: /protocolo
 # El aula es privada (ya lleva meta noindex; esto es refuerzo).
 Disallow: /aula
 
+# El dossier se comparte solo por mail/WhatsApp; no lo indexamos
+# (la ficha del final tiene los valores del servicio).
+Disallow: /dossier
+Disallow: /descargas/
+
 Sitemap: https://vlab.com.ar/sitemap-index.xml

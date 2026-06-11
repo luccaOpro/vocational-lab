@@ -35,6 +35,9 @@ const MAIL_FROM_NAME = "Vocational Lab";
 const WSP_LINK = "https://wa.me/5491123145518";
 const WSP_VISIBLE = "+54 9 11 2314-5518";
 const INSCRIPCION_URL = "https://vlab.com.ar/inscripcion";
+// El dossier web del programa: reemplaza al archivo adjunto que se iba a
+// mandar en W1A. Al final del dossier está la ficha con fechas y valores.
+const DOSSIER_URL = "https://vlab.com.ar/dossier";
 const LOGO_URL = "https://vlab.com.ar/email-logo-v2.png";
 
 // ── Secrets (vienen del panel de Supabase) ──
@@ -118,21 +121,15 @@ function plantilla(
       titulo("Qué bueno que nos escribiste") +
       p(`Hola${nom}, te contamos de qué se trata Vocational Lab.`) +
       p(`Es un programa de descubrimiento vocacional que acompaña el proceso de elección desde el autoconocimiento genuino y con una mirada realista del futuro del trabajo.`) +
-      label("Lo que incluye") +
-      lista([
-        "6 encuentros grupales en vivo y 2 sesiones individuales con devolución personalizada.",
-        "Exploración de tu mundo interno: quién eres, qué te mueve, tus fortalezas.",
-        "Exploración del mundo externo: tendencias, IA, carreras, escenarios futuros.",
-        "Guías, tests y recursos para pasar a la acción.",
-      ]) +
-      boton("Reserva tu lugar", INSCRIPCION_URL) +
+      p(`Preparamos un <strong>dossier completo</strong> para que conozcas el programa por dentro: las 5 etapas del viaje, los 8 encuentros, qué te llevas al terminar y quiénes te acompañan. Al final vas a encontrar la ficha del próximo grupo con fechas, valores y modalidades de pago.`) +
+      boton("Ver el dossier del programa", DOSSIER_URL) +
       p(`¿Te quedan dudas? Escríbenos por WhatsApp y te respondemos a la brevedad.`),
     );
     const texto =
       `Hola${nom}, qué bueno que nos escribiste.\n\n` +
       `Vocational Lab es un programa de descubrimiento vocacional que acompaña el proceso de elección desde el autoconocimiento y una mirada realista del futuro del trabajo.\n\n` +
-      `Incluye 6 encuentros grupales en vivo, 2 sesiones individuales, y guías y recursos para pasar a la acción.\n\n` +
-      `Reserva tu lugar: ${INSCRIPCION_URL}\nWhatsApp: ${WSP_LINK}\n\n` +
+      `Preparamos un dossier completo para que conozcas el programa por dentro — al final está la ficha del próximo grupo con fechas, valores y modalidades de pago:\n${DOSSIER_URL}\n\n` +
+      `¿Dudas? WhatsApp: ${WSP_LINK}\n\n` +
       `Julia y Laura · Vocational Lab · hola@vlab.com.ar`;
     return { asunto, html, texto };
   }

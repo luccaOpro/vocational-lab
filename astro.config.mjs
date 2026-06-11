@@ -7,9 +7,11 @@ export default defineConfig({
   site: 'https://vlab.com.ar',
   integrations: [
     sitemap({
-      // /protocolo queda fuera del sitemap: tiene datos personales de las
-      // responsables y va con noindex, así que no la ofrecemos a Google.
-      filter: (page) => !page.includes('/protocolo'),
+      // Fuera del sitemap (van con noindex, no las ofrecemos a Google):
+      // · /protocolo — datos personales de las responsables.
+      // · /dossier — se comparte solo por mail/WhatsApp; al final tiene
+      //   la ficha con los valores del servicio.
+      filter: (page) => !page.includes('/protocolo') && !page.includes('/dossier'),
     }),
   ],
 });

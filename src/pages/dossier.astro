@@ -1,0 +1,1146 @@
+---
+/*
+  /dossier — el dossier del programa, en versión web.
+  ---
+  Reemplaza al archivo que se iba a mandar por mail cuando alguien pide
+  "más información": ahora el mail W1A trae un botón que apunta acá.
+
+  Decisiones (2026-06-11, ver DECISIONES.md):
+    · Página pública pero con `noindex` y SIN link desde el nav/footer
+      (mismo criterio que /protocolo): la ve quien recibe el link.
+    · Los valores del servicio NO aparecen en la página: viven en la
+      "ficha del próximo grupo" (PDF descargable) que está al FINAL del
+      recorrido — así nadie llega al precio sin pasar por la propuesta.
+    · El PDF de la ficha va en public/descargas/ (ver PENDIENTES.md).
+*/
+
+import { Image } from "astro:assets";
+import Layout from "../layouts/Layout.astro";
+import Footer from "../components/sections/Footer.astro";
+import mapaImg from "../assets/dossier/mapa-del-programa.png";
+import juliaFoto from "../assets/equipo/julia.jpeg";
+import lauraFoto from "../assets/equipo/laura.jpeg";
+
+// URL de la ficha con fechas, valores y modalidades de pago.
+// El archivo hay que subirlo a public/descargas/ con este nombre exacto.
+const FICHA_URL = "/descargas/ficha-proximo-grupo.pdf";
+const WSP_LINK = "https://wa.me/5491123145518?text=" + encodeURIComponent(
+  "Hola, vi el dossier de Vocational Lab y quiero recibir la ficha del próximo grupo."
+);
+
+const distingue = [
+  {
+    titulo: "Mundo interno + mundo externo",
+    cuerpo:
+      "Trabajo profundo de autoconocimiento combinado con una mirada actualizada del mundo del trabajo. Exploramos el mundo del trabajo que viene, con IA y humanos complementándose.",
+  },
+  {
+    titulo: "De la reflexión a la acción",
+    cuerpo: "Terminamos con tu plan a medida, listo para ejecutar.",
+  },
+  {
+    titulo: "Una comunidad de pares",
+    cuerpo:
+      "Un grupo pequeño y seleccionado de personas transitando exactamente el mismo momento. Las conexiones que se forman aquí continúan mucho más allá del programa.",
+  },
+  {
+    titulo: "La familia, de adentro",
+    cuerpo:
+      "El programa cierra con un encuentro donde quien participa puede presentar su plan a la familia. Un momento de protagonismo real.",
+  },
+];
+
+const etapas = [
+  { nombre: "El llamado", encuentros: "E1" },
+  { nombre: "El origen", encuentros: "E2 · E3 · E4" },
+  { nombre: "La búsqueda", encuentros: "E5" },
+  { nombre: "Lanzar la flecha", encuentros: "E6" },
+  { nombre: "Volver con tesoros", encuentros: "E7 · E8" },
+];
+
+const encuentros = [
+  { n: 1, nombre: "Despegue", tipo: "Grupal · Kick-off", foco: "Onboarding. El grupo abre el viaje.", etapa: "El llamado", individual: false },
+  { n: 2, nombre: "Mi propia luz", tipo: "Grupal · Bloque 1", foco: "¿Qué me gusta? ¿En qué destaco? Talentos e intereses.", etapa: "El origen", individual: false },
+  { n: 3, nombre: "Voces y raíces", tipo: "Grupal · Bloque 2", foco: "Creencias, mandatos, árbol genealógico vocacional.", etapa: "El origen", individual: false },
+  { n: 4, nombre: "El umbral", tipo: "Individual · Integración", foco: "Pausa íntima. Tests psicométricos + integración personal.", etapa: "El origen", individual: true },
+  { n: 5, nombre: "Trazar el mapa", tipo: "Grupal · Bloque 3", foco: "Mi mapa. Cómo explorar bien. Áreas de aprendizaje.", etapa: "La búsqueda", individual: false },
+  { n: 6, nombre: "Tensar el arco", tipo: "Grupal · Bloque 4", foco: "Plan A y B. Mi portfolio multifacético. Decisión y compromiso.", etapa: "Lanzar la flecha", individual: false },
+  { n: 7, nombre: "Brindis del viaje", tipo: "Grupal · Integración", foco: "Celebración del recorrido. Feedback. Cierre grupal.", etapa: "Volver con tesoros", individual: false },
+  { n: 8, nombre: "El viaje continúa", tipo: "Individual · Cierre", foco: "Devolución personalizada. Informe final. Opcional: familia presente.", etapa: "Volver con tesoros", individual: true },
+];
+
+const entreEncuentros = [
+  {
+    titulo: "Estímulos pre",
+    cuerpo: "Materiales que anticipan la emoción y temática del próximo encuentro: audios, videos, cuentos.",
+  },
+  {
+    titulo: "Tareas post",
+    cuerpo: "Consignas que consolidan los entregables del programa: guías, plantillas, búsquedas, conversaciones.",
+  },
+  {
+    titulo: "Canal de atajos",
+    cuerpo: "Dispositivo personalizado para participantes que necesiten apoyo adicional entre sesiones.",
+  },
+];
+
+const entregables = [
+  "Descubrimientos consolidados: lo que me gusta + en qué destaco",
+  "Árbol genealógico vocacional trabajado",
+  "Resultados de tests psicométricos integrados",
+  "Mi mapa personal con áreas de exploración",
+  "Caja de herramientas para explorar",
+  "Plan de acción A y B con pasos, plazos y recursos",
+  "Mi portfolio en construcción: estudios + prácticas + hobbies + arte + voluntariados",
+  "Mini-proyecto emprendedor: Mi futuro mundo del trabajo",
+  "Informe final personalizado con aportes a medida para tu plan",
+];
+
+const guias = [
+  {
+    nombre: "Laura Pires",
+    rol: "Psicóloga sistémica · Especialista en orientación vocacional y evaluación psicolaboral",
+    foto: lauraFoto,
+    bio: "Psicóloga sistémica especializada en familia y evaluación psicolaboral, con foco en desarrollo de identidad y orientación vocacional. Treinta años acompañando — como consultora laboral, directora de escuela y en desarrollo de líderes. Colabora con Argentina Cibersegura, ONG enfocada en ciudadanía digital y construcción de identidad en entornos digitales. Es fundadora de Plus Consultores. Integra su mirada psicológica profunda con el conocimiento del mundo organizacional, la educación y las artes — porque acompañar a alguien en la construcción de su futuro es, también, un acto creativo.",
+    cita: "Vocational Lab me permite ofrecer todo ese recorrido a personas en un momento clave de su vida — y acompañarlas hacia el despliegue de su mayor potencial.",
+  },
+  {
+    nombre: "Julia Vargas",
+    rol: "Especialista en futuro del trabajo · Desarrollo organizacional",
+    foto: juliaFoto,
+    bio: "Licenciada en Relaciones del Trabajo y Magíster en Políticas Laborales (Università di Bologna). Más de dos décadas construyendo equipos, culturas y programas de aprendizaje en organizaciones globales. Docente universitaria, coach ontológica y especialista en futuro del trabajo — acompañando a personas y organizaciones a tomar las riendas de su transformación laboral.",
+    cita: "Toda mi carrera tuvo un hilo conductor: identificar en cada persona la chispa que le hace brillar los ojos. Vocational Lab es la forma de hacer eso abierto, para todos.",
+  },
+];
+
+const pasos = [
+  {
+    n: "01",
+    titulo: "Descarga la ficha",
+    cuerpo: "Al final de esta página tienes la ficha del próximo grupo con fechas, valores y modalidades de pago.",
+  },
+  {
+    n: "02",
+    titulo: "Respondemos todas tus dudas",
+    cuerpo: "Acompañándote en las preguntas que surjan, por WhatsApp o por mail.",
+  },
+  {
+    n: "03",
+    titulo: "Inscripción",
+    cuerpo: "Confirmas tu lugar en el grupo. Los grupos son reducidos para garantizar la calidad del proceso.",
+  },
+  {
+    n: "04",
+    titulo: "Empiezas",
+    cuerpo: "8 semanas para descubrir en quién te quieres convertir.",
+  },
+];
+---
+
+<Layout
+  title="Dossier del programa · Vocational Lab"
+  description="Vocational Lab: programa de orientación vocacional y futuro del trabajo. 8 semanas, 5 etapas, 8 encuentros."
+  noindex
+>
+  {/* ── Header mínimo: logo → home + barra de progreso de lectura ── */}
+  <header class="dtop">
+    <div class="dtop__inner container">
+      <a href="/" class="dtop__brand" aria-label="Vocational Lab — Inicio">
+        <svg class="dtop__logo" xmlns="http://www.w3.org/2000/svg" viewBox="-71 60 367 400" aria-hidden="true">
+          <path fill="currentColor" d="M0,443.73l.03-45.407c23.216.636,45.683-4.407,66.324-14.637,36.23-18.152,63.593-50.904,74.253-90.112,10.187-37.467,4.874-77.408-15.454-110.56-6.952-11.393-15.189-21.809-25.037-30.712C72.82,127.121,37.263,113.652,0,114.496l.037-46.499c44.551-.826,87.825,14.16,122.067,42.496,13.748,11.427,25.844,24.486,35.722,39.444,8.994,13.102,16.167,27.094,21.57,42.023,12.435,34.36,14.355,70.023,6.359,105.724-8.974,40.066-30.991,76.227-62.228,102.842-22.961,19.111-50.003,32.569-79.197,39.003-14.634,3.128-29.245,4.514-44.329,4.2Z"/>
+          <path fill="#d85527" d="M26.34,305.497l-.613-1.82c-.122-.361-.996-.54-1.611-.716l.476-1.582-19.161.152,10.251-10.602,13.716,1.059-.058-1.175-12.423-1.026,6.091-6.282,13.612,1.104-.034-1.185-12.454-1.038,6.18-6.275,13.336,1.094.131-1.185-12.437-1.034,3.919-3.942c3.487-3.508,12.645-.401,18.901-1.622L217.149,100.94c-3.31-1.789-6.564-2.322-9.947-2.602l-11.392-.355,15.203-7.816,29.993-15.686c3.798-1.847,7.134-3.708,11.428-5.274l-22.756,50.442-3.415,6.55-2.236-15.178c-.229-1.554-.973-3.126-1.887-4.554L59.04,275.068l.589,10.139c.36,6.203-.746,7.708-5.857,12.288l-1.477-13.103c-.048-.076-.922-.053-1.189.021l1.603,14.354-6.078,6.182-1.514-13.294-1.183.053,1.629,14.478-6.088,6.301-1.474-13.253c-.017-.073-.587-.473-.717-.338l-.494.515,1.634,14.233-9.718,10.161-.463-19.249-1.902.943Z"/>
+        </svg>
+        <span class="dtop__nombre">Vocational&nbsp;Lab</span>
+      </a>
+      <a href="#siguiente-paso" class="dtop__cta">Próximos pasos ↓</a>
+      <span class="dtop__progreso" data-dossier-progreso aria-hidden="true"></span>
+    </div>
+  </header>
+
+  <main id="contenido">
+    {/* ════════ PORTADA — tapa del dossier, azul noche ════════ */}
+    <section class="portada">
+      {/* Estrella de marca flotando, versión clara */}
+      <svg class="portada__estrella" viewBox="235 -5 135 138" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path fill="currentColor" d="M298.919,59.572c.276,3.224,1.168,6.074,2.204,9.026,2.16,6.156,4.711,11.974,7.4,17.959,6.086,13.543,12.882,26.533,19.526,39.841l-23.439-38.61c-4.11-6.442-8.219-12.707-12.752-18.811-1.875-2.524-3.751-4.794-5.971-6.944-4.892-4.739-13.586,2.872-17.91,7.246,3.126-5.608,8.67-14.951,3.291-19.349-3.952-3.231-9.751-4.655-14.659-5.984,4.837.167,14.61-.004,16.446-3.913,2.574-5.479-11.443-32.405-14.854-40.032,4.469,6.811,8.531,13.575,13.323,20.097,3.24,4.318,7.109,9.638,11.451,12.579,1.286.871,2.775.931,4.205.328,5.04-2.126,10.72-7.591,14.833-11.63,6.152-6.041,11.61-12.426,17.388-18.918-4.544,6.896-9.014,13.503-12.92,20.714-2.467,4.671-5.647,10.714-5.955,15.79-.099,1.628.557,2.988,1.887,3.893,1.342.913,2.811,1.678,4.364,2.294,9.163,3.639,19.708,5.764,29.429,7.928l30.791,5.675c-13-1.19-25.692-2.499-38.701-3.088-6.689-.303-13.097-.497-19.708-.122-2.697.153-5.285.46-7.791,1.277-1.195.389-2.002,1.319-1.879,2.757Z"/>
+      </svg>
+
+      <div class="container portada__inner">
+        <p class="portada__eyebrow">Dossier del programa</p>
+        <h1 class="portada__titulo">
+          Vocational Lab
+          <em>Donde futuro y vocación se encuentran</em>
+        </h1>
+        <p class="portada__sub">Programa de orientación vocacional y futuro del trabajo</p>
+        <p class="portada__lead">
+          Un programa para personas que están en el momento de decidir hacia
+          dónde ir y quieren llegar al futuro con claridad, dirección y un
+          plan propio.
+        </p>
+        <span class="portada__badge">Modalidad virtual · Disponible en todo el mundo de habla hispana</span>
+
+        <a href="#nueva-forma" class="portada__scroll" aria-label="Bajar al contenido">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M6 9 L12 15 L18 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+          </svg>
+        </a>
+      </div>
+    </section>
+
+    {/* ════════ UNA NUEVA FORMA ════════ */}
+    <section id="nueva-forma" class="section">
+      <div class="container nf">
+        <header data-animate>
+          <p class="eyebrow">Una nueva forma de llegar a quien quieres ser</p>
+          <h2>Mucho más que <em>orientación vocacional</em></h2>
+          <p class="lead nf__lead">
+            Venimos a acompañarte a construir tu camino — con método, con
+            otros, y con un plan concreto.
+          </p>
+        </header>
+        <div class="nf__diferencial" data-animate data-delay="100">
+          <h3>Nuestro diferencial</h3>
+          <p>
+            Te ayudamos a descubrirte, a entender qué te mueve y qué se te da
+            bien — y desde ahí, a construir una visión amplia y posibilitadora
+            de tu futuro. No solo "qué estudiar", sino cómo armar tu propio
+            <strong>portfolio de posibilidades</strong>: detectar oportunidades
+            que van más allá de una sola carrera, y tener las herramientas
+            concretas para hacerlo real.
+          </p>
+          <p>
+            Saldrás con una mirada más ancha del mundo, un plan de acción
+            concreto, y el rol protagonista de tu propia historia. Eso incluye
+            entender el futuro del trabajo y construir las bases de tu
+            libertad financiera.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    {/* ════════ LO QUE NOS DISTINGUE ════════ */}
+    <section class="section distingue">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Lo que nos distingue</p>
+        </header>
+        <div class="distingue__grid" data-stagger>
+          {distingue.map((d) => (
+            <article class="distingue__item">
+              <h3>{d.titulo}</h3>
+              <p>{d.cuerpo}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ════════ EL PROGRAMA — números grandes ════════ */}
+    <section class="section programa-nums">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">El programa</p>
+          <h2 class="programa-nums__titulo">
+            <span class="num-grande"><span class="counter" data-target="8">8</span> semanas</span>
+            <span class="num-sep">·</span>
+            <span class="num-grande"><span class="counter" data-target="5">5</span> etapas</span>
+            <span class="num-sep">·</span>
+            <span class="num-grande"><span class="counter" data-target="8">8</span> encuentros</span>
+          </h2>
+          <p class="lead">
+            Una arquitectura pedagógica pensada encuentro por encuentro. Cada
+            sesión combina conceptos, práctica y emoción para mirar de adentro
+            hacia afuera. Los encuentros grupales y las sesiones individuales
+            se alternan para dar profundidad y personalización al proceso.
+          </p>
+        </header>
+
+        {/* Las 5 etapas, como cinta del viaje */}
+        <ol class="cinta" data-stagger>
+          {etapas.map((e, i) => (
+            <li class="cinta__etapa">
+              <span class="cinta__n">{i + 1}</span>
+              <span class="cinta__nombre">{e.nombre}</span>
+              <span class="cinta__enc">{e.encuentros}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    {/* ════════ LOS 8 ENCUENTROS ════════ */}
+    <section class="section encuentros">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Los 8 encuentros</p>
+          <h2>El viaje, encuentro por encuentro</h2>
+          <p class="encuentros__leyenda">
+            <span class="leyenda__punto leyenda__punto--grupal" aria-hidden="true"></span> Grupal
+            <span class="leyenda__punto leyenda__punto--individual" aria-hidden="true"></span> Individual
+          </p>
+        </header>
+        <ol class="enc-lista" data-stagger>
+          {encuentros.map((e) => (
+            <li class={`enc ${e.individual ? "enc--individual" : ""}`}>
+              <span class="enc__n" aria-hidden="true">{e.n}</span>
+              <div class="enc__cuerpo">
+                <div class="enc__head">
+                  <h3 class="enc__nombre">{e.nombre}</h3>
+                  <span class="enc__tipo">{e.tipo}</span>
+                </div>
+                <p class="enc__foco">{e.foco}</p>
+                <span class="enc__etapa">{e.etapa}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    {/* ════════ EL MAPA DEL VIAJE ════════ */}
+    <section class="section mapa">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">El mapa del viaje</p>
+          <h2>La arquitectura completa del programa</h2>
+          <p class="lead">
+            Las cinco etapas, los ocho encuentros, las tres líneas de trabajo
+            — mundo interno, mundo externo y emoción — y los momentos de
+            integración a lo largo del recorrido.
+          </p>
+        </header>
+        <figure class="mapa__figura" data-animate data-delay="100">
+          <Image
+            src={mapaImg}
+            alt="Mapa del programa Vocational Lab: cinco etapas, ocho encuentros y las líneas de trabajo de mundo interno, mundo externo y emoción."
+            widths={[640, 1024, 1520]}
+            sizes="(max-width: 1120px) 100vw, 1056px"
+            loading="lazy"
+          />
+        </figure>
+      </div>
+    </section>
+
+    {/* ════════ ENTRE ENCUENTROS ════════ */}
+    <section class="section entre">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Entre encuentros</p>
+          <h2>El viaje no se detiene entre sesiones</h2>
+        </header>
+        <div class="entre__grid" data-stagger>
+          {entreEncuentros.map((x) => (
+            <article class="entre__item">
+              <h3>{x.titulo}</h3>
+              <p>{x.cuerpo}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ════════ QUÉ TE LLEVÁS ════════ */}
+    <section class="section entregables">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Qué te llevas</p>
+          <h2>Entregables del programa</h2>
+          <p class="lead">Al terminar Vocational Lab, cada participante tiene en sus manos:</p>
+        </header>
+        <ul class="entregables__lista" data-stagger>
+          {entregables.map((e) => (
+            <li class="entregables__item">
+              <svg class="entregables__check" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path d="M5 12.5 L10 17.5 L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+              </svg>
+              <span>{e}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    {/* ════════ FORMATOS ════════ */}
+    <section class="section formatos">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Formatos disponibles</p>
+        </header>
+        <div class="formatos__grid" data-stagger>
+          <article class="formatos__item">
+            <h3>Presencial + virtual</h3>
+            <p>
+              Sesiones individuales y grupales con opción de encuentros
+              presenciales en Buenos Aires (CABA, Zona Norte y Zona Sur).
+            </p>
+          </article>
+          <article class="formatos__item">
+            <h3>100% virtual</h3>
+            <p>
+              Para participantes de Argentina, Cono Sur y España. El programa
+              completo se sostiene sin necesidad de presencia física.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    {/* ════════ LAS GUÍAS ════════ */}
+    <section class="section guias">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Las guías del viaje</p>
+          <h2>Dos miradas distintas, <em>un mismo deseo</em></h2>
+          <p class="lead">Acompañarte a encontrar tu camino.</p>
+        </header>
+        <div class="guias__grid" data-stagger>
+          {guias.map((g) => (
+            <article class="guia">
+              <div class="guia__foto">
+                <Image src={g.foto} alt={`Foto de ${g.nombre}`} width={400} height={400} loading="lazy" />
+              </div>
+              <h3 class="guia__nombre">{g.nombre}</h3>
+              <p class="guia__rol">{g.rol}</p>
+              <p class="guia__bio">{g.bio}</p>
+              <blockquote class="guia__cita"><p>“{g.cita}”</p></blockquote>
+            </article>
+          ))}
+        </div>
+        <p class="guias__vision" data-animate>
+          <strong>Visión completa:</strong> profundidad psicológica · mundo del
+          trabajo · IA · futurismo · comunidad de pares
+        </p>
+      </div>
+    </section>
+
+    {/* ════════ PARA FAMILIAS ════════ */}
+    <section class="section familias">
+      <div class="container familias__inner">
+        <header data-animate>
+          <p class="eyebrow">Para familias</p>
+          <h2>Una inversión en claridad y foco</h2>
+          <p class="lead">
+            Ver a alguien que quieres con dudas sobre su futuro puede ser
+            angustiante. Vocational Lab le da algo más valioso: las
+            herramientas para descubrirlo, y un plan concreto para hacerlo
+            real.
+          </p>
+        </header>
+        <ul class="familias__puntos" data-stagger>
+          <li>No es orientación vocacional clásica. Es un programa de 8 semanas con metodología, seguimiento y resultados concretos.</li>
+          <li>Quien participa no sale con "más datos sobre carreras". Sale con un plan de acción que puede presentarles.</li>
+          <li>El programa cierra con un encuentro individual donde quien participa puede elegir invitar a un familiar. Son los que acompañan — no los que deciden.</li>
+        </ul>
+      </div>
+    </section>
+
+    {/* ════════ PARA INSTITUCIONES ════════ */}
+    <section class="section instituciones">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">Para instituciones educativas</p>
+          <h2>Dos formas de trabajar juntos</h2>
+        </header>
+        <div class="instituciones__grid" data-stagger>
+          <article class="instituciones__item">
+            <h3>Vocational Lab para las familias del colegio</h3>
+            <p>
+              Ofrecemos el programa a las familias de estudiantes de los
+              últimos años como recurso externo de orientación, y charlas para
+              que las familias acompañen el proceso con herramientas reales.
+            </p>
+            <p class="instituciones__nota">
+              Funciona como extensión de lo que el colegio ya hace — no como
+              reemplazo de nada.
+            </p>
+          </article>
+          <article class="instituciones__item">
+            <h3>Talleres para docentes y equipos de orientación</h3>
+            <p>
+              Herramientas concretas para que docentes puedan acompañar a
+              estudiantes en el proceso vocacional y la transición al mundo
+              adulto.
+            </p>
+            <p class="instituciones__nota">
+              Formato flexible: taller de un día, ciclo de encuentros, o
+              integrado al calendario institucional.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    {/* ════════ PRÓXIMOS PASOS + FICHA ════════ */}
+    <section id="siguiente-paso" class="section pasos">
+      <div class="container">
+        <header data-animate>
+          <p class="eyebrow">¿El programa es para ti?</p>
+          <h2>Próximos pasos</h2>
+          <p class="lead">
+            Inscripciones abiertas para próximos grupos. Los grupos son
+            reducidos — si algo de lo que leíste te resonó, este es el
+            momento de dar el paso.
+          </p>
+        </header>
+        <ol class="pasos__lista" data-stagger>
+          {pasos.map((p) => (
+            <li class="paso">
+              <span class="paso__n">{p.n}</span>
+              <h3 class="paso__titulo">{p.titulo}</h3>
+              <p class="paso__cuerpo">{p.cuerpo}</p>
+            </li>
+          ))}
+        </ol>
+
+        {/* ── La ficha: fechas, valores y modalidades — el final del recorrido ── */}
+        <div class="ficha" data-animate data-delay="100">
+          <div class="ficha__texto">
+            <h3 class="ficha__titulo">La ficha del próximo grupo</h3>
+            <p class="ficha__bajada">
+              Fechas, valores y modalidades de pago, en un solo archivo.
+              Descárgala o pídenosla directo — respondemos en el día.
+            </p>
+          </div>
+          <div class="ficha__acciones">
+            <a href={FICHA_URL} class="btn btn-primary ficha__btn" download>
+              Descargar la ficha (PDF)
+            </a>
+            <a href={WSP_LINK} target="_blank" rel="noopener" class="btn ficha__btn-sec">
+              Pedirla por WhatsApp
+            </a>
+            <a href="mailto:hola@vlab.com.ar?subject=Quiero%20la%20ficha%20del%20pr%C3%B3ximo%20grupo" class="ficha__mail">
+              o escríbenos a hola@vlab.com.ar
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  /*
+    Barra de progreso de lectura del dossier (mismo patrón que el nav
+    del sitio: transform scaleX + requestAnimationFrame).
+  */
+  const barra = document.querySelector<HTMLElement>("[data-dossier-progreso]");
+  if (barra && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    let pedido = false;
+    function pintar() {
+      pedido = false;
+      const total = document.documentElement.scrollHeight - window.innerHeight;
+      const avance = total > 0 ? window.scrollY / total : 0;
+      barra!.style.transform = `scaleX(${Math.min(Math.max(avance, 0), 1)})`;
+    }
+    window.addEventListener("scroll", () => {
+      if (!pedido) { pedido = true; requestAnimationFrame(pintar); }
+    }, { passive: true });
+    pintar();
+  }
+
+  /*
+    Contadores animados de "8 semanas · 5 etapas · 8 encuentros"
+    (mismo efecto que el "8 encuentros" de la home).
+  */
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const counters = document.querySelectorAll<HTMLElement>(".counter[data-target]");
+    const obs = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        obs.unobserve(entry.target);
+        const el = entry.target as HTMLElement;
+        const target = parseInt(el.dataset.target ?? "0", 10);
+        const inicio = performance.now();
+        const dur = 900;
+        function tick(ahora: number) {
+          const p = Math.min((ahora - inicio) / dur, 1);
+          el.textContent = String(Math.round((1 - Math.pow(1 - p, 3)) * target));
+          if (p < 1) requestAnimationFrame(tick);
+          else el.textContent = String(target);
+        }
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.5 });
+    counters.forEach((c) => obs.observe(c));
+  }
+</script>
+
+<style>
+  /* ═══════ Header mínimo ═══════ */
+  .dtop {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(242, 234, 215, 0.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .dtop__inner {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+  }
+  .dtop__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--color-ink);
+  }
+  .dtop__logo { height: 40px; width: auto; }
+  .dtop__nombre {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+  .dtop__cta {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-accent);
+  }
+  .dtop__cta:hover { color: var(--color-accent-dark); }
+  /* Barra de progreso de lectura */
+  .dtop__progreso {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    background: var(--color-accent);
+    transform: scaleX(0);
+    transform-origin: left center;
+    pointer-events: none;
+  }
+
+  /* ═══════ Portada ═══════ */
+  .portada {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    padding: clamp(5rem, 12vw, 9rem) 0 clamp(4rem, 9vw, 7rem);
+    text-align: center;
+  }
+  .portada__estrella {
+    position: absolute;
+    top: 14%;
+    right: 10%;
+    width: clamp(30px, 4vw, 52px);
+    color: var(--color-accent);
+    opacity: 0.9;
+  }
+  @keyframes dossier-flotar {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50%      { transform: translateY(-14px) rotate(4deg); }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .portada__estrella { animation: dossier-flotar 8s ease-in-out infinite; }
+    .portada__eyebrow  { animation: dossier-entra 0.7s cubic-bezier(0.16, 1, 0.3, 1) 100ms both; }
+    .portada__titulo   { animation: dossier-entra 0.8s cubic-bezier(0.16, 1, 0.3, 1) 250ms both; }
+    .portada__sub      { animation: dossier-entra 0.75s cubic-bezier(0.16, 1, 0.3, 1) 400ms both; }
+    .portada__lead     { animation: dossier-entra 0.75s cubic-bezier(0.16, 1, 0.3, 1) 520ms both; }
+    .portada__badge    { animation: dossier-entra 0.7s cubic-bezier(0.16, 1, 0.3, 1) 650ms both; }
+    .portada__scroll   { animation: dossier-entra 0.7s cubic-bezier(0.16, 1, 0.3, 1) 900ms both; }
+  }
+  @keyframes dossier-entra {
+    from { opacity: 0; transform: translateY(18px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .portada__inner { max-width: 820px; }
+  .portada__eyebrow {
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--color-gold);
+    margin: 0 0 1.6rem;
+  }
+  .portada__titulo {
+    color: var(--color-bg);
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    line-height: 1.08;
+    margin: 0 0 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .portada__titulo em {
+    font-style: italic;
+    font-size: 0.48em;
+    color: var(--color-accent);
+    font-weight: 400;
+  }
+  .portada__sub {
+    font-size: 1.02rem;
+    color: rgba(242, 234, 215, 0.75);
+    margin: 0 0 1.6rem;
+  }
+  .portada__lead {
+    font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: rgba(242, 234, 215, 0.9);
+    max-width: 56ch;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+  .portada__badge {
+    display: inline-block;
+    padding: 0.5rem 1.1rem;
+    border: 1px solid rgba(242, 234, 215, 0.3);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: rgba(242, 234, 215, 0.85);
+  }
+  .portada__scroll {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    margin-top: 2.6rem;
+    border: 1px solid rgba(242, 234, 215, 0.3);
+    border-radius: 50%;
+    color: rgba(242, 234, 215, 0.7);
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .portada__scroll:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    transform: translateY(3px);
+  }
+
+  /* ═══════ Una nueva forma ═══════ */
+  .nf { max-width: 880px; }
+  .nf h2 em { font-style: italic; color: var(--color-accent); }
+  .nf__lead { margin-top: 1.2rem; }
+  .nf__diferencial {
+    margin-top: 2.5rem;
+    padding: 2rem 2.2rem;
+    background: #fff;
+    border-left: 3px solid var(--color-accent);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  }
+  .nf__diferencial h3 { margin: 0 0 0.9rem; font-size: 1.25rem; }
+  .nf__diferencial p { margin: 0 0 1em; color: var(--color-ink-soft); }
+  .nf__diferencial p:last-child { margin-bottom: 0; }
+
+  /* ═══════ Lo que nos distingue ═══════ */
+  .distingue { background: var(--color-surface); }
+  .distingue__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  @media (max-width: 760px) { .distingue__grid { grid-template-columns: 1fr; } }
+  .distingue__item {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.8rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .distingue__item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 40px -28px rgba(19, 27, 61, 0.45);
+  }
+  .distingue__item h3 { font-size: 1.3rem; margin: 0 0 0.6rem; }
+  .distingue__item p { margin: 0; color: var(--color-ink-soft); }
+
+  /* ═══════ El programa: números ═══════ */
+  .programa-nums__titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem 1rem;
+    margin: 0 0 1.4rem;
+  }
+  .num-grande { white-space: nowrap; }
+  .num-grande .counter {
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .num-sep { color: var(--color-ink-muted); }
+
+  /* Cinta de etapas */
+  .cinta {
+    list-style: none;
+    margin: 3rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+  }
+  @media (max-width: 1024px) { .cinta { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .cinta { grid-template-columns: 1fr; } }
+  .cinta__etapa {
+    border-top: 2px solid var(--color-accent);
+    padding: 0.9rem 0.8rem 1rem;
+    transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+  }
+  .cinta__etapa:hover {
+    background: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 16px 36px -26px rgba(19, 27, 61, 0.4);
+  }
+  .cinta__n {
+    display: block;
+    font-family: var(--font-serif);
+    color: var(--color-accent);
+    margin-bottom: 0.35rem;
+  }
+  .cinta__nombre {
+    display: block;
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+  }
+  .cinta__enc {
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    color: var(--color-ink-muted);
+  }
+
+  /* ═══════ Los 8 encuentros ═══════ */
+  .encuentros { background: var(--color-surface); }
+  .encuentros__leyenda {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem 0.6rem;
+    flex-wrap: wrap;
+    margin: 1.2rem 0 0;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+  }
+  .leyenda__punto {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-left: 1rem;
+  }
+  .leyenda__punto:first-of-type { margin-left: 0; }
+  .leyenda__punto--grupal { background: var(--color-ink); }
+  .leyenda__punto--individual { background: transparent; border: 2px solid var(--color-deep); }
+
+  .enc-lista {
+    list-style: none;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .enc {
+    display: flex;
+    gap: 1.2rem;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.3rem 1.5rem;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .enc:hover {
+    transform: translateX(4px);
+    border-color: var(--color-deep);
+    box-shadow: 0 14px 34px -26px rgba(19, 27, 61, 0.5);
+  }
+  /* Número del encuentro: relleno = grupal, contorno = individual
+     (mismo código visual que el mapa del programa). */
+  .enc__n {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+  }
+  .enc--individual .enc__n {
+    background: transparent;
+    border: 2px solid var(--color-deep);
+    color: var(--color-deep);
+  }
+  .enc__cuerpo { flex: 1; min-width: 0; }
+  .enc__head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .enc__nombre { font-size: 1.25rem; margin: 0; }
+  .enc__tipo {
+    font-size: 0.78rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+  .enc__foco { margin: 0.4rem 0 0.6rem; color: var(--color-ink-soft); }
+  .enc__etapa {
+    display: inline-block;
+    font-size: 0.78rem;
+    padding: 0.22rem 0.65rem;
+    border-radius: 999px;
+    background: rgba(36, 58, 130, 0.09);
+    color: var(--color-deep);
+    font-weight: 500;
+  }
+  @media (max-width: 560px) {
+    .enc { padding: 1.1rem 1.1rem; gap: 0.9rem; }
+  }
+
+  /* ═══════ Mapa ═══════ */
+  .mapa__figura {
+    margin: 2.5rem 0 0;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    box-shadow: 0 24px 60px -38px rgba(19, 27, 61, 0.5);
+    background: #faf6ee;
+  }
+  .mapa__figura :global(img) { width: 100%; height: auto; display: block; }
+
+  /* ═══════ Entre encuentros ═══════ */
+  .entre__grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+  @media (max-width: 900px) { .entre__grid { grid-template-columns: 1fr; } }
+  .entre__item {
+    padding-top: 1.4rem;
+    border-top: 1px solid var(--color-line);
+  }
+  .entre__item h3 { font-size: 1.2rem; margin: 0 0 0.5rem; }
+  .entre__item p { margin: 0; color: var(--color-ink-soft); font-size: 0.97rem; }
+
+  /* ═══════ Entregables ═══════ */
+  .entregables { background: var(--color-surface); }
+  .entregables__lista {
+    list-style: none;
+    margin: 2.2rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.8rem 2rem;
+  }
+  @media (max-width: 760px) { .entregables__lista { grid-template-columns: 1fr; } }
+  .entregables__item {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    padding: 0.55rem 0;
+    color: var(--color-ink-soft);
+    line-height: 1.5;
+  }
+  .entregables__check {
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+    color: var(--color-accent);
+  }
+
+  /* ═══════ Formatos ═══════ */
+  .formatos__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  @media (max-width: 760px) { .formatos__grid { grid-template-columns: 1fr; } }
+  .formatos__item {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-top: 3px solid var(--color-deep);
+    border-radius: var(--radius-md);
+    padding: 1.8rem;
+  }
+  .formatos__item h3 { margin: 0 0 0.6rem; font-size: 1.3rem; }
+  .formatos__item p { margin: 0; color: var(--color-ink-soft); }
+
+  /* ═══════ Guías ═══════ */
+  .guias { background: var(--color-surface); }
+  .guias h2 em { font-style: italic; color: var(--color-accent); }
+  .guias__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2.5rem;
+    margin-top: 2.5rem;
+  }
+  @media (max-width: 860px) { .guias__grid { grid-template-columns: 1fr; } }
+  .guia {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 2rem;
+  }
+  .guia__foto {
+    width: 132px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-bottom: 1.2rem;
+    background: var(--color-surface);
+  }
+  .guia__foto :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .guia:hover .guia__foto :global(img) { transform: scale(1.05); }
+  .guia__nombre { margin: 0 0 0.3rem; font-size: 1.45rem; }
+  .guia__rol {
+    margin: 0 0 1rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-deep);
+    font-weight: 500;
+  }
+  .guia__bio { margin: 0 0 1.2rem; color: var(--color-ink-soft); font-size: 0.95rem; }
+  .guia__cita {
+    margin: 0;
+    padding: 0.6rem 0 0 1.1rem;
+    border-left: 3px solid var(--color-accent);
+  }
+  .guia__cita p {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.02rem;
+    line-height: 1.5;
+  }
+  .guias__vision {
+    margin: 2.5rem 0 0;
+    text-align: center;
+    color: var(--color-ink-soft);
+    font-size: 0.95rem;
+  }
+
+  /* ═══════ Familias ═══════ */
+  .familias__inner { max-width: 880px; }
+  .familias__puntos {
+    list-style: none;
+    margin: 2rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .familias__puntos li {
+    position: relative;
+    padding-left: 1.6rem;
+    color: var(--color-ink-soft);
+    line-height: 1.55;
+  }
+  .familias__puntos li::before {
+    content: "◆";
+    position: absolute;
+    left: 0;
+    top: 0.1em;
+    color: var(--color-accent);
+    font-size: 0.7rem;
+  }
+
+  /* ═══════ Instituciones ═══════ */
+  .instituciones { background: var(--color-surface); }
+  .instituciones__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+  @media (max-width: 860px) { .instituciones__grid { grid-template-columns: 1fr; } }
+  .instituciones__item {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.8rem;
+  }
+  .instituciones__item h3 { margin: 0 0 0.7rem; font-size: 1.25rem; }
+  .instituciones__item p { margin: 0 0 0.8rem; color: var(--color-ink-soft); }
+  .instituciones__nota {
+    font-style: italic;
+    font-size: 0.92rem !important;
+    color: var(--color-ink-muted) !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* ═══════ Próximos pasos + ficha ═══════ */
+  .pasos__lista {
+    list-style: none;
+    margin: 2.5rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+  @media (max-width: 980px) { .pasos__lista { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .pasos__lista { grid-template-columns: 1fr; } }
+  .paso {
+    border-top: 2px solid var(--color-accent);
+    padding-top: 1rem;
+  }
+  .paso__n {
+    font-family: var(--font-serif);
+    color: var(--color-accent);
+    font-size: 1.05rem;
+  }
+  .paso__titulo { font-size: 1.15rem; margin: 0.35rem 0 0.45rem; }
+  .paso__cuerpo { margin: 0; color: var(--color-ink-soft); font-size: 0.95rem; }
+
+  /* La ficha — bloque final azul noche, eco de la portada */
+  .ficha {
+    margin-top: 4rem;
+    background: var(--color-ink);
+    color: var(--color-bg);
+    border-radius: var(--radius-lg);
+    border-top: 3px solid var(--color-accent);
+    padding: clamp(2rem, 5vw, 3.2rem);
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+  @media (max-width: 860px) { .ficha { grid-template-columns: 1fr; } }
+  .ficha__titulo {
+    color: var(--color-bg);
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin: 0 0 0.7rem;
+  }
+  .ficha__bajada {
+    margin: 0;
+    color: rgba(242, 234, 215, 0.8);
+    line-height: 1.55;
+  }
+  .ficha__acciones {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    align-items: stretch;
+  }
+  .ficha__btn { justify-content: center; }
+  .ficha__btn-sec {
+    justify-content: center;
+    background: transparent;
+    color: var(--color-bg);
+    border-color: rgba(242, 234, 215, 0.45);
+  }
+  .ficha__btn-sec:hover {
+    background: rgba(242, 234, 215, 0.1);
+    border-color: var(--color-bg);
+  }
+  .ficha__mail {
+    text-align: center;
+    font-size: 0.88rem;
+    color: rgba(242, 234, 215, 0.65);
+    border-bottom: 0;
+  }
+  .ficha__mail:hover { color: var(--color-bg); }
+</style>

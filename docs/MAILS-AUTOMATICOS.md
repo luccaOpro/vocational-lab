@@ -60,6 +60,22 @@ Supabase → **Database → Webhooks** → **Create a new hook**:
 
 ---
 
+## Cómo actualizar la función cuando cambia el código
+
+El archivo `supabase/functions/enviar-mail-solicitud/index.ts` es la fuente de
+verdad, pero Supabase no lo lee del repo: hay que **re-pegar y re-deployar**.
+
+1. Supabase → **Edge Functions** → `enviar-mail-solicitud` → editor de código.
+2. Borrar lo que hay, pegar el contenido completo del archivo del repo.
+3. **Deploy**. Los secretos y el webhook no se tocan: quedan como están.
+
+> ⚠️ Cambio pendiente de re-deploy (2026-06-11): el mail W1A ("más info")
+> ahora lleva un botón al **dossier web** (`vlab.com.ar/dossier`) en lugar
+> del bloque "Lo que incluye" + "Reserva tu lugar". Hasta que se re-deploye,
+> sigue saliendo la versión vieja.
+
+---
+
 ## Notas
 
 - **Seguridad:** la función solo envía si el header `x-vl-secret` coincide con el

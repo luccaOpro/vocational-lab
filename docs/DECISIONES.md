@@ -108,3 +108,19 @@
 **Además, fix relacionado**: el alta de videos en módulos nunca había funcionado — el CHECK de `archivos_modulo.tipo` (migración 01) no aceptaba el valor `youtube` que inserta el panel, así que el INSERT fallaba siempre. Se corrige con la migración `13-video-youtube-en-modulos.sql`. De paso, el aula ahora reproduce los videos embebidos (YouTube nocookie / Vimeo player) sin salir de la página; si la URL no es de YouTube/Vimeo, se muestra como link externo igual que antes.
 
 **Nota**: la columna `tareas.video_url` queda en la base (existe en producción, agregada a mano en su momento) pero ya no se usa desde el código. Si algún día molesta, se puede borrar con un `alter table`.
+
+## 2026-06-11 — El dossier es una página web (/dossier), no un archivo adjunto
+
+**Decisión**: el dossier del programa (que Julia y Laura prepararon como documento para mandar a quien pide "más información") se convierte en una página del sitio: `vlab.com.ar/dossier`. El mail automático W1A pasa a llevar un botón "Ver el dossier del programa" en lugar del resumen "Lo que incluye".
+
+**Por qué**:
+- Una página web siempre está actualizada: se corrige una vez y todos ven la última versión (un PDF mandado por mail queda viejo en la bandeja de entrada de cada persona).
+- Permite darle el diseño de marca del sitio (animaciones, mapa del viaje, fotos) en lugar de un documento estático.
+- Se puede medir y mejorar; un adjunto no.
+
+**Regla de oro del flujo** (pedido explícito de Julia y Laura): **nadie ve los valores del servicio antes de ver el dossier**. Por eso:
+- Los valores NO están en la página: viven en la "ficha del próximo grupo" (PDF descargable con fechas, valores y modalidades de pago) que está al FINAL del recorrido del dossier.
+- `/dossier` va con `noindex`, fuera del sitemap y bloqueada en robots.txt (mismo criterio que `/protocolo`), y sin link desde el nav ni el footer: llega quien recibe el link por mail o WhatsApp.
+- `public/descargas/` también está bloqueada en robots.txt.
+
+**Pendiente al tomar la decisión**: subir el PDF de la ficha a `public/descargas/ficha-proximo-grupo.pdf` y re-deployar la Edge Function (ver PENDIENTES.md).
