@@ -89,7 +89,7 @@ function layout(contenidoHtml: string): string {
     <tr><td align="center">
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background:#ffffff;border:1px solid #DDD2B4;border-radius:14px;overflow:hidden;">
         <tr><td style="background:#131B3D;padding:28px 28px 22px;text-align:center;">
-          <img src="${LOGO_URL}" width="44" alt="Vocational Lab" style="display:inline-block;border:0;outline:none;text-decoration:none;width:44px;height:auto;" />
+          <img src="${LOGO_URL}" width="58" alt="Vocational Lab" style="display:inline-block;border:0;outline:none;text-decoration:none;width:58px;height:auto;" />
           <div style="color:#F2EAD7;font-family:Georgia,'Times New Roman',serif;font-size:15px;letter-spacing:.26em;margin-top:10px;text-transform:uppercase;">Vocational&nbsp;Lab</div>
         </td></tr>
         <tr><td style="height:3px;background:#D8552A;font-size:0;line-height:0;">&nbsp;</td></tr>
