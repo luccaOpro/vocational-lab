@@ -108,6 +108,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     rol_solicitante: "mayor" | "responsable_menor" | null;
     edad: number | null;
     nombre_menor: string | null;
+    email_menor: string | null;
     fecha_nacimiento_menor: string | null;
     vinculo_menor: string | null;
     dni_tutor: string | null;
@@ -319,14 +320,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         const edadM = calcularEdad(s.fecha_nacimiento_menor);
         filas.push(fila("Se inscribe", "Menor de edad (lo anota un responsable)"));
         filas.push(fila("Menor", `${esc(s.nombre_menor ?? "—")}${edadM != null ? ` · ${edadM} años` : ""}`));
+        filas.push(fila("Email del menor", esc(s.email_menor ?? "—")));
         filas.push(fila("Nacimiento", formatoFecha(s.fecha_nacimiento_menor)));
         filas.push(fila("Responsable", `${esc(s.nombre)} · ${esc(s.vinculo_menor ?? "—")}`));
         filas.push(fila("DNI responsable", esc(s.dni_tutor ?? "—")));
       }
-      // Contacto de emergencia (si lo cargaron).
+      // Contacto de familiar/persona cercana que acompaña (si lo cargaron).
       if (s.contacto_emergencia_nombre || s.contacto_emergencia_telefono) {
         filas.push(fila(
-          "Emergencia",
+          "Acompaña",
           `${esc(s.contacto_emergencia_nombre ?? "—")} · ${esc(s.contacto_emergencia_telefono ?? "—")}${s.contacto_emergencia_vinculo ? ` (${esc(s.contacto_emergencia_vinculo)})` : ""}`
         ));
       }

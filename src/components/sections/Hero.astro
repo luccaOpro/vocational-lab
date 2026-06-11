@@ -133,10 +133,16 @@
     transform: scaleX(-1);
   }
 
-  /* En pantallas chicas los ornamentos laterales molestan más de lo que
-     suman: dejamos solo la estrella coral, más chica y arriba. */
+  /* En pantallas chicas la marca de agua SE QUEDA (pedido 2026-06-11):
+     más chica, más abajo y un toque más sutil para no ensuciar el texto.
+     La estrella azul sí se va, que era puro ruido en ese ancho. */
   @media (max-width: 720px) {
-    .hero__marca { display: none; }
+    .hero__marca {
+      width: 250px;
+      right: -16%;
+      top: 64%;
+      opacity: 0.06;
+    }
     .hero__estrella--2 { display: none; }
     .hero__estrella--1 { top: 9%; right: 8%; }
   }

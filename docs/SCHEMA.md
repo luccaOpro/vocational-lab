@@ -214,13 +214,14 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 | `rol_solicitante`      | text         | `mayor` o `responsable_menor`. Obligatorio si `intencion = 'inscripcion'`.   |
 | `edad`                 | int          | Edad del participante mayor. Obligatoria si `rol_solicitante = 'mayor'`.     |
 | `nombre_menor`         | text         | Obligatorio si `rol_solicitante = 'responsable_menor'`.                      |
+| `email_menor`          | text         | Email propio del/la menor (le enviamos el acceso al campus). Migración 14. El form lo exige si `rol_solicitante = 'responsable_menor'`. |
 | `fecha_nacimiento_menor` | date       | Fecha de nacimiento del menor. Obligatoria si `rol_solicitante = 'responsable_menor'`. |
 | `vinculo_menor`        | text         | Vínculo del tutor con el menor. Obligatorio si `rol_solicitante = 'responsable_menor'`. |
 | `dni_tutor`            | text         | DNI/documento del representante legal. Obligatorio si `rol_solicitante = 'responsable_menor'`. |
 | `edad_menor`           | int          | _Deprecado_ — reemplazado por `fecha_nacimiento_menor`. El form ya no lo escribe. |
-| `contacto_emergencia_nombre` | text   | Contacto de emergencia. Obligatorio para `mayor`; opcional (adicional) para menores. |
-| `contacto_emergencia_telefono` | text | Teléfono del contacto de emergencia.                                        |
-| `contacto_emergencia_vinculo` | text  | Vínculo del contacto de emergencia con el participante.                      |
+| `contacto_emergencia_nombre` | text   | Familiar o persona cercana que acompaña en el proceso (en la web ya no se llama "emergencia", 2026-06-11). Obligatorio para `mayor`; opcional (adicional) para menores. |
+| `contacto_emergencia_telefono` | text | Teléfono del contacto que acompaña.                                          |
+| `contacto_emergencia_vinculo` | text  | Vínculo del contacto que acompaña con el participante.                       |
 | `protocolo_aceptado`   | boolean      | Tiene que ser `true` si `intencion = 'inscripcion'`.                         |
 | `protocolo_version`    | text         | Versión del PDF aceptado (ej `protocolo-v1.pdf`).                            |
 | `protocolo_aceptado_en`| timestamptz  | Momento exacto de la aceptación.                                             |

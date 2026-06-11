@@ -9,7 +9,7 @@
 
 <header class="nav">
   <div class="nav__inner container">
-    <a href="#hero" class="nav__brand" aria-label="Vocational Lab — Inicio">
+    <a href="/" class="nav__brand" aria-label="Vocational Lab — Inicio">
       {/* Logo completo (ícono + texto VOCATIONAL LAB) inline.
           Inline para que aparezca junto con el HTML inicial,
           sin un segundo round-trip que provoca flash de carga.
@@ -27,10 +27,12 @@
 
     {/* Links visibles en desktop.
         El "Hablemos" no va acá: vive como CTA secundario en el Hero. */}
+    {/* Links con "/#" (no "#" pelado): así también funcionan desde
+        /inscripcion, /protocolo o cualquier otra página. */}
     <nav class="nav__links" aria-label="Navegación principal">
-      <a href="#caminos">Programas</a>
-      <a href="#programa">Proceso</a>
-      <a href="#equipo">Equipo</a>
+      <a href="/#caminos">Programas</a>
+      <a href="/#programa">Proceso</a>
+      <a href="/#equipo">Equipo</a>
       <a href="/aula" class="nav__cta">Aula</a>
     </nav>
 
@@ -86,9 +88,9 @@
   </div>
 
   <nav class="nav__panel-links" aria-label="Navegación mobile">
-    <a href="#caminos" data-menu-link>Programas</a>
-    <a href="#programa" data-menu-link>Proceso</a>
-    <a href="#equipo" data-menu-link>Equipo</a>
+    <a href="/#caminos" data-menu-link>Programas</a>
+    <a href="/#programa" data-menu-link>Proceso</a>
+    <a href="/#equipo" data-menu-link>Equipo</a>
   </nav>
 </aside>
 
@@ -461,7 +463,9 @@
   // se marca con el subrayado coral. Ayuda a ubicarse en la página.
   // ============================================================
   const linksNav = Array.from(
-    document.querySelectorAll<HTMLAnchorElement>('.nav__links a[href^="#"]')
+    // href*="#" (no ^="#"): los links ahora son "/#seccion" para que
+    // funcionen desde cualquier página; l.hash devuelve "#seccion" igual.
+    document.querySelectorAll<HTMLAnchorElement>('.nav__links a[href*="#"]')
   );
   const secciones = linksNav
     .map((l) => document.querySelector<HTMLElement>(l.hash))

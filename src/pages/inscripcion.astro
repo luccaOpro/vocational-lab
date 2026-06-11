@@ -59,7 +59,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
 
         {/* ─── PASO 1 · Intención ─── */}
         <fieldset class="ins-form__fieldset">
-          <legend class="ins-form__legend">¿Qué te trae por acá? <span class="ins-form__required" aria-hidden="true">*</span></legend>
+          <legend class="ins-form__legend">¿Qué te trae aquí? <span class="ins-form__required" aria-hidden="true">*</span></legend>
 
           <div class="ins-form__radios" role="radiogroup">
             <label class="ins-form__radio">
@@ -228,6 +228,15 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
                 <span class="ins-form__label">Fecha de nacimiento <span class="ins-form__required" aria-hidden="true">*</span></span>
                 <input type="date" name="fecha_nacimiento_menor" />
               </label>
+
+              {/* Email propio del/la participante: lo usamos para enviarle
+                  las indicaciones de acceso al campus virtual (pedido
+                  Julia y Laura, 2026-06-11). */}
+              <label class="ins-form__field ins-form__field--full">
+                <span class="ins-form__label">Email del/de la participante <span class="ins-form__required" aria-hidden="true">*</span></span>
+                <input type="email" name="email_menor" autocomplete="off" maxlength="80" />
+                <small class="ins-form__ayuda">A esta casilla le enviaremos las indicaciones de acceso al campus virtual.</small>
+              </label>
             </div>
 
             <p class="ins-form__nota">Tus datos como representante legal:</p>
@@ -254,7 +263,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
               para responsable_menor son opcionales (el tutor ya es el
               contacto principal). */}
           <fieldset id="bloque-emergencia" class="ins-form__fieldset" hidden>
-            <legend class="ins-form__legend" id="emergencia-legend">Contacto de emergencia</legend>
+            <legend class="ins-form__legend" id="emergencia-legend">Contacto de familiar o persona cercana que te acompañará en el proceso</legend>
             <p class="ins-form__nota" id="emergencia-nota">
               Una persona a la que podamos contactar si hiciera falta durante el programa.
             </p>
@@ -405,6 +414,33 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
   filtrarCampo("contacto_emergencia_telefono", soloTelIntl);
   filtrarCampo("contacto_emergencia_vinculo", soloVinculo);
 
+  // ============ País autocompletado desde el prefijo telefónico ============
+  // El selector de prefijo ya dice el país: cuando el usuario lo cambia,
+  // copiamos el nombre al campo "País" para que no lo tipee dos veces.
+  // Solo si el campo está vacío o si lo llenamos nosotros antes (si la
+  // persona escribió su país a mano, no se lo pisamos).
+  {
+    const $codigo = $form.querySelector<HTMLSelectElement>('[name="telefono_codigo"]');
+    const $pais = $form.querySelector<HTMLInputElement>('[name="pais"]');
+    if ($codigo && $pais) {
+      $codigo.addEventListener("change", () => {
+        const escribioAMano = $pais.value.trim() !== "" && $pais.dataset.autocompletado !== "true";
+        if (escribioAMano) return;
+        // El texto de la opción es "🇦🇷 Argentina (+54)": sacamos bandera y código.
+        const texto = $codigo.options[$codigo.selectedIndex]?.text ?? "";
+        const nombre = texto.replace(/\s*\(\+[\d\s]+\)\s*$/, "").replace(/^[^\p{L}]+/u, "").trim();
+        if (nombre) {
+          $pais.value = nombre;
+          $pais.dataset.autocompletado = "true";
+        }
+      });
+      // Si después edita el campo a mano, dejamos de autocompletar.
+      $pais.addEventListener("input", () => {
+        delete $pais.dataset.autocompletado;
+      });
+    }
+  }
+
   // Fecha de nacimiento del menor: no puede ser futura ni absurdamente vieja.
   const $fechaMenor = $form.querySelector('[name="fecha_nacimiento_menor"]') as HTMLInputElement | null;
   if ($fechaMenor) {
@@ -491,13 +527,13 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     //  - Menor: el tutor ya es el contacto principal → este es adicional y opcional → asteriscos ocultos.
     $bloqueEmergencia.hidden = !(esMayor || esMenor);
     if (esMenor) {
-      $emergenciaLegend.textContent = "Contacto de emergencia adicional (opcional)";
+      $emergenciaLegend.textContent = "Contacto adicional de familiar o persona cercana (opcional)";
       $emergenciaNota.textContent =
-        "Como representante legal sos el contacto principal. Si querés sumar un segundo contacto, completalo acá.";
+        "Como representante legal eres el contacto principal. Si quieres sumar un segundo contacto, complétalo aquí.";
     } else {
-      $emergenciaLegend.textContent = "Contacto de emergencia";
+      $emergenciaLegend.textContent = "Contacto de familiar o persona cercana que te acompañará en el proceso";
       $emergenciaNota.textContent =
-        "Una persona a la que podamos contactar si hiciera falta durante el programa.";
+        "Un familiar o persona cercana que te acompañará durante el programa y a quien podamos contactar si hiciera falta.";
     }
     document.querySelectorAll<HTMLElement>("[data-emergencia-asterisco]").forEach((a) => {
       a.hidden = !esMayor;
@@ -597,7 +633,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     const canalPreferido = String(fd.get("canal_preferido_respuesta") ?? "");
 
     // Validaciones básicas — cada error scrollea al campo problemático.
-    if (!intencion) return mostrarError("Elige qué te trae por acá.", "intencion");
+    if (!intencion) return mostrarError("Elige qué te trae aquí.", "intencion");
     if (!nombre) return mostrarError("Necesitamos tu nombre.", "nombre");
     if (!NOMBRE_COMPLETO_REGEX.test(nombre)) {
       return mostrarError("Completa tu nombre y apellido (al menos 2 palabras).", "nombre");
@@ -621,6 +657,7 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     let rolSolicitante: string | null = null;
     let edad: number | null = null;
     let nombreMenor: string | null = null;
+    let emailMenor: string | null = null;
     let fechaNacimientoMenor: string | null = null;
     let vinculoMenor: string | null = null;
     let dniTutor: string | null = null;
@@ -649,26 +686,27 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         if (edad === null || Number.isNaN(edad) || edad < 18 || edad > 100) {
           return mostrarError("Para inscribirte tú mismo/a necesitamos una edad válida (entre 18 y 100).", "edad");
         }
-        // Para mayores el contacto de emergencia es obligatorio.
+        // Para mayores el contacto que acompaña es obligatorio.
         if (!contactoEmergenciaNombre) {
-          return mostrarError("Completa el nombre del contacto de emergencia.", "contacto_emergencia_nombre");
+          return mostrarError("Completa el nombre del familiar o persona cercana que te acompañará.", "contacto_emergencia_nombre");
         }
         if (!NOMBRE_COMPLETO_REGEX.test(contactoEmergenciaNombre)) {
-          return mostrarError("El contacto de emergencia necesita nombre y apellido.", "contacto_emergencia_nombre");
+          return mostrarError("El contacto que te acompaña necesita nombre y apellido.", "contacto_emergencia_nombre");
         }
         if (!contactoEmergenciaTelefono) {
-          return mostrarError("Completa el teléfono del contacto de emergencia.", "contacto_emergencia_telefono");
+          return mostrarError("Completa el teléfono del familiar o persona cercana que te acompañará.", "contacto_emergencia_telefono");
         }
         if (contarDigitos(contactoEmergenciaTelefono) < 6 || contarDigitos(contactoEmergenciaTelefono) > 16) {
-          return mostrarError("El teléfono del contacto de emergencia no parece válido.", "contacto_emergencia_telefono");
+          return mostrarError("El teléfono del contacto que te acompaña no parece válido.", "contacto_emergencia_telefono");
         }
         if (!contactoEmergenciaVinculo) {
-          return mostrarError("Indica tu vínculo con el contacto de emergencia.", "contacto_emergencia_vinculo");
+          return mostrarError("Indica tu vínculo con la persona que te acompañará.", "contacto_emergencia_vinculo");
         }
       }
 
       if (rolSolicitante === "responsable_menor") {
         nombreMenor = String(fd.get("nombre_menor") ?? "").trim() || null;
+        emailMenor = String(fd.get("email_menor") ?? "").trim().toLowerCase() || null;
         fechaNacimientoMenor = String(fd.get("fecha_nacimiento_menor") ?? "").trim() || null;
         vinculoMenor = String(fd.get("vinculo_menor") ?? "").trim() || null;
         dniTutor = String(fd.get("dni_tutor") ?? "").trim() || null;
@@ -681,6 +719,16 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         }
         if (!fechaNacimientoMenor) {
           return mostrarError("Necesitamos la fecha de nacimiento del menor.", "fecha_nacimiento_menor");
+        }
+        // Email propio del participante: ahí le mandamos el acceso al campus.
+        if (!emailMenor) {
+          return mostrarError("Necesitamos el email del/de la participante para enviarle el acceso al campus.", "email_menor");
+        }
+        if (!EMAIL_REGEX.test(emailMenor)) {
+          return mostrarError("El email del/de la participante no parece válido.", "email_menor");
+        }
+        if (emailMenor === email) {
+          return mostrarError("El email del/de la participante tiene que ser distinto del tuyo: ahí le enviaremos su acceso al campus.", "email_menor");
         }
         if (!vinculoMenor) {
           return mostrarError("Indica tu vínculo con el menor (madre, padre, tutor/a…).", "vinculo_menor");
@@ -720,6 +768,9 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
         rol_solicitante: rolSolicitante,
         edad: edad,
         nombre_menor: nombreMenor,
+        // Solo mandamos la columna cuando hay dato: así, si la migración 14
+        // todavía no corrió, los flujos de info/mayor siguen funcionando.
+        ...(emailMenor ? { email_menor: emailMenor } : {}),
         fecha_nacimiento_menor: fechaNacimientoMenor,
         vinculo_menor: vinculoMenor,
         dni_tutor: dniTutor,
@@ -945,6 +996,13 @@ import ProtocoloContenido from "../components/ProtocoloContenido.astro";
     color: var(--color-ink-soft);
     font-size: 0.95rem;
     line-height: 1.5;
+  }
+  /* Texto de ayuda chiquito debajo de un campo. */
+  .ins-form__ayuda {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    line-height: 1.4;
   }
 
   /* Panel scrolleable con el contenido del protocolo */
