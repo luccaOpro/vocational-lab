@@ -204,7 +204,7 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 | `id`                   | uuid (PK)    | Identificador único.                                                         |
 | `creado_en`            | timestamptz  | Cuándo se envió la solicitud.                                                |
 | `canal`                | text         | `web`, `whatsapp`, `instagram` u `otro`. Se setea por query param.           |
-| `intencion`            | text         | `info` / `inscripcion`. (`charla` está permitido en la DB pero el form ya no lo emite — deprecado 2026-06-03.) |
+| `intencion`            | text         | `info` / `inscripcion` / `charla`. (`charla` estuvo deprecada 2026-06-03 → 2026-06-12; ahora la emite el form "Hablemos" de la landing.) |
 | `nombre`               | text         | Nombre de quien completa el form.                                            |
 | `email`                | text         | Mail de contacto.                                                            |
 | `telefono`             | text         | Opcional.                                                                    |
@@ -228,7 +228,15 @@ Capta a quien llena el form público de `/inscripcion` (o el form web simplifica
 | `user_agent`           | text         | Browser/dispositivo desde el que se firmó (para evidencia probatoria).       |
 | `estado`               | text         | `nueva` / `contactada` / `convertida` / `descartada`. Default `nueva`.       |
 | `curso_id`             | uuid (FK)    | A qué curso quiere anotarse (opcional).                                      |
-| `notas_admin`          | text         | Notas internas del admin (opcional).                                         |
+| `notas_admin`          | text         | _Deprecado_ (migración 15) — reemplazado por `notas`. El panel ya no lo escribe; lo que había se migró solo. |
+| `mensaje`              | text         | Texto libre del form "Hablemos" de la landing (`intencion = 'charla'`). Migración 15. |
+| `contactada_por_mail`  | boolean      | true si ya le escribieron por mail. Lo marca el admin a mano en el panel. Migración 15. |
+| `contactada_por_whatsapp` | boolean   | true si ya le escribieron por WhatsApp. Ídem. Migración 15.                  |
+| `contactada_en`        | timestamptz  | Primer contacto real (lo setea el panel al pasar a `contactada` o marcar un canal). Base del aviso de seguimiento a las 48 hs. Migración 15. |
+| `seguimiento_hecho_en` | timestamptz  | Cuándo se le mandó el mensaje de seguimiento. Mientras esté en null y pasen 48 hs del contacto, el panel muestra la alerta. Migración 15. |
+| `recordatorio_en`      | timestamptz  | Recordatorio manual: el panel avisa ese día sobre esta solicitud. Migración 15. |
+| `recordatorio_nota`    | text         | Qué hay que hacer cuando vence el recordatorio. Migración 15.                |
+| `notas`                | jsonb        | Notas internas con fecha: `[{"en": "2026-06-12T…", "texto": "…"}]`. Reemplaza a `notas_admin`. Migración 15. |
 
 **Reglas RLS:**
 - **INSERT abierto** — anónimos y logueados pueden crear solicitudes. Esto es lo que permite que el form público funcione sin login.

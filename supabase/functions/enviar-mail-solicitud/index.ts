@@ -15,8 +15,11 @@
    - VL_WEBHOOK_SECRET  → clave compartida con el header x-vl-secret del webhook
 
   MAPEO intención → mail:
-   - info         → W1A  ("Quiero más información")
-   - inscripcion  → W1B  ("Quiero anotarme")
+   - info         → W1A  ("Quiero más información") → a la persona
+   - inscripcion  → W1B  ("Quiero anotarme")        → a la persona
+   - charla       → aviso interno con el mensaje del form "Hablemos"
+                    → a hola@vlab.com.ar, con reply-to a la persona
+                    (responder ese mail le responde directo a quien escribió)
    - otras        → no se manda nada
 
   DISEÑO: plantilla de marca (header azul noche con logo, cuerpo
@@ -49,6 +52,7 @@ interface Solicitud {
   nombre?: string;
   email?: string;
   canal?: string;
+  mensaje?: string;
 }
 
 const primerNombre = (n?: string): string => {
@@ -58,6 +62,12 @@ const primerNombre = (n?: string): string => {
 
 const emailValido = (e?: string): boolean =>
   !!e && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+
+// Escape de HTML para todo lo que escribió la persona (nombre, mensaje):
+// va dentro de nuestro mail interno y no queremos inyección de HTML.
+const esc = (s: string): string =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 
 // ── Helpers de HTML (estilos inline: los mails no leen CSS externo) ──
 const eyebrow = (t: string) =>
@@ -172,6 +182,35 @@ function plantilla(
   return null;
 }
 
+// ── Aviso interno · form "Hablemos" (intencion = 'charla') ──
+// Este mail NO va a la persona: va a hola@vlab.com.ar con el mensaje
+// que dejó en el form. El reply-to apunta a la persona, así que
+// "Responder" en el correo le escribe directo a ella.
+function avisoCharla(sol: Solicitud): { asunto: string; html: string; texto: string } {
+  const nombre = (sol.nombre ?? "").trim() || "(sin nombre)";
+  const email = (sol.email ?? "").trim() || "(sin mail)";
+  const mensaje = (sol.mensaje ?? "").trim() || "(vino sin mensaje)";
+
+  const asunto = `Nuevo mensaje desde la web — ${nombre}`;
+  const html = layout(
+    eyebrow("Form «Hablemos» de la web") +
+    titulo("Nuevo mensaje para responder") +
+    label("Quién escribe") +
+    p(`<strong>${esc(nombre)}</strong> · <a href="mailto:${esc(email)}" style="color:#D8552A;">${esc(email)}</a>`) +
+    label("Mensaje") +
+    p(esc(mensaje).replace(/\n/g, "<br />")) +
+    p(`Para responderle, usa <strong>Responder</strong> en este mail (le llega directo a la persona). La solicitud también quedó guardada en el panel del aula.`) +
+    boton("Ver en el panel de solicitudes", "https://vlab.com.ar/aula/admin/solicitudes"),
+  );
+  const texto =
+    `Nuevo mensaje desde el form "Hablemos" de la web.\n\n` +
+    `De: ${nombre} <${email}>\n\n` +
+    `Mensaje:\n${mensaje}\n\n` +
+    `Responder este mail le escribe directo a la persona.\n` +
+    `Panel: https://vlab.com.ar/aula/admin/solicitudes`;
+  return { asunto, html, texto };
+}
+
 Deno.serve(async (req: Request) => {
   // ── Cámaras de seguridad (logs de diagnóstico) ──
   const secretHeader = req.headers.get("x-vl-secret");
@@ -206,14 +245,29 @@ Deno.serve(async (req: Request) => {
     canal: sol.canal ?? null,
   }));
 
-  const tpl = plantilla(intencion, nombre);
-  if (!tpl) {
-    console.log("[skip] intención sin plantilla:", intencion);
-    return Response.json({ enviado: false, motivo: "intencion sin plantilla", intencion });
-  }
-  if (!emailValido(email)) {
-    console.log("[skip] email inválido");
-    return Response.json({ enviado: false, motivo: "email invalido" });
+  // ¿A quién va el mail y con qué contenido?
+  //  - charla → aviso interno a hola@ (aunque el mail de la persona sea
+  //    inválido: el mensaje no se pierde, solo no se puede "Responder").
+  //  - info / inscripcion → respuesta automática a la persona.
+  let tpl: { asunto: string; html: string; texto: string } | null;
+  let destinatario: string;
+  let replyTo: string | null = null;
+
+  if (intencion === "charla") {
+    tpl = avisoCharla(sol);
+    destinatario = MAIL_USER;
+    if (emailValido(email)) replyTo = email;
+  } else {
+    tpl = plantilla(intencion, nombre);
+    if (!tpl) {
+      console.log("[skip] intención sin plantilla:", intencion);
+      return Response.json({ enviado: false, motivo: "intencion sin plantilla", intencion });
+    }
+    if (!emailValido(email)) {
+      console.log("[skip] email inválido");
+      return Response.json({ enviado: false, motivo: "email invalido" });
+    }
+    destinatario = email;
   }
 
   const client = new SMTPClient({
@@ -226,10 +280,11 @@ Deno.serve(async (req: Request) => {
   });
 
   try {
-    console.log("[smtp] intentando enviar a", email, "·", SMTP_HOST + ":" + SMTP_PORT);
+    console.log("[smtp] intentando enviar a", destinatario, "·", SMTP_HOST + ":" + SMTP_PORT);
     await client.send({
       from: `${MAIL_FROM_NAME} <${MAIL_USER}>`,
-      to: email,
+      to: destinatario,
+      ...(replyTo ? { replyTo } : {}),
       subject: tpl.asunto,
       content: tpl.texto,
       html: tpl.html,
@@ -240,6 +295,6 @@ Deno.serve(async (req: Request) => {
     return Response.json({ enviado: false, error: String(err) }, { status: 500 });
   }
 
-  console.log("[ok] enviado a", email, "· intención", intencion);
-  return Response.json({ enviado: true, a: email, intencion });
+  console.log("[ok] enviado a", destinatario, "· intención", intencion);
+  return Response.json({ enviado: true, a: destinatario, intencion });
 });

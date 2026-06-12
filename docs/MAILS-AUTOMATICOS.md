@@ -1,12 +1,18 @@
 # Mails automáticos de respuesta al formulario
 
-> Última actualización: 2026-06-10
+> Última actualización: 2026-06-12
 
 Cuando alguien completa el formulario de `/inscripcion`, le llega solo un mail
 de respuesta desde `hola@vlab.com.ar`, según qué eligió:
 
 - **"Quiero más información"** (`info`) → mail **W1A**.
 - **"Quiero anotarme"** (`inscripcion`) → mail **W1B**.
+
+Además, cuando alguien usa el form **"Hablemos"** de la landing (`charla`),
+el mail NO va a la persona: la función reenvía su mensaje **a
+`hola@vlab.com.ar`**, con *reply-to* a quien escribió. O sea: abrir ese mail
+y tocar "Responder" le responde directo a la persona. La solicitud también
+queda guardada en `/aula/admin/solicitudes` como "Quiere hablar".
 
 Los textos viven en la función `supabase/functions/enviar-mail-solicitud/index.ts`.
 La función se dispara con un **Database Webhook** de Supabase cuando entra una
@@ -69,10 +75,14 @@ verdad, pero Supabase no lo lee del repo: hay que **re-pegar y re-deployar**.
 2. Borrar lo que hay, pegar el contenido completo del archivo del repo.
 3. **Deploy**. Los secretos y el webhook no se tocan: quedan como están.
 
-> ⚠️ Cambio pendiente de re-deploy (2026-06-11): el mail W1A ("más info")
-> ahora lleva un botón al **dossier web** (`vlab.com.ar/dossier`) en lugar
-> del bloque "Lo que incluye" + "Reserva tu lugar". Hasta que se re-deploye,
-> sigue saliendo la versión vieja.
+> ⚠️ Cambios pendientes de re-deploy:
+> - (2026-06-11) el mail W1A ("más info") ahora lleva un botón al **dossier
+>   web** (`vlab.com.ar/dossier`) en lugar del bloque "Lo que incluye" +
+>   "Reserva tu lugar".
+> - (2026-06-12) el aviso interno del form **"Hablemos"** (`charla` →
+>   reenvío a `hola@vlab.com.ar`). Hasta que se re-deploye, los mensajes
+>   del form igual quedan guardados en el panel de solicitudes — solo no
+>   llega el mail.
 
 ---
 
@@ -82,8 +92,9 @@ verdad, pero Supabase no lo lee del repo: hay que **re-pegar y re-deployar**.
   secreto. Así nadie que descubra la URL puede usarla para mandar mails.
 - **Puerto SMTP:** usa 465 (TLS implícito). Si en los logs aparece un error de
   conexión/TLS, probar cambiando `SMTP_PORT` a 587 en el código.
-- **Intención sin plantilla** (ej. si algún día se suma `charla`/`consultas`): la
+- **Intención sin plantilla** (ej. si algún día se suma `consultas`): la
   función responde OK pero no manda nada, hasta que le agreguemos su plantilla.
+  (`charla` ya tiene la suya desde 2026-06-12: el aviso interno a `hola@`.)
 - **Pendiente relacionado:** los mails de pago confirmado (BIENVENIDA / FAMILIA)
   todavía no están — se dispararían cuando el admin confirma una transferencia.
   Ver `docs/PENDIENTES.md`.

@@ -24,7 +24,8 @@ export type IconName =
   | "package"
   | "target"
   | "sprout"
-  | "paperclip";
+  | "paperclip"
+  | "bell";
 
 export const ICON_PATHS: Record<IconName, string> = {
   "book-open":
@@ -47,6 +48,8 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>',
   paperclip:
     '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 17.99 8.76L9.41 17.34a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
+  bell:
+    '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
 };
 
 /**

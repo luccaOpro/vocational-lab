@@ -124,3 +124,19 @@
 - `public/descargas/` también está bloqueada en robots.txt.
 
 **Pendiente al tomar la decisión**: subir el PDF de la ficha a `public/descargas/ficha-proximo-grupo.pdf` y re-deployar la Edge Function (ver PENDIENTES.md).
+
+## 2026-06-12 — Form "Hablemos" real + panel de solicitudes como herramienta de seguimiento
+
+**Decisión**: la card "Prefiero hablar primero" de la landing deja de ser solo un mailto y pasa a ser un formulario real (nombre + mail + mensaje). Al enviarlo: (1) se guarda en `solicitudes_inscripcion` con `intencion = 'charla'` (que estaba deprecada y revive) y la columna nueva `mensaje`; (2) la Edge Function `enviar-mail-solicitud` reenvía el mensaje a `hola@vlab.com.ar` con reply-to a la persona, así "Responder" en el correo le contesta directo.
+
+**Además**: el panel `/aula/admin/solicitudes` se renueva como herramienta de trabajo diario de Julia y Laura, porque el seguimiento es 100% manual:
+- **Avisos arriba de todo**: solicitudes nuevas sin responder hace más de 24 hs, seguimiento de 48 hs de quienes pidieron info/charla y no se anotaron (decisión del doc 11-jun), y recordatorios manuales vencidos.
+- **Búsqueda** (nombre, mail, teléfono, mensaje, notas) y **orden** por fecha.
+- **Registro de contacto**: botones "Mail" / "WhatsApp" en cada card para marcar por dónde se le escribió (con filtro por eso). Al marcar el primer contacto, la solicitud pasa sola de "nueva" a "contactada" y se guarda la fecha (base del aviso de 48 hs).
+- **Notas con fecha**: varias por solicitud, cada una con su timestamp (reemplazan al texto único `notas_admin`; las viejas se migran solas).
+- **Recordatorios manuales**: "avisame el día X sobre esta persona" — aparecen como aviso ese día.
+- **Mail pre-redactado**: botón "Escribir por mail" que abre el correo con asunto y cuerpo según la intención (espejo del de WhatsApp).
+
+**Por qué**: estamos a días del lanzamiento y la comunicación con interesados es manual por mail/WhatsApp. Las chicas necesitan ver qué quedó sin responder y a quién hacerle seguimiento sin depender de la memoria. Se eligió mejorar el panel propio (y no una planilla externa) porque los datos ya viven en Supabase y el panel ya era la bandeja de entrada.
+
+**Requiere** (antes de pushear a producción): correr `docs/sql/15-hablemos-y-seguimiento.sql` y re-deployar la Edge Function. Ver PENDIENTES.md.

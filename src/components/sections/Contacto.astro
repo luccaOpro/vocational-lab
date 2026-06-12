@@ -3,9 +3,15 @@
   SECCIÓN 8 · INSCRIPCIÓN Y CONTACTO
   Dos columnas:
    · Izquierda: CTA grande que lleva a /inscripcion (form completo
-     con las 3 intenciones del flow + firma del protocolo).
-   · Derecha: alternativa por mail/Instagram para quien prefiere
-     escribir directo.
+     con las intenciones del flow + firma del protocolo).
+   · Derecha: el form "Hablemos" — un mini formulario de contacto
+     (nombre + mail + mensaje) para quien prefiere hablar antes
+     de decidir. Al enviarlo:
+       1. Se guarda en solicitudes_inscripcion (intencion = 'charla',
+          columna `mensaje`) → el admin lo ve en /aula/admin/solicitudes.
+       2. El Database Webhook dispara la Edge Function
+          enviar-mail-solicitud, que reenvía el mensaje a
+          hola@vlab.com.ar con reply-to a la persona.
 
   El form de inscripción vive en /inscripcion como página única
   para los 3 canales (web, WhatsApp, Instagram).
@@ -41,7 +47,7 @@
         </p>
       </div>
 
-      <!-- Columna 2 · Alternativa de contacto directo.
+      <!-- Columna 2 · Form "Hablemos".
            El id="hablemos" es el ancla de los CTAs "Hablemos"/"Escríbenos"
            de Caminos y ParaQuien (pedido 2026-06-11: esas opciones van a
            hablar, no a la inscripción). -->
@@ -49,11 +55,52 @@
         <h3>Prefiero hablar primero</h3>
         <p>
           Si tienes dudas o quieres entender si el programa es para ti
-          antes de decidir, escríbenos directo.
+          antes de decidir, escríbenos. Tu mensaje nos llega directo
+          a <strong>hola@vlab.com.ar</strong>.
         </p>
-        <p class="contacto__inversion">
-          Inversión a consultar — trabajamos con becas y planes de pago.
-        </p>
+
+        <form id="hablemos-form" class="hablemos-form" novalidate>
+          {/* Honeypot anti-bot: mismo patrón que /inscripcion (fuera de
+              pantalla, sin tab). Si llega con texto, es un bot. */}
+          <div class="hablemos-form__hp" aria-hidden="true">
+            <label>No completes este campo
+              <input type="text" name="sitio_web" tabindex="-1" autocomplete="off" />
+            </label>
+          </div>
+
+          <label class="hablemos-form__field">
+            <span>Nombre y apellido</span>
+            <input type="text" name="nombre" required autocomplete="name" minlength="3" maxlength="60" />
+          </label>
+
+          <label class="hablemos-form__field">
+            <span>Email</span>
+            <input type="email" name="email" required autocomplete="email" maxlength="80" />
+          </label>
+
+          <label class="hablemos-form__field">
+            <span>Tu mensaje</span>
+            <textarea
+              name="mensaje"
+              required
+              rows="5"
+              maxlength="2000"
+              placeholder="Cuéntanos tu situación o tu duda, y te respondemos por mail."
+            ></textarea>
+          </label>
+
+          <p id="hablemos-error" class="hablemos-form__error" hidden></p>
+
+          <button type="submit" id="hablemos-submit" class="btn btn-primary hablemos-form__submit">
+            Enviar mensaje →
+          </button>
+        </form>
+
+        {/* Confirmación (reemplaza al form al enviar) */}
+        <div id="hablemos-ok" class="hablemos-ok" hidden>
+          <p class="hablemos-ok__titulo">¡Mensaje enviado!</p>
+          <p>Te respondemos por mail a la brevedad.</p>
+        </div>
 
         <ul class="contacto__links">
           <li>
@@ -69,6 +116,85 @@
     </div>
   </div>
 </section>
+
+<script>
+  /*
+    Envío del form "Hablemos".
+    El cliente de Supabase se importa recién al enviar (import dinámico)
+    para no cargar la librería en la landing si nadie usa el form.
+  */
+  const $form = document.getElementById("hablemos-form") as HTMLFormElement | null;
+  const $ok = document.getElementById("hablemos-ok") as HTMLElement | null;
+  const $error = document.getElementById("hablemos-error") as HTMLElement | null;
+  const $submit = document.getElementById("hablemos-submit") as HTMLButtonElement | null;
+
+  // Momento en que cargó la página: envíos en menos de ~1.5s son bots.
+  const cargadoEn = Date.now();
+
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+  function mostrarError(msg: string) {
+    if (!$error) return;
+    $error.textContent = msg;
+    $error.hidden = false;
+  }
+
+  function exito() {
+    if ($form) $form.hidden = true;
+    if ($ok) $ok.hidden = false;
+  }
+
+  $form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if ($error) $error.hidden = true;
+
+    const fd = new FormData($form);
+    const honeypot = String(fd.get("sitio_web") ?? "").trim();
+    const nombre = String(fd.get("nombre") ?? "").trim();
+    const email = String(fd.get("email") ?? "").trim().toLowerCase();
+    const mensaje = String(fd.get("mensaje") ?? "").trim();
+
+    // Anti-spam: simulamos éxito sin guardar (no le damos pistas al bot).
+    if (honeypot !== "" || Date.now() - cargadoEn < 1500) {
+      exito();
+      return;
+    }
+
+    if (nombre.length < 3) return mostrarError("Necesitamos tu nombre.");
+    if (!EMAIL_REGEX.test(email)) return mostrarError("El mail no parece válido. Revisa si te falta algo.");
+    if (mensaje.length < 10) return mostrarError("Cuéntanos un poco más, así podemos ayudarte mejor.");
+
+    if ($submit) {
+      $submit.disabled = true;
+      $submit.textContent = "Enviando…";
+    }
+
+    try {
+      const { supabase } = await import("../../lib/supabase");
+      const { error: dbError } = await supabase
+        .from("solicitudes_inscripcion")
+        .insert({
+          canal: "web",
+          intencion: "charla",
+          nombre,
+          email,
+          mensaje,
+          // Escribió un mensaje → espera respuesta por mail.
+          canal_preferido_respuesta: "mail",
+          user_agent: navigator.userAgent,
+        });
+      if (dbError) throw dbError;
+      exito();
+    } catch (err) {
+      console.error("[hablemos]", err);
+      mostrarError("No pudimos enviar tu mensaje. Prueba de nuevo en un momento, o escríbenos directo a hola@vlab.com.ar.");
+      if ($submit) {
+        $submit.disabled = false;
+        $submit.textContent = "Enviar mensaje →";
+      }
+    }
+  });
+</script>
 
 <style>
   .contacto {
@@ -128,12 +254,92 @@
   }
   .contacto__card--alt :global(h3) { color: var(--color-bg); }
   .contacto__card--alt p { color: rgba(250, 247, 242, 0.85); }
-  .contacto__inversion {
-    margin-top: 1.25rem !important;
-    font-family: var(--font-serif);
-    font-style: italic;
-    color: rgba(250, 247, 242, 0.7) !important;
+  .contacto__card--alt p strong { color: var(--color-bg); }
+
+  /* ===== Form "Hablemos" ===== */
+  .hablemos-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
   }
+
+  /* Honeypot: fuera de pantalla, invisible y no enfocable. */
+  .hablemos-form__hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  [hidden] {
+    display: none !important;
+  }
+
+  .hablemos-form__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .hablemos-form__field span {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: rgba(250, 247, 242, 0.75);
+  }
+  .hablemos-form__field input,
+  .hablemos-form__field textarea {
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid rgba(250, 247, 242, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(250, 247, 242, 0.08);
+    color: var(--color-bg);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .hablemos-form__field input::placeholder,
+  .hablemos-form__field textarea::placeholder {
+    color: rgba(250, 247, 242, 0.45);
+  }
+  .hablemos-form__field input:focus,
+  .hablemos-form__field textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background: rgba(250, 247, 242, 0.12);
+  }
+  .hablemos-form__field textarea {
+    resize: vertical;
+    min-height: 110px;
+  }
+
+  .hablemos-form__error {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #FFB199;
+    line-height: 1.5;
+  }
+
+  .hablemos-form__submit {
+    align-self: flex-start;
+    margin-top: 0.25rem;
+  }
+
+  /* Confirmación */
+  .hablemos-ok {
+    margin-top: 1.5rem;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid rgba(250, 247, 242, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(250, 247, 242, 0.08);
+  }
+  .hablemos-ok__titulo {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    margin: 0 0 0.3rem;
+    color: var(--color-bg) !important;
+  }
+  .hablemos-ok p { margin: 0; }
 
   .contacto__links {
     list-style: none;

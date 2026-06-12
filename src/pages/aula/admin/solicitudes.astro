@@ -2,18 +2,24 @@
 /*
   /aula/admin/solicitudes — bandeja de solicitudes de inscripción.
   ---
-  Muestra todo lo que entra por el formulario público de /inscripcion
-  (tabla solicitudes_inscripcion). El admin puede:
-    · Ver todos los datos de cada solicitud (contacto + consentimiento).
-    · Filtrar por estado (nueva / contactada / convertida / descartada).
-    · Cambiar el estado de cada una.
-    · Dejar una nota interna.
+  Muestra todo lo que entra por los forms públicos: /inscripcion
+  (intenciones "info" e "inscripcion") y el form "Hablemos" de la
+  landing (intencion "charla", con mensaje libre).
 
-  Es la entrada del embudo: cuando una persona efectivamente paga, el
-  admin la marca como "convertida" y carga el pago en /aula/admin/transferencias.
+  El seguimiento lo hacen Julia y Laura A MANO (sin automatización),
+  así que el panel es su herramienta de trabajo diaria:
+    · Avisos arriba de todo: solicitudes nuevas sin responder,
+      seguimientos de 48 hs pendientes y recordatorios vencidos.
+    · Buscador (nombre, mail, teléfono, mensaje, notas) + orden.
+    · Filtros por estado, por intención y por canal de contacto
+      (¿ya le escribimos por mail? ¿por WhatsApp?).
+    · Por cada solicitud: marcar por dónde se la contactó, notas
+      internas con fecha, recordatorio manual ("avisarme el día X"),
+      WhatsApp y mail pre-redactados, copiar mails para CCO.
 
-  Las reglas de seguridad (RLS) que permiten al admin leer/editar esta
-  tabla ya están en docs/sql/04-solicitudes-inscripcion.sql.
+  Las reglas de seguridad (RLS) están en docs/sql/04. Las columnas
+  de seguimiento (contacto, recordatorios, notas con fecha, mensaje
+  del form "Hablemos") las agrega docs/sql/15.
 */
 
 import AulaLayout from "../../../layouts/AulaLayout.astro";
@@ -32,6 +38,23 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </div>
       </header>
 
+      {/* Avisos: lo que necesita acción hoy (se arma por JS) */}
+      <div class="sols__avisos" id="sols-avisos" hidden></div>
+
+      {/* Buscador + orden */}
+      <div class="sols__buscador" id="sols-buscador" hidden>
+        <input
+          type="search"
+          id="sols-buscar"
+          placeholder="Buscar por nombre, mail, teléfono, mensaje o nota…"
+          aria-label="Buscar solicitudes"
+        />
+        <select id="sols-orden" aria-label="Ordenar solicitudes">
+          <option value="recientes">Más recientes primero</option>
+          <option value="antiguas">Más antiguas primero</option>
+        </select>
+      </div>
+
       {/* Filtros por estado */}
       <div class="sols__filtros" id="sols-filtros" role="tablist" aria-label="Filtrar por estado" hidden>
         <button type="button" class="sols__filtro is-activo" data-filtro="todas">Todas</button>
@@ -39,6 +62,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <button type="button" class="sols__filtro" data-filtro="contactada">Contactadas</button>
         <button type="button" class="sols__filtro" data-filtro="convertida">Convertidas</button>
         <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
+      </div>
+
+      {/* Filtro por canal de contacto (qué se usó para escribirles) */}
+      <div class="sols__filtros sols__filtros--contacto" id="sols-fcontacto" role="group" aria-label="Filtrar por canal de contacto" hidden>
+        <span class="sols__filtros-label">Contacto:</span>
+        <button type="button" class="sols__filtro is-activo" data-fcontacto="todas">Todas</button>
+        <button type="button" class="sols__filtro" data-fcontacto="mail">Les escribimos por mail</button>
+        <button type="button" class="sols__filtro" data-fcontacto="whatsapp">Les escribimos por WhatsApp</button>
+        <button type="button" class="sols__filtro" data-fcontacto="sin">Sin contactar</button>
       </div>
 
       {/* Envío manual: filtro por intención + copiar los mails de lo visible.
@@ -49,13 +81,14 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           <button type="button" class="sols__filtro is-activo" data-intencion="todas">Todas las intenciones</button>
           <button type="button" class="sols__filtro" data-intencion="info">Quieren info</button>
           <button type="button" class="sols__filtro" data-intencion="inscripcion">Quieren anotarse</button>
+          <button type="button" class="sols__filtro" data-intencion="charla">Quieren hablar</button>
         </div>
         <div class="sols__envio-acciones">
           <span class="sols__envio-resumen" id="envio-resumen"></span>
           <button type="button" class="sols__envio-btn" id="envio-copiar">Copiar mails</button>
           <a class="sols__envio-btn sols__envio-btn--sec" id="envio-mailto" href="#" hidden>Abrir en el correo (CCO)</a>
         </div>
-        <p class="sols__envio-hint">Se copian los mails de las solicitudes visibles según los filtros, sin repetidos. Pégalos en <strong>CCO</strong> para no exponer las direcciones entre sí.</p>
+        <p class="sols__envio-hint">Se copian los mails de las solicitudes visibles según los filtros y la búsqueda, sin repetidos. Pégalos en <strong>CCO</strong> para no exponer las direcciones entre sí.</p>
       </div>
 
       {/* Resumen de origen (de qué canal vino cada solicitud) */}
@@ -85,20 +118,34 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   const $lista = document.getElementById("sols-lista") as HTMLElement;
   const $bajada = document.getElementById("sols-bajada")!;
   const $errorBox = document.getElementById("sols-error") as HTMLElement;
+  const $avisos = document.getElementById("sols-avisos") as HTMLElement;
+  const $buscador = document.getElementById("sols-buscador") as HTMLElement;
+  const $buscar = document.getElementById("sols-buscar") as HTMLInputElement;
+  const $orden = document.getElementById("sols-orden") as HTMLSelectElement;
   const $filtros = document.getElementById("sols-filtros") as HTMLElement;
+  const $fcontacto = document.getElementById("sols-fcontacto") as HTMLElement;
   const $canales = document.getElementById("sols-canales") as HTMLElement;
   const $envio = document.getElementById("sols-envio") as HTMLElement;
   const $envioResumen = document.getElementById("envio-resumen") as HTMLElement;
   const $envioCopiar = document.getElementById("envio-copiar") as HTMLButtonElement;
   const $envioMailto = document.getElementById("envio-mailto") as HTMLAnchorElement;
 
+  // ============ Reglas de los avisos (editables) ============
+  // Una solicitud "nueva" sin tocar durante más de estas horas → aviso.
+  const HORAS_SIN_RESPUESTA = 24;
+  // Pidió info/charla, fue contactada, y pasaron estas horas sin que se
+  // anote → aviso de seguimiento (decisión doc 11-jun: seguimiento 48 hs).
+  const HORAS_SEGUIMIENTO = 48;
+
   // ============ Tipos ============
   type Estado = "nueva" | "contactada" | "convertida" | "descartada";
+  type Intencion = "info" | "inscripcion" | "charla";
+  type Nota = { en: string | null; texto: string };
   type Solicitud = {
     id: string;
     creado_en: string;
     canal: string;
-    intencion: "info" | "inscripcion" | "charla";
+    intencion: Intencion;
     nombre: string;
     email: string;
     telefono: string | null;
@@ -120,6 +167,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     protocolo_aceptado_en: string | null;
     estado: Estado;
     notas_admin: string | null;
+    // Migración 15 — form "Hablemos" + seguimiento manual
+    mensaje: string | null;
+    contactada_por_mail: boolean;
+    contactada_por_whatsapp: boolean;
+    contactada_en: string | null;
+    seguimiento_hecho_en: string | null;
+    recordatorio_en: string | null;
+    recordatorio_nota: string | null;
+    notas: Nota[];
   };
 
   const ESTADOS: Record<Estado, { label: string }> = {
@@ -129,13 +185,22 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     descartada: { label: "Descartada" },
   };
 
+  const INTENCION_LABEL: Record<Intencion, string> = {
+    info: "Quiere info",
+    inscripcion: "Quiere anotarse",
+    charla: "Quiere hablar",
+  };
+
   const CANAL_LABEL: Record<string, string> = {
     web: "Web", whatsapp: "WhatsApp", instagram: "Instagram", otro: "Otro",
   };
 
   let solicitudes: Solicitud[] = [];
   let filtroActivo: "todas" | Estado = "todas";
-  let filtroIntencion: "todas" | "info" | "inscripcion" = "todas";
+  let filtroIntencion: "todas" | Intencion = "todas";
+  let filtroContacto: "todas" | "mail" | "whatsapp" | "sin" = "todas";
+  let busqueda = "";
+  let orden: "recientes" | "antiguas" = "recientes";
   let emailsVisibles: string[] = [];
 
   // ============ Helpers ============
@@ -161,6 +226,30 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         day: "numeric", month: "long", year: "numeric",
       });
     } catch { return iso; }
+  }
+
+  // Fecha corta para las notas y recordatorios: "12/6 14:30".
+  function formatoFechaCorta(iso: string | null) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleDateString("es-AR", { day: "numeric", month: "numeric" }) +
+        " " + d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    } catch { return ""; }
+  }
+
+  // "hace 3 h" / "hace 2 días" — para los avisos.
+  function tiempoRelativo(iso: string): string {
+    const ms = Date.now() - new Date(iso).getTime();
+    const horas = Math.floor(ms / 3_600_000);
+    if (horas < 1) return "hace menos de 1 hora";
+    if (horas < 48) return `hace ${horas} h`;
+    return `hace ${Math.floor(horas / 24)} días`;
+  }
+
+  // Para la búsqueda: minúsculas y sin acentos ("Maria" encuentra "María").
+  function normalizar(s: string): string {
+    return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   }
 
   // Edad a partir de una fecha de nacimiento (YYYY-MM-DD).
@@ -197,7 +286,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (s.intencion === "info") {
       return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu consulta desde la web y te escribimos por aquí como pediste. ¿Quieres que te contemos más sobre el programa o prefieres que coordinemos una charla?`;
     }
-    return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu mensaje desde la web y te escribimos por aquí como pediste. ¿En qué te podemos ayudar?`;
+    return `${hola}somos Julia y Laura de Vocational Lab. Recibimos tu mensaje desde la web. ¿En qué te podemos ayudar?`;
   }
 
   // waLink + el mensaje pre-cargado (?text=...).
@@ -205,6 +294,27 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const base = waLink(s.telefono);
     if (!base) return null;
     return `${base}?text=${encodeURIComponent(mensajeWpp(s))}`;
+  }
+
+  // Mail pre-redactado (mailto con asunto + cuerpo según la intención).
+  // Igual que el de WhatsApp: se abre escrito en el cliente de correo
+  // y Julia/Laura lo completan antes de mandar.
+  function mailtoMsg(s: Solicitud): string {
+    const nom = (s.nombre || "").trim().split(/\s+/)[0] || "";
+    const hola = nom ? `Hola ${nom}:` : "Hola:";
+    let asunto: string;
+    let cuerpo: string;
+    if (s.intencion === "inscripcion") {
+      asunto = "Tu lugar en Vocational Lab";
+      cuerpo = `${hola}\n\nSomos Julia y Laura de Vocational Lab. Recibimos tu inscripción al próximo grupo, ¡qué alegría!\n\nPara confirmar tu lugar coordinamos el pago por transferencia. Te dejamos los datos:\n\n[completar datos de la transferencia]\n\nCualquier duda, respondes este mail y te ayudamos.\n\nJulia y Laura · Vocational Lab`;
+    } else if (s.intencion === "info") {
+      asunto = "Información sobre Vocational Lab";
+      cuerpo = `${hola}\n\nSomos Julia y Laura de Vocational Lab. Recibimos tu consulta desde la web, ¡gracias por escribirnos!\n\n[completar]\n\nJulia y Laura · Vocational Lab`;
+    } else {
+      asunto = "Tu mensaje a Vocational Lab";
+      cuerpo = `${hola}\n\nSomos Julia y Laura de Vocational Lab. Leímos tu mensaje, ¡gracias por escribirnos!\n\n[completar respuesta]\n\nJulia y Laura · Vocational Lab`;
+    }
+    return `mailto:${s.email}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
   }
 
   // ============ Carga ============
@@ -224,26 +334,139 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       return;
     }
 
-    solicitudes = (data ?? []) as Solicitud[];
+    // Defaults defensivos: si la migración 15 todavía no corrió, las columnas
+    // nuevas vienen undefined y el panel igual tiene que poder mostrar la lista.
+    solicitudes = ((data ?? []) as Record<string, unknown>[]).map((raw) => {
+      const s = raw as unknown as Solicitud;
+      if (!Array.isArray(s.notas)) {
+        s.notas = s.notas_admin ? [{ en: null, texto: s.notas_admin }] : [];
+      }
+      s.contactada_por_mail = !!s.contactada_por_mail;
+      s.contactada_por_whatsapp = !!s.contactada_por_whatsapp;
+      return s;
+    });
+
     $loader.hidden = true;
+    $buscador.hidden = false;
     $filtros.hidden = false;
+    $fcontacto.hidden = false;
     $envio.hidden = false;
     render();
   }
 
+  // ============ Avisos (lo que necesita acción hoy) ============
+  type Aviso = {
+    tipo: "recordatorio" | "sin_respuesta" | "seguimiento";
+    sol: Solicitud;
+    texto: string;
+    accionLabel: string | null; // botón "listo" del aviso (null = solo "Ver")
+  };
+
+  function calcularAvisos(): Aviso[] {
+    const ahora = Date.now();
+    const avisos: Aviso[] = [];
+
+    for (const s of solicitudes) {
+      // 1 · Recordatorio manual vencido.
+      if (s.recordatorio_en && new Date(s.recordatorio_en).getTime() <= ahora
+        && s.estado !== "descartada") {
+        avisos.push({
+          tipo: "recordatorio",
+          sol: s,
+          texto: `Aviso programado · ${s.nombre}${s.recordatorio_nota ? `: ${s.recordatorio_nota}` : ""}`,
+          accionLabel: "Listo, quitar aviso",
+        });
+        continue; // si hay recordatorio vencido, no apilamos más avisos de la misma persona
+      }
+
+      // 2 · Nueva sin responder hace más de HORAS_SIN_RESPUESTA.
+      if (s.estado === "nueva"
+        && ahora - new Date(s.creado_en).getTime() > HORAS_SIN_RESPUESTA * 3_600_000) {
+        avisos.push({
+          tipo: "sin_respuesta",
+          sol: s,
+          texto: `${s.nombre} (${INTENCION_LABEL[s.intencion].toLowerCase()}) entró ${tiempoRelativo(s.creado_en)} y todavía nadie le respondió.`,
+          accionLabel: null,
+        });
+        continue;
+      }
+
+      // 3 · Seguimiento de 48 hs: pidió info o quería hablar, fue contactada,
+      //     y no se anotó ni se le hizo el seguimiento todavía.
+      if ((s.intencion === "info" || s.intencion === "charla")
+        && s.estado === "contactada"
+        && !s.seguimiento_hecho_en
+        && s.contactada_en
+        && ahora - new Date(s.contactada_en).getTime() > HORAS_SEGUIMIENTO * 3_600_000) {
+        avisos.push({
+          tipo: "seguimiento",
+          sol: s,
+          texto: `${s.nombre} recibió respuesta ${tiempoRelativo(s.contactada_en)} y no se anotó. Puede ser momento de un mensaje de seguimiento (charla, beneficio, recordatorio de cupos).`,
+          accionLabel: "Seguimiento hecho",
+        });
+      }
+    }
+
+    // Recordatorios primero, después sin respuesta, después seguimientos.
+    const peso = { recordatorio: 0, sin_respuesta: 1, seguimiento: 2 };
+    return avisos.sort((a, b) => peso[a.tipo] - peso[b.tipo]);
+  }
+
+  function renderAvisos() {
+    const avisos = calcularAvisos();
+    if (avisos.length === 0) {
+      $avisos.hidden = true;
+      $avisos.innerHTML = "";
+      return avisos.length;
+    }
+
+    $avisos.innerHTML = `
+      <p class="sols__avisos-titulo">${iconHtml("bell", 16)} Necesitan atención (${avisos.length})</p>
+      <ul class="sols__avisos-lista">
+        ${avisos.map((a) => `
+          <li class="sols-aviso sols-aviso--${a.tipo}">
+            <span class="sols-aviso__texto">${esc(a.texto)}</span>
+            <span class="sols-aviso__acciones">
+              <button type="button" class="sols-aviso__btn" data-aviso-ver="${esc(a.sol.id)}">Ver</button>
+              ${a.accionLabel ? `<button type="button" class="sols-aviso__btn sols-aviso__btn--ok" data-aviso-listo="${a.tipo}:${esc(a.sol.id)}">${esc(a.accionLabel)}</button>` : ""}
+            </span>
+          </li>`).join("")}
+      </ul>`;
+    $avisos.hidden = false;
+    return avisos.length;
+  }
+
   // ============ Render ============
   function render() {
-    const visibles = solicitudes.filter((s) =>
-      (filtroActivo === "todas" || s.estado === filtroActivo) &&
-      (filtroIntencion === "todas" || s.intencion === filtroIntencion)
-    );
+    const q = normalizar(busqueda.trim());
+
+    const visibles = solicitudes.filter((s) => {
+      if (filtroActivo !== "todas" && s.estado !== filtroActivo) return false;
+      if (filtroIntencion !== "todas" && s.intencion !== filtroIntencion) return false;
+      if (filtroContacto === "mail" && !s.contactada_por_mail) return false;
+      if (filtroContacto === "whatsapp" && !s.contactada_por_whatsapp) return false;
+      if (filtroContacto === "sin" && (s.contactada_por_mail || s.contactada_por_whatsapp)) return false;
+      if (q) {
+        const texto = normalizar([
+          s.nombre, s.email, s.telefono ?? "", s.pais ?? "", s.nombre_menor ?? "",
+          s.email_menor ?? "", s.mensaje ?? "", s.como_nos_encontraste ?? "",
+          s.recordatorio_nota ?? "", ...s.notas.map((n) => n.texto),
+        ].join(" "));
+        if (!texto.includes(q)) return false;
+      }
+      return true;
+    }).sort((a, b) => orden === "recientes"
+      ? b.creado_en.localeCompare(a.creado_en)
+      : a.creado_en.localeCompare(b.creado_en));
+
+    const cantAvisos = renderAvisos();
 
     // Resumen en la bajada.
     const nuevas = solicitudes.filter((s) => s.estado === "nueva").length;
     const total = solicitudes.length;
     $bajada.textContent = total === 0
       ? "Todavía no entró ninguna solicitud."
-      : `${total} en total · ${nuevas} sin revisar`;
+      : `${total} en total · ${nuevas} sin revisar${cantAvisos ? ` · ${cantAvisos} con aviso pendiente` : ""}`;
 
     // Resumen por canal (de dónde vino cada solicitud).
     if (total === 0) {
@@ -259,7 +482,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }
 
     // Contadores en los filtros de estado (ojo: scopeado a #sols-filtros para
-    // no pisar los botones de intención, que comparten la clase visual).
+    // no pisar los botones de intención/contacto, que comparten la clase visual).
     document.querySelectorAll<HTMLButtonElement>("#sols-filtros .sols__filtro").forEach((btn) => {
       const f = btn.dataset.filtro as "todas" | Estado;
       const n = f === "todas" ? total : solicitudes.filter((s) => s.estado === f).length;
@@ -268,7 +491,10 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       btn.classList.toggle("is-activo", f === filtroActivo);
     });
 
-    // Botones de intención: solo marcamos el activo.
+    // Botones de contacto e intención: solo marcamos el activo.
+    document.querySelectorAll<HTMLButtonElement>("[data-fcontacto]").forEach((btn) => {
+      btn.classList.toggle("is-activo", btn.dataset.fcontacto === filtroContacto);
+    });
     document.querySelectorAll<HTMLButtonElement>("[data-intencion]").forEach((btn) => {
       btn.classList.toggle("is-activo", btn.dataset.intencion === filtroIntencion);
     });
@@ -293,7 +519,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <div class="empty-state">
           <span class="empty-state__icono" aria-hidden="true">${iconHtml("inbox", 28)}</span>
           <h3 class="empty-state__titulo">Nada por acá</h3>
-          <p class="empty-state__bajada">No hay solicitudes con este filtro.</p>
+          <p class="empty-state__bajada">${q ? "Ninguna solicitud coincide con la búsqueda." : "No hay solicitudes con este filtro."}</p>
         </div>`;
       return;
     }
@@ -304,11 +530,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   function renderCard(s: Solicitud): string {
     const esInscripcion = s.intencion === "inscripcion";
-    const intLabel = esInscripcion ? "Quiere anotarse" : "Quiere info";
     const waMsg = waLinkMsg(s);
     const prefiereWpp = s.canal_preferido_respuesta === "whatsapp";
+    const prefiereMail = s.canal_preferido_respuesta === "mail";
     const prefiere = prefiereWpp ? "Prefiere WhatsApp"
-      : s.canal_preferido_respuesta === "mail" ? "Prefiere mail" : null;
+      : prefiereMail ? "Prefiere mail" : null;
 
     // Bloque de consentimiento (solo si es inscripción).
     let consentimiento = "";
@@ -345,6 +571,45 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </div>`;
     }
 
+    // Mensaje libre (form "Hablemos").
+    const mensaje = s.mensaje ? `
+      <div class="sol-card__bloque">
+        <span class="sol-card__bloque-titulo">Mensaje</span>
+        <p class="sol-card__mensaje">${esc(s.mensaje)}</p>
+      </div>` : "";
+
+    // Seguimiento: por dónde se la contactó + recordatorio.
+    const recVencido = s.recordatorio_en && new Date(s.recordatorio_en).getTime() <= Date.now();
+    const seguimiento = `
+      <div class="sol-card__bloque">
+        <span class="sol-card__bloque-titulo">Seguimiento</span>
+        <div class="sol-seguimiento">
+          <span class="sol-seguimiento__label">Ya le escribimos por:</span>
+          <button type="button" class="sol-toggle${s.contactada_por_mail ? " is-on" : ""}" data-contacto="mail" data-id="${esc(s.id)}" aria-pressed="${s.contactada_por_mail}">Mail</button>
+          <button type="button" class="sol-toggle${s.contactada_por_whatsapp ? " is-on" : ""}" data-contacto="whatsapp" data-id="${esc(s.id)}" aria-pressed="${s.contactada_por_whatsapp}">WhatsApp</button>
+          ${s.contactada_en ? `<span class="sol-seguimiento__fecha">Primer contacto: ${esc(formatoFechaCorta(s.contactada_en))}</span>` : ""}
+        </div>
+        ${s.recordatorio_en ? `
+          <p class="sol-recordatorio${recVencido ? " sol-recordatorio--vencido" : ""}">
+            ${iconHtml("bell", 14)} Aviso para el ${esc(formatoFecha(s.recordatorio_en.slice(0, 10)))}${s.recordatorio_nota ? `: ${esc(s.recordatorio_nota)}` : ""}
+            <button type="button" class="sol-recordatorio__quitar" data-rec-quitar="${esc(s.id)}">quitar</button>
+          </p>` : ""}
+      </div>`;
+
+    // Notas internas con fecha.
+    const notas = s.notas.length > 0 ? `
+      <div class="sol-card__bloque">
+        <span class="sol-card__bloque-titulo">Notas internas (${s.notas.length})</span>
+        <ul class="sol-notas">
+          ${s.notas.map((n, i) => `
+            <li class="sol-notas__item">
+              ${n.en ? `<span class="sol-notas__fecha">${esc(formatoFechaCorta(n.en))}</span>` : ""}
+              <span class="sol-notas__texto">${esc(n.texto)}</span>
+              <button type="button" class="sol-notas__borrar" data-nota-borrar="${esc(s.id)}:${i}" aria-label="Borrar nota">×</button>
+            </li>`).join("")}
+        </ul>
+      </div>` : "";
+
     // Selector de estado.
     const opcionesEstado = (Object.keys(ESTADOS) as Estado[]).map((e) =>
       `<option value="${e}" ${e === s.estado ? "selected" : ""}>${ESTADOS[e].label}</option>`
@@ -361,7 +626,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
             </div>
           </div>
           <div class="sol-card__tags">
-            <span class="sol-tag sol-tag--${esInscripcion ? "insc" : "info"}">${intLabel}</span>
+            <span class="sol-tag sol-tag--${s.intencion === "inscripcion" ? "insc" : s.intencion === "charla" ? "charla" : "info"}">${INTENCION_LABEL[s.intencion] ?? esc(s.intencion)}</span>
             <span class="sol-tag sol-tag--canal">vía ${esc(CANAL_LABEL[s.canal] ?? s.canal)}</span>
           </div>
         </div>
@@ -377,9 +642,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           </dl>
         </div>
 
+        ${mensaje}
+
         ${consentimiento}
 
-        ${s.notas_admin ? `<p class="sol-card__nota"><strong>Nota:</strong> ${esc(s.notas_admin)}</p>` : ""}
+        ${seguimiento}
+
+        ${notas}
 
         <div class="sol-card__acciones">
           <label class="sol-card__estado">
@@ -388,9 +657,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
           </label>
           <div class="sol-card__botones">
             ${waMsg ? `<a class="sol-wpp${prefiereWpp ? " sol-wpp--destacado" : ""}" href="${esc(waMsg)}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ""}
-            <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">
-              ${s.notas_admin ? "Editar nota" : "Agregar nota"}
-            </button>
+            <a class="sol-mail${prefiereMail ? " sol-mail--destacado" : ""}" href="${esc(mailtoMsg(s))}">Escribir por mail</a>
+            <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">Agregar nota</button>
+            <button type="button" class="boton-ghost-mini" data-recordatorio="${esc(s.id)}">${s.recordatorio_en ? "Cambiar aviso" : "Crear aviso"}</button>
             <button type="button" class="sol-eliminar" data-eliminar="${esc(s.id)}">Eliminar</button>
           </div>
         </div>
@@ -401,13 +670,49 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     return `<div class="sol-fila"><dt>${esc(label)}</dt><dd>${valorHTML}</dd></div>`;
   }
 
+  // ============ Persistencia (helper común de updates) ============
+  // Aplica el update en Supabase y, si sale bien, copia los cambios al
+  // objeto local y re-renderiza. Devuelve true/false según resultado.
+  async function actualizarSolicitud(id: string, cambios: Partial<Solicitud>): Promise<boolean> {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol) return false;
+
+    const { error } = await supabase
+      .from("solicitudes_inscripcion")
+      .update(cambios)
+      .eq("id", id);
+
+    if (error) {
+      showToast(traducirError(error), "error");
+      return false;
+    }
+
+    Object.assign(sol, cambios);
+    return true;
+  }
+
   // ============ Acciones ============
   function enchufarAcciones() {
     document.querySelectorAll<HTMLSelectElement>("[data-estado]").forEach((sel) => {
       sel.addEventListener("change", () => cambiarEstado(sel.dataset.estado!, sel.value as Estado, sel));
     });
     document.querySelectorAll<HTMLButtonElement>("[data-nota]").forEach((btn) => {
-      btn.addEventListener("click", () => editarNota(btn.dataset.nota!));
+      btn.addEventListener("click", () => agregarNota(btn.dataset.nota!));
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-nota-borrar]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const [id, idx] = btn.dataset.notaBorrar!.split(":");
+        borrarNota(id, parseInt(idx, 10));
+      });
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-contacto]").forEach((btn) => {
+      btn.addEventListener("click", () => toggleContacto(btn.dataset.id!, btn.dataset.contacto as "mail" | "whatsapp"));
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-recordatorio]").forEach((btn) => {
+      btn.addEventListener("click", () => editarRecordatorio(btn.dataset.recordatorio!));
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-rec-quitar]").forEach((btn) => {
+      btn.addEventListener("click", () => quitarRecordatorio(btn.dataset.recQuitar!));
     });
     document.querySelectorAll<HTMLButtonElement>("[data-eliminar]").forEach((btn) => {
       btn.addEventListener("click", () => eliminarSolicitud(btn.dataset.eliminar!, btn));
@@ -456,62 +761,184 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       if (!ok) { sel.value = sol.estado; return; }
     }
 
-    sel.disabled = true;
-    const { error } = await supabase
-      .from("solicitudes_inscripcion")
-      .update({ estado: nuevo })
-      .eq("id", id);
-    sel.disabled = false;
-
-    if (error) {
-      showToast(traducirError(error), "error");
-      sel.value = sol.estado;
-      return;
+    // Al pasar a "contactada" por primera vez, registramos cuándo
+    // (es la base del aviso de seguimiento a las 48 hs).
+    const cambios: Partial<Solicitud> = { estado: nuevo };
+    if (nuevo === "contactada" && !sol.contactada_en) {
+      cambios.contactada_en = new Date().toISOString();
     }
 
-    sol.estado = nuevo;
+    sel.disabled = true;
+    const ok = await actualizarSolicitud(id, cambios);
+    sel.disabled = false;
+
+    if (!ok) { sel.value = sol.estado; return; }
     showToast(`Marcada como ${ESTADOS[nuevo].label.toLowerCase()}.`);
     render();
   }
 
-  async function editarNota(id: string) {
+  // Marca/desmarca por dónde se contactó a la persona. Si es el primer
+  // contacto y la solicitud estaba "nueva", la pasamos a "contactada" sola.
+  async function toggleContacto(id: string, canal: "mail" | "whatsapp") {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol) return;
+
+    const campo = canal === "mail" ? "contactada_por_mail" : "contactada_por_whatsapp";
+    const nuevoValor = !sol[campo];
+
+    const cambios: Partial<Solicitud> = { [campo]: nuevoValor };
+    if (nuevoValor && !sol.contactada_en) cambios.contactada_en = new Date().toISOString();
+    if (nuevoValor && sol.estado === "nueva") cambios.estado = "contactada";
+
+    if (!(await actualizarSolicitud(id, cambios))) return;
+
+    if (nuevoValor && cambios.estado === "contactada") {
+      showToast(`Contacto por ${canal === "mail" ? "mail" : "WhatsApp"} registrado. Pasó a "contactada".`);
+    } else {
+      showToast(nuevoValor ? `Contacto por ${canal === "mail" ? "mail" : "WhatsApp"} registrado.` : "Contacto desmarcado.");
+    }
+    render();
+  }
+
+  async function agregarNota(id: string) {
     const sol = solicitudes.find((s) => s.id === id);
     if (!sol) return;
 
     const result = await formModal({
-      titulo: "Nota interna",
-      mensaje: `Sobre la solicitud de ${sol.nombre}. Solo la ven los admins.`,
+      titulo: "Agregar nota",
+      mensaje: `Sobre la solicitud de ${sol.nombre}. Solo la ven los admins. Queda guardada con fecha y hora.`,
       campos: [
         {
           name: "nota",
           label: "Nota",
           type: "textarea",
           rows: 4,
-          value: sol.notas_admin ?? "",
-          placeholder: "Ej: la llamé el 7/6, coordina pago para la semana que viene.",
+          required: true,
+          placeholder: "Ej: la llamé hoy, coordina pago para la semana que viene.",
         },
       ],
-      confirmLabel: "Guardar",
+      confirmLabel: "Guardar nota",
     });
     if (result === null) return;
 
-    const nota = result.nota.trim() || null;
-    const { error } = await supabase
-      .from("solicitudes_inscripcion")
-      .update({ notas_admin: nota })
-      .eq("id", id);
+    const texto = result.nota.trim();
+    if (!texto) return;
 
-    if (error) {
-      showToast(traducirError(error), "error");
-      return;
-    }
-
-    sol.notas_admin = nota;
+    const notas = [...sol.notas, { en: new Date().toISOString(), texto }];
+    if (!(await actualizarSolicitud(id, { notas }))) return;
     showToast("Nota guardada.");
     render();
   }
 
-  // ============ Filtros ============
+  async function borrarNota(id: string, idx: number) {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol || !sol.notas[idx]) return;
+
+    const ok = await confirmModal({
+      titulo: "Borrar nota",
+      mensaje: `¿Borrar esta nota? "${sol.notas[idx].texto.slice(0, 80)}${sol.notas[idx].texto.length > 80 ? "…" : ""}"`,
+      confirmLabel: "Borrar",
+      danger: true,
+    });
+    if (!ok) return;
+
+    const notas = sol.notas.filter((_, i) => i !== idx);
+    if (!(await actualizarSolicitud(id, { notas }))) return;
+    showToast("Nota borrada.");
+    render();
+  }
+
+  async function editarRecordatorio(id: string) {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol) return;
+
+    const result = await formModal({
+      titulo: sol.recordatorio_en ? "Cambiar aviso" : "Crear aviso",
+      mensaje: `El panel te va a avisar ese día, arriba de todo, sobre la solicitud de ${sol.nombre}.`,
+      campos: [
+        {
+          name: "fecha",
+          label: "Avisar el día",
+          type: "date",
+          required: true,
+          value: sol.recordatorio_en ? sol.recordatorio_en.slice(0, 10) : "",
+        },
+        {
+          name: "nota",
+          label: "Qué hay que hacer",
+          value: sol.recordatorio_nota ?? "",
+          placeholder: "Ej: escribirle para ofrecerle la charla informativa.",
+        },
+      ],
+      confirmLabel: "Guardar aviso",
+    });
+    if (result === null) return;
+
+    const fecha = result.fecha.trim();
+    if (!fecha) { showToast("Falta la fecha del aviso.", "error"); return; }
+
+    // Guardamos el aviso a las 00:00 hora local de ese día: el panel lo
+    // muestra como pendiente desde esa mañana.
+    const cambios: Partial<Solicitud> = {
+      recordatorio_en: new Date(fecha + "T00:00:00").toISOString(),
+      recordatorio_nota: result.nota.trim() || null,
+    };
+    if (!(await actualizarSolicitud(id, cambios))) return;
+    showToast("Aviso guardado.");
+    render();
+  }
+
+  async function quitarRecordatorio(id: string) {
+    if (!(await actualizarSolicitud(id, { recordatorio_en: null, recordatorio_nota: null }))) return;
+    showToast("Aviso quitado.");
+    render();
+  }
+
+  // Marca el seguimiento de 48 hs como hecho (apaga el aviso) y deja
+  // una nota con fecha para que quede registro de quién/cuándo.
+  async function marcarSeguimiento(id: string) {
+    const sol = solicitudes.find((s) => s.id === id);
+    if (!sol) return;
+
+    const ahora = new Date().toISOString();
+    const notas = [...sol.notas, { en: ahora, texto: "Se le envió mensaje de seguimiento." }];
+    if (!(await actualizarSolicitud(id, { seguimiento_hecho_en: ahora, notas }))) return;
+    showToast("Seguimiento registrado.");
+    render();
+  }
+
+  // ============ Avisos: Ver / Listo ============
+  $avisos.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+
+    const verBtn = target.closest<HTMLButtonElement>("[data-aviso-ver]");
+    if (verBtn) {
+      // Limpiamos filtros y búsqueda para garantizar que la card esté visible.
+      filtroActivo = "todas";
+      filtroIntencion = "todas";
+      filtroContacto = "todas";
+      busqueda = "";
+      $buscar.value = "";
+      render();
+      const card = document.querySelector<HTMLElement>(`[data-sol-id="${verBtn.dataset.avisoVer}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "center" });
+        card.classList.add("sol-card--destacada");
+        setTimeout(() => card.classList.remove("sol-card--destacada"), 2200);
+      }
+      return;
+    }
+
+    const listoBtn = target.closest<HTMLButtonElement>("[data-aviso-listo]");
+    if (listoBtn) {
+      const [tipo, id] = listoBtn.dataset.avisoListo!.split(":");
+      listoBtn.disabled = true;
+      if (tipo === "recordatorio") quitarRecordatorio(id);
+      else if (tipo === "seguimiento") marcarSeguimiento(id);
+    }
+  });
+
+  // ============ Filtros, búsqueda y orden ============
   $filtros.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".sols__filtro");
     if (!btn) return;
@@ -519,10 +946,27 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     render();
   });
 
+  $fcontacto.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-fcontacto]");
+    if (!btn) return;
+    filtroContacto = btn.dataset.fcontacto as typeof filtroContacto;
+    render();
+  });
+
   $envio.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-intencion]");
     if (!btn) return;
-    filtroIntencion = btn.dataset.intencion as "todas" | "info" | "inscripcion";
+    filtroIntencion = btn.dataset.intencion as "todas" | Intencion;
+    render();
+  });
+
+  $buscar.addEventListener("input", () => {
+    busqueda = $buscar.value;
+    render();
+  });
+
+  $orden.addEventListener("change", () => {
+    orden = $orden.value as "recientes" | "antiguas";
     render();
   });
 
@@ -584,6 +1028,90 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   .sols__loader { padding: 1.5rem 0; }
   .sols__error { color: var(--color-accent); padding: 1rem 0; }
 
+  /* ===== Avisos (necesitan atención) ===== */
+  .sols__avisos {
+    background: rgba(216, 85, 42, 0.06);
+    border: 1px solid rgba(216, 85, 42, 0.35);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.2rem;
+    margin-bottom: 1.6rem;
+  }
+  .sols__avisos-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 0 0.7rem;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+  .sols__avisos-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  :global(.sols-aviso) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    font-size: 0.9rem;
+    color: var(--color-ink);
+    line-height: 1.45;
+  }
+  :global(.sols-aviso__acciones) { display: flex; gap: 0.4rem; flex-shrink: 0; }
+  :global(.sols-aviso__btn) {
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--color-line);
+    border-radius: 99px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  :global(.sols-aviso__btn:hover) { border-color: var(--color-accent); color: var(--color-ink); }
+  :global(.sols-aviso__btn--ok) { border-color: #2e8b57; color: #2e8b57; }
+  :global(.sols-aviso__btn--ok:hover) { background: rgba(46, 139, 87, 0.08); border-color: #2e8b57; color: #226844; }
+
+  /* ===== Buscador + orden ===== */
+  .sols__buscador {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+  }
+  .sols__buscador input[type="search"] {
+    flex: 1;
+    min-width: 220px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--color-ink);
+  }
+  .sols__buscador input[type="search"]:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+  .sols__buscador select {
+    font-family: inherit;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+  }
+
   /* ===== Barra de envío manual ===== */
   .sols__envio {
     background: #fff;
@@ -638,8 +1166,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   .sols__filtros {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
-    margin-bottom: 1.8rem;
+    margin-bottom: 1.2rem;
+  }
+  .sols__filtros--contacto { margin-bottom: 1.8rem; }
+  .sols__filtros-label {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+    margin-right: 0.2rem;
   }
   .sols__filtro {
     padding: 0.45rem 0.95rem;
@@ -683,6 +1218,13 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sol-card--convertida) { border-left-color: #2e8b57; }
   :global(.sol-card--descartada) { opacity: 0.62; }
 
+  /* Flash al llegar desde un aviso ("Ver"). */
+  :global(.sol-card--destacada) {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(216, 85, 42, 0.25);
+    transition: box-shadow 0.4s ease;
+  }
+
   :global(.sol-card__head) {
     display: flex;
     justify-content: space-between;
@@ -716,6 +1258,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
   :global(.sol-tag--insc) { background: rgba(216, 85, 42, 0.12); color: var(--color-accent); }
   :global(.sol-tag--info) { background: rgba(36, 58, 130, 0.1); color: var(--color-deep); }
+  :global(.sol-tag--charla) { background: rgba(46, 139, 87, 0.12); color: #226844; }
   :global(.sol-tag--canal) { background: var(--color-bg); color: var(--color-ink-soft); }
 
   /* Bloques de datos */
@@ -742,16 +1285,109 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sol-fila dd) { margin: 0; color: var(--color-ink); word-break: break-word; }
   :global(.sol-fila a) { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
 
-  :global(.sol-card__nota) {
+  /* Mensaje libre del form "Hablemos" */
+  :global(.sol-card__mensaje) {
     margin: 0;
     padding: 0.8rem 1rem;
     background: var(--color-surface);
+    border-left: 3px solid var(--color-gold);
     border-radius: var(--radius-sm);
-    font-size: 0.9rem;
+    font-size: 0.92rem;
+    line-height: 1.55;
+    color: var(--color-ink);
+    white-space: pre-line;
+  }
+
+  /* Seguimiento: toggles de contacto + recordatorio */
+  :global(.sol-seguimiento) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  :global(.sol-seguimiento__label) { font-size: 0.85rem; color: var(--color-ink-soft); }
+  :global(.sol-seguimiento__fecha) { font-size: 0.8rem; color: var(--color-ink-muted); margin-left: 0.3rem; }
+  :global(.sol-toggle) {
+    padding: 0.35rem 0.85rem;
+    border: 1px solid var(--color-line);
+    border-radius: 99px;
+    background: #fff;
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  :global(.sol-toggle:hover) { border-color: var(--color-deep); color: var(--color-ink); }
+  :global(.sol-toggle.is-on) {
+    background: var(--color-deep);
+    border-color: var(--color-deep);
+    color: #fff;
+  }
+  :global(.sol-toggle.is-on::before) { content: "✓ "; }
+
+  :global(.sol-recordatorio) {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin: 0.7rem 0 0;
+    font-size: 0.85rem;
+    color: var(--color-ink-soft);
+  }
+  :global(.sol-recordatorio--vencido) { color: var(--color-accent); font-weight: 500; }
+  :global(.sol-recordatorio__quitar) {
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    padding: 0;
+  }
+  :global(.sol-recordatorio__quitar:hover) { color: var(--color-accent); }
+
+  /* Notas internas con fecha */
+  :global(.sol-notas) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  :global(.sol-notas__item) {
+    display: flex;
+    align-items: baseline;
+    gap: 0.55rem;
+    padding: 0.55rem 0.8rem;
+    background: var(--color-surface);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
     line-height: 1.5;
     color: var(--color-ink);
   }
-  :global(.sol-card__nota strong) { color: var(--color-ink-soft); }
+  :global(.sol-notas__fecha) {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+  :global(.sol-notas__texto) { flex: 1; word-break: break-word; }
+  :global(.sol-notas__borrar) {
+    flex-shrink: 0;
+    border: 0;
+    background: none;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    padding: 0 0.15rem;
+  }
+  :global(.sol-notas__borrar:hover) { color: var(--color-accent); }
 
   /* Acciones */
   :global(.sol-card__acciones) {
@@ -823,6 +1459,25 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sol-wpp:hover) { background: rgba(31, 133, 40, 0.08); }
   :global(.sol-wpp--destacado) { background: #1F8528; color: #fff; border-color: #1F8528; }
   :global(.sol-wpp--destacado:hover) { background: #186A20; color: #fff; }
+
+  /* Botón "Escribir por mail": misma lógica con el azul de marca. */
+  :global(.sol-mail) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 0.95rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-deep);
+    color: var(--color-deep);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  :global(.sol-mail:hover) { background: rgba(36, 58, 130, 0.07); }
+  :global(.sol-mail--destacado) { background: var(--color-deep); color: #fff; }
+  :global(.sol-mail--destacado:hover) { background: #1b2c63; color: #fff; }
 
   @media (max-width: 540px) {
     :global(.sol-fila) { grid-template-columns: 1fr; gap: 0.1rem; }
