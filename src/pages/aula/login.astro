@@ -542,14 +542,15 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   }
 
   /* Marca de agua del logo completo, asomando por la derecha (como en
-     el hero de la home). Se queda también en mobile, más chica. */
+     el hero de la home). Se queda también en mobile, más chica.
+     Sin rotación: el logo va derecho (pedido 2026-06-12). */
   .login__marca {
     position: absolute;
     top: 50%;
     right: -8%;
     width: clamp(280px, 34vw, 480px);
     height: auto;
-    transform: translateY(-50%) rotate(6deg);
+    transform: translateY(-50%);
     color: var(--color-ink);
     opacity: 0.05;
     pointer-events: none;

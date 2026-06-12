@@ -99,14 +99,15 @@
   }
 
   /* Marca de agua del logo: gigante, casi invisible, asomando por la
-     derecha. Da identidad sin competir con el texto. */
+     derecha. Da identidad sin competir con el texto. Sin rotación:
+     el logo va derecho (pedido 2026-06-12). */
   .hero__marca {
     position: absolute;
     top: 50%;
     right: -6%;
     width: clamp(320px, 38vw, 540px);
     height: auto;
-    transform: translateY(-50%) rotate(6deg);
+    transform: translateY(-50%);
     color: var(--color-ink);
     opacity: 0.045;
     pointer-events: none;
