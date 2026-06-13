@@ -10,6 +10,8 @@
   Cuando integremos Supabase, ese link va a llamar al signOut() de verdad.
 */
 
+import Icon from "./Icon.astro";
+
 interface Props {
   /** Define qué links mostrar. Default: "alumno". */
   rol?: "alumno" | "profe" | "admin";
@@ -17,11 +19,6 @@ interface Props {
 
 const { rol = "alumno" } = Astro.props;
 const ruta = Astro.url.pathname;
-
-// Marcamos el link activo según la ruta actual.
-function activo(...targets: string[]) {
-  return targets.some((t) => ruta.startsWith(t)) ? "is-active" : "";
-}
 
 // Definimos los links según el rol.
 const homePorRol = {
@@ -39,27 +36,42 @@ const etiquetaPorRol = {
 // "Mi perfil" ya no va como link de texto en desktop: lo reemplaza el
 // avatar circular de la derecha (ver .navaula__perfil). En el panel
 // mobile sigue como item de texto, agregado a mano abajo.
+// El campo `icon` se usa solo en el panel mobile (le da el aire de
+// dashboard); en desktop los links siguen siendo solo texto.
 const linksPorRol = {
   alumno: [
-    { href: "/aula/mis-cursos", label: "Mis cursos", match: ["/aula/mis-cursos", "/aula/curso"] },
+    { href: "/aula/mis-cursos", label: "Mis cursos", icon: "book-open", match: ["/aula/mis-cursos", "/aula/curso"] },
   ],
   profe: [
-    { href: "/aula/profe", label: "Dashboard", match: ["/aula/profe"] },
-    { href: "/aula/profe/entregas", label: "Entregas", match: ["/aula/profe/entregas"] },
+    { href: "/aula/profe", label: "Dashboard", icon: "layout-dashboard", match: ["/aula/profe"] },
+    { href: "/aula/profe/entregas", label: "Entregas", icon: "file-text", match: ["/aula/profe/entregas"] },
   ],
   admin: [
-    { href: "/aula/admin", label: "Dashboard", match: ["/aula/admin"] },
-    { href: "/aula/admin/cursos", label: "Cursos", match: ["/aula/admin/cursos"] },
-    { href: "/aula/admin/solicitudes", label: "Solicitudes", match: ["/aula/admin/solicitudes"] },
-    { href: "/aula/admin/transferencias", label: "Pagos", match: ["/aula/admin/transferencias"] },
-    { href: "/aula/admin/usuarios", label: "Usuarios", match: ["/aula/admin/usuarios"] },
-    { href: "/aula/admin/configuracion", label: "Ajustes", match: ["/aula/admin/configuracion"] },
+    { href: "/aula/admin", label: "Dashboard", icon: "layout-dashboard", match: ["/aula/admin"] },
+    { href: "/aula/admin/cursos", label: "Cursos", icon: "book-open", match: ["/aula/admin/cursos"] },
+    { href: "/aula/admin/solicitudes", label: "Solicitudes", icon: "inbox", match: ["/aula/admin/solicitudes"] },
+    { href: "/aula/admin/transferencias", label: "Pagos", icon: "receipt", match: ["/aula/admin/transferencias"] },
+    { href: "/aula/admin/usuarios", label: "Usuarios", icon: "users", match: ["/aula/admin/usuarios"] },
+    { href: "/aula/admin/configuracion", label: "Ajustes", icon: "settings", match: ["/aula/admin/configuracion"] },
   ],
-};
+} as const;
 
 const links = linksPorRol[rol];
 const home = homePorRol[rol];
 const etiqueta = etiquetaPorRol[rol];
+
+// Link activo: gana el match MÁS específico (más largo) que prefija la
+// ruta actual. Sin esto, "Dashboard" (match /aula/admin) se marcaba activo
+// en TODAS las subrutas de admin, además del item real. Incluimos /aula/perfil
+// porque "Mi perfil" comparte el patrón.
+const matchesDelRol: string[] = [...links.flatMap((l) => [...l.match]), "/aula/perfil"];
+const matchActivo: string | null = matchesDelRol
+  .filter((t) => ruta === t || ruta.startsWith(t + "/"))
+  .sort((a, b) => b.length - a.length)[0] ?? null;
+
+function activo(...targets: string[]) {
+  return matchActivo && targets.includes(matchActivo) ? "is-active" : "";
+}
 ---
 
 <header class={`navaula navaula--${rol}`} data-rol={rol}>
@@ -124,14 +136,14 @@ const etiqueta = etiquetaPorRol[rol];
   aria-hidden="true"
 >
   <div class="navaula__panel-head">
-    <span class="navaula__panel-brand">Aula</span>
+    <span class="navaula__panel-eyebrow">{etiqueta}</span>
     <button
       class="navaula__close"
       type="button"
       aria-label="Cerrar menú"
       data-aula-toggle
     >
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M6 6 L18 18 M18 6 L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" />
       </svg>
     </button>
@@ -139,10 +151,19 @@ const etiqueta = etiquetaPorRol[rol];
 
   <nav class="navaula__panel-links" aria-label="Navegación mobile del aula">
     {links.map((l) => (
-      <a href={l.href} data-aula-link>{l.label}</a>
+      <a href={l.href} data-aula-link class:list={["navaula__panel-link", activo(...l.match)]}>
+        <Icon name={l.icon} size={19} class="navaula__panel-icon" />
+        <span>{l.label}</span>
+      </a>
     ))}
-    <a href="/aula/perfil" data-aula-link>Mi perfil</a>
-    <a href="/aula/login" data-aula-link data-aula-logout class="navaula__panel-logout">Cerrar sesión</a>
+    <a href="/aula/perfil" data-aula-link class:list={["navaula__panel-link", activo("/aula/perfil")]}>
+      <Icon name="user" size={19} class="navaula__panel-icon" />
+      <span>Mi perfil</span>
+    </a>
+    <a href="/aula/login" data-aula-link data-aula-logout class="navaula__panel-link navaula__panel-logout">
+      <Icon name="log-out" size={19} class="navaula__panel-icon" />
+      <span>Cerrar sesión</span>
+    </a>
   </nav>
 </aside>
 
@@ -342,53 +363,110 @@ const etiqueta = etiquetaPorRol[rol];
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.1rem 1.5rem;
+    padding: 1.15rem 1.3rem;
     border-bottom: 1px solid var(--color-line);
   }
 
-  .navaula__panel-brand {
-    font-family: var(--font-serif);
-    font-size: 1rem;
-    color: var(--color-ink);
+  .navaula__panel-eyebrow {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
   }
 
   .navaula__close {
     display: inline-grid;
     place-items: center;
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     background: transparent;
     border: 0;
     cursor: pointer;
-    color: var(--color-ink);
+    color: var(--color-ink-soft);
     border-radius: var(--radius-sm);
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .navaula__close:hover { background: var(--color-surface); }
+  .navaula__close:hover { background: var(--color-surface); color: var(--color-ink); }
 
+  /* ===== Lista de items (estilo dashboard moderno) ===== */
   .navaula__panel-links {
     display: flex;
     flex-direction: column;
-    padding: 1.5rem 1.5rem 2rem;
-    gap: 0.25rem;
+    flex: 1;
+    padding: 1rem 0.85rem 1.3rem;
+    gap: 0.15rem;
   }
-  .navaula__panel-links a {
-    font-family: var(--font-serif);
-    font-size: 1.3rem;
-    color: var(--color-ink);
-    padding: 0.85rem 0;
-    border-bottom: 1px solid var(--color-line);
-  }
-  .navaula__panel-logout {
-    margin-top: 1.2rem;
-    border-bottom: 0 !important;
-    background: var(--color-ink);
-    color: var(--color-bg) !important;
-    text-align: center;
+  .navaula__panel-link {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.72rem 0.85rem;
     border-radius: var(--radius-sm);
-    padding: 0.95rem 1rem !important;
-    font-family: var(--font-sans) !important;
-    font-size: 1rem !important;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-ink-soft);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .navaula__panel-link :global(.navaula__panel-icon) {
+    flex-shrink: 0;
+    color: var(--color-ink-muted);
+    transition: color 0.15s ease, transform 0.15s ease;
+  }
+  .navaula__panel-link:hover {
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .navaula__panel-link:hover :global(.navaula__panel-icon) { color: var(--color-ink-soft); }
+  /* Página activa: pastilla coral tenue + barra a la izquierda. */
+  .navaula__panel-link.is-active {
+    background: rgba(216, 85, 42, 0.1);
+    color: var(--color-accent);
+    box-shadow: inset 3px 0 0 var(--color-accent);
+  }
+  .navaula__panel-link.is-active :global(.navaula__panel-icon) { color: var(--color-accent); }
+
+  /* "Cerrar sesión": empujado al fondo, separado por una línea. */
+  .navaula__panel-logout {
+    margin-top: auto;
+    position: relative;
+    color: var(--color-ink-muted);
+  }
+  .navaula__panel-logout::before {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    top: -0.5rem;
+    border-top: 1px solid var(--color-line);
+  }
+  .navaula__panel-logout:hover {
+    background: rgba(216, 85, 42, 0.08);
+    color: var(--color-accent);
+  }
+  .navaula__panel-logout:hover :global(.navaula__panel-icon) { color: var(--color-accent); }
+
+  /* Entrada escalonada de los items al abrir el panel. Clave: el estado
+     base es VISIBLE (opacity:1); la animación solo agrega la entrada con
+     fill `both`. Así, si por lo que sea no corre, el menú igual se ve.
+     Envuelto en no-preference: con reduced-motion no hay animación. */
+  @media (prefers-reduced-motion: no-preference) {
+    .navaula__panel[data-open="true"] .navaula__panel-link {
+      animation: navaula-item 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(1) { animation-delay: 0.04s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(2) { animation-delay: 0.08s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(3) { animation-delay: 0.12s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(4) { animation-delay: 0.16s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(5) { animation-delay: 0.20s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(6) { animation-delay: 0.24s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(7) { animation-delay: 0.28s; }
+    .navaula__panel[data-open="true"] .navaula__panel-link:nth-child(8) { animation-delay: 0.32s; }
+  }
+  @keyframes navaula-item {
+    from { opacity: 0; transform: translateX(10px); }
+    to   { opacity: 1; transform: none; }
   }
 
   /* ===== Breakpoint mobile ===== */
