@@ -202,8 +202,9 @@
   }
 
   .contacto__head {
-    max-width: 720px;
-    margin-bottom: 3rem;
+    max-width: 640px;
+    margin: 0 auto 2.5rem;
+    text-align: center;
   }
   .contacto__sub {
     margin: 1rem 0 0;
@@ -211,13 +212,16 @@
     font-size: 1.1rem;
   }
 
+  /* Las dos cards apiladas en una sola columna centrada (antes eran
+     dos columnas, pero al sumarle el form a "Hablemos" la card derecha
+     quedó mucho más alta que la izquierda y se veía desbalanceado).
+     Como cierre de la landing, centrado queda más prolijo. */
   .contacto__grid {
-    display: grid;
-    grid-template-columns: 1.4fr 1fr;
-    gap: 2rem;
-  }
-  @media (max-width: 880px) {
-    .contacto__grid { grid-template-columns: 1fr; }
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 600px;
+    margin: 0 auto;
   }
 
   .contacto__card {
