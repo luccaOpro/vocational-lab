@@ -25,7 +25,10 @@ export type IconName =
   | "target"
   | "sprout"
   | "paperclip"
-  | "bell";
+  | "bell"
+  | "mail"
+  | "message-circle"
+  | "filter";
 
 export const ICON_PATHS: Record<IconName, string> = {
   "book-open":
@@ -50,6 +53,12 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 17.99 8.76L9.41 17.34a2 2 0 0 1-2.83-2.83l8.49-8.48"/>',
   bell:
     '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  mail:
+    '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  "message-circle":
+    '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
+  filter:
+    '<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>',
 };
 
 /**

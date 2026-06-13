@@ -11,15 +11,21 @@
     · Avisos arriba de todo: solicitudes nuevas sin responder,
       seguimientos de 48 hs pendientes y recordatorios vencidos.
     · Buscador (nombre, mail, teléfono, mensaje, notas) + orden.
-    · Filtros por estado, por intención y por canal de contacto
-      (¿ya le escribimos por mail? ¿por WhatsApp?).
+    · Filtros por estado, intención y canal de contacto.
     · Por cada solicitud: marcar por dónde se la contactó, notas
-      internas con fecha, recordatorio manual ("avisarme el día X"),
-      WhatsApp y mail pre-redactados, copiar mails para CCO.
+      internas con fecha, recordatorio manual, WhatsApp y mail
+      pre-redactados, copiar mails para CCO.
+
+  DISEÑO (rework 2026-06-12): bandeja tipo inbox — cada solicitud es
+  una fila compacta (avatar, nombre, chips, hace cuánto entró) y el
+  detalle completo se abre al hacer click. Lista paginada de a 10.
+
+  MODO DEMO (solo en `npm run dev`): /aula/admin/solicitudes?demo=1
+  carga datos de ejemplo sin tocar Supabase ni pedir login, para
+  trabajar el diseño. El bloque entero desaparece del build real.
 
   Las reglas de seguridad (RLS) están en docs/sql/04. Las columnas
-  de seguimiento (contacto, recordatorios, notas con fecha, mensaje
-  del form "Hablemos") las agrega docs/sql/15.
+  de seguimiento las agrega docs/sql/15.
 */
 
 import AulaLayout from "../../../layouts/AulaLayout.astro";
@@ -41,54 +47,72 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       {/* Avisos: lo que necesita acción hoy (se arma por JS) */}
       <div class="sols__avisos" id="sols-avisos" hidden></div>
 
-      {/* Buscador + orden */}
-      <div class="sols__buscador" id="sols-buscador" hidden>
-        <input
-          type="search"
-          id="sols-buscar"
-          placeholder="Buscar por nombre, mail, teléfono, mensaje o nota…"
-          aria-label="Buscar solicitudes"
-        />
-        <select id="sols-orden" aria-label="Ordenar solicitudes">
-          <option value="recientes">Más recientes primero</option>
-          <option value="antiguas">Más antiguas primero</option>
-        </select>
-      </div>
-
-      {/* Filtros por estado */}
-      <div class="sols__filtros" id="sols-filtros" role="tablist" aria-label="Filtrar por estado" hidden>
-        <button type="button" class="sols__filtro is-activo" data-filtro="todas">Todas</button>
-        <button type="button" class="sols__filtro" data-filtro="nueva">Nuevas</button>
-        <button type="button" class="sols__filtro" data-filtro="contactada">Contactadas</button>
-        <button type="button" class="sols__filtro" data-filtro="convertida">Convertidas</button>
-        <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
-      </div>
-
-      {/* Filtro por canal de contacto (qué se usó para escribirles) */}
-      <div class="sols__filtros sols__filtros--contacto" id="sols-fcontacto" role="group" aria-label="Filtrar por canal de contacto" hidden>
-        <span class="sols__filtros-label">Contacto:</span>
-        <button type="button" class="sols__filtro is-activo" data-fcontacto="todas">Todas</button>
-        <button type="button" class="sols__filtro" data-fcontacto="mail">Les escribimos por mail</button>
-        <button type="button" class="sols__filtro" data-fcontacto="whatsapp">Les escribimos por WhatsApp</button>
-        <button type="button" class="sols__filtro" data-fcontacto="sin">Sin contactar</button>
-      </div>
-
-      {/* Envío manual: filtro por intención + copiar los mails de lo visible.
-          Pensado para que Julia/Laura armen un mail grupal en su correo:
-          filtran acá, copian las direcciones y las pegan en CCO. */}
-      <div class="sols__envio" id="sols-envio" hidden>
-        <div class="sols__filtros sols__envio-filtros" role="group" aria-label="Filtrar por intención">
-          <button type="button" class="sols__filtro is-activo" data-intencion="todas">Todas las intenciones</button>
-          <button type="button" class="sols__filtro" data-intencion="info">Quieren info</button>
-          <button type="button" class="sols__filtro" data-intencion="inscripcion">Quieren anotarse</button>
-          <button type="button" class="sols__filtro" data-intencion="charla">Quieren hablar</button>
+      {/* Toolbar: búsqueda + orden siempre a la vista; los filtros viven
+          en un panel desplegable detrás del botón "Filtros" (con contador
+          de filtros activos). */}
+      <div class="sols__toolbar" id="sols-toolbar" hidden>
+        <div class="sols__toolbar-fila sols__toolbar-fila--buscar">
+          <input
+            type="search"
+            id="sols-buscar"
+            placeholder="Buscar por nombre, mail, teléfono, mensaje o nota…"
+            aria-label="Buscar solicitudes"
+          />
+          <select id="sols-orden" aria-label="Ordenar solicitudes">
+            <option value="recientes">Más recientes primero</option>
+            <option value="antiguas">Más antiguas primero</option>
+          </select>
+          <button type="button" class="sols__filtros-toggle" id="sols-filtros-toggle" aria-expanded="false" aria-controls="sols-filtros-panel">
+            <span class="sols__filtros-toggle-icono" id="sols-filtros-icono" aria-hidden="true"></span>
+            Filtros
+            <span class="sols__filtros-badge" id="sols-filtros-badge" hidden></span>
+            <svg class="sols__filtros-flecha" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </button>
         </div>
-        <div class="sols__envio-acciones">
-          <span class="sols__envio-resumen" id="envio-resumen"></span>
-          <button type="button" class="sols__envio-btn" id="envio-copiar">Copiar mails</button>
-          <a class="sols__envio-btn sols__envio-btn--sec" id="envio-mailto" href="#" hidden>Abrir en el correo (CCO)</a>
+
+        <div class="sols__filtros-panel" id="sols-filtros-panel" hidden>
+          <div class="sols__toolbar-fila" id="sols-filtros" role="group" aria-label="Filtrar por estado">
+            <span class="sols__toolbar-label">Estado</span>
+            <button type="button" class="sols__filtro is-activo" data-filtro="todas">Todas</button>
+            <button type="button" class="sols__filtro" data-filtro="nueva">Nuevas</button>
+            <button type="button" class="sols__filtro" data-filtro="contactada">Contactadas</button>
+            <button type="button" class="sols__filtro" data-filtro="convertida">Convertidas</button>
+            <button type="button" class="sols__filtro" data-filtro="descartada">Descartadas</button>
+          </div>
+
+          <div class="sols__toolbar-fila" id="sols-envio" role="group" aria-label="Filtrar por intención">
+            <span class="sols__toolbar-label">Intención</span>
+            <button type="button" class="sols__filtro is-activo" data-intencion="todas">Todas</button>
+            <button type="button" class="sols__filtro" data-intencion="info">Quieren info</button>
+            <button type="button" class="sols__filtro" data-intencion="inscripcion">Quieren anotarse</button>
+            <button type="button" class="sols__filtro" data-intencion="charla">Quieren hablar</button>
+          </div>
+
+          {/* Por dónde PREFIERE la persona que le respondan (lo eligió en el form). */}
+          <div class="sols__toolbar-fila" id="sols-fprefiere" role="group" aria-label="Filtrar por canal preferido de respuesta">
+            <span class="sols__toolbar-label">Prefieren</span>
+            <button type="button" class="sols__filtro is-activo" data-fprefiere="todas">Todas</button>
+            <button type="button" class="sols__filtro" data-fprefiere="mail">Respuesta por mail</button>
+            <button type="button" class="sols__filtro" data-fprefiere="whatsapp">Respuesta por WhatsApp</button>
+          </div>
+
+          {/* Por dónde YA les escribió el equipo (se marca en cada card). */}
+          <div class="sols__toolbar-fila" id="sols-fcontacto" role="group" aria-label="Filtrar por canal de contacto ya usado">
+            <span class="sols__toolbar-label">Ya escribimos</span>
+            <button type="button" class="sols__filtro is-activo" data-fcontacto="todas">Todas</button>
+            <button type="button" class="sols__filtro" data-fcontacto="mail">Por mail</button>
+            <button type="button" class="sols__filtro" data-fcontacto="whatsapp">Por WhatsApp</button>
+            <button type="button" class="sols__filtro" data-fcontacto="sin">Sin contactar</button>
+          </div>
+
+          {/* Envío manual: copiar los mails de lo filtrado para pegar en CCO. */}
+          <div class="sols__toolbar-fila sols__toolbar-fila--envio">
+            <span class="sols__envio-resumen" id="envio-resumen"></span>
+            <button type="button" class="sols__envio-btn" id="envio-copiar">Copiar mails</button>
+            <a class="sols__envio-btn sols__envio-btn--sec" id="envio-mailto" href="#" hidden>Abrir en el correo (CCO)</a>
+            <span class="sols__envio-hint">Se copian los mails de TODO lo filtrado (no solo esta página), sin repetidos. Pégalos en <strong>CCO</strong>.</span>
+          </div>
         </div>
-        <p class="sols__envio-hint">Se copian los mails de las solicitudes visibles según los filtros y la búsqueda, sin repetidos. Pégalos en <strong>CCO</strong> para no exponer las direcciones entre sí.</p>
       </div>
 
       {/* Resumen de origen (de qué canal vino cada solicitud) */}
@@ -102,6 +126,9 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       </div>
 
       <div id="sols-lista"></div>
+
+      {/* Paginador (se arma por JS) */}
+      <nav class="sols__pager" id="sols-pager" aria-label="Páginas de solicitudes" hidden></nav>
 
       <p id="sols-error" class="sols__error" hidden></p>
     </div>
@@ -119,23 +146,31 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   const $bajada = document.getElementById("sols-bajada")!;
   const $errorBox = document.getElementById("sols-error") as HTMLElement;
   const $avisos = document.getElementById("sols-avisos") as HTMLElement;
-  const $buscador = document.getElementById("sols-buscador") as HTMLElement;
+  const $toolbar = document.getElementById("sols-toolbar") as HTMLElement;
   const $buscar = document.getElementById("sols-buscar") as HTMLInputElement;
   const $orden = document.getElementById("sols-orden") as HTMLSelectElement;
   const $filtros = document.getElementById("sols-filtros") as HTMLElement;
   const $fcontacto = document.getElementById("sols-fcontacto") as HTMLElement;
-  const $canales = document.getElementById("sols-canales") as HTMLElement;
+  const $fprefiere = document.getElementById("sols-fprefiere") as HTMLElement;
   const $envio = document.getElementById("sols-envio") as HTMLElement;
+  const $filtrosToggle = document.getElementById("sols-filtros-toggle") as HTMLButtonElement;
+  const $filtrosPanel = document.getElementById("sols-filtros-panel") as HTMLElement;
+  const $filtrosBadge = document.getElementById("sols-filtros-badge") as HTMLElement;
+  const $filtrosIcono = document.getElementById("sols-filtros-icono") as HTMLElement;
+  const $canales = document.getElementById("sols-canales") as HTMLElement;
+  const $pager = document.getElementById("sols-pager") as HTMLElement;
   const $envioResumen = document.getElementById("envio-resumen") as HTMLElement;
   const $envioCopiar = document.getElementById("envio-copiar") as HTMLButtonElement;
   const $envioMailto = document.getElementById("envio-mailto") as HTMLAnchorElement;
 
-  // ============ Reglas de los avisos (editables) ============
+  // ============ Reglas de los avisos y la lista (editables) ============
   // Una solicitud "nueva" sin tocar durante más de estas horas → aviso.
   const HORAS_SIN_RESPUESTA = 24;
   // Pidió info/charla, fue contactada, y pasaron estas horas sin que se
   // anote → aviso de seguimiento (decisión doc 11-jun: seguimiento 48 hs).
   const HORAS_SEGUIMIENTO = 48;
+  // Solicitudes por página.
+  const POR_PAGINA = 10;
 
   // ============ Tipos ============
   type Estado = "nueva" | "contactada" | "convertida" | "descartada";
@@ -199,8 +234,14 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   let filtroActivo: "todas" | Estado = "todas";
   let filtroIntencion: "todas" | Intencion = "todas";
   let filtroContacto: "todas" | "mail" | "whatsapp" | "sin" = "todas";
+  let filtroPrefiere: "todas" | "mail" | "whatsapp" = "todas";
   let busqueda = "";
   let orden: "recientes" | "antiguas" = "recientes";
+  let pagina = 1;
+  // Qué cards están abiertas (sobrevive a los re-renders).
+  const abiertas = new Set<string>();
+  // Avisos: plegados/desplegados (arrancan desplegados).
+  let avisosPlegados = false;
   let emailsVisibles: string[] = [];
 
   // ============ Helpers ============
@@ -238,11 +279,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     } catch { return ""; }
   }
 
-  // "hace 3 h" / "hace 2 días" — para los avisos.
+  // "hace 3 h" / "hace 2 días" — para la fila compacta y los avisos.
   function tiempoRelativo(iso: string): string {
     const ms = Date.now() - new Date(iso).getTime();
     const horas = Math.floor(ms / 3_600_000);
-    if (horas < 1) return "hace menos de 1 hora";
+    if (horas < 1) return "hace minutos";
     if (horas < 48) return `hace ${horas} h`;
     return `hace ${Math.floor(horas / 24)} días`;
   }
@@ -297,8 +338,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
 
   // Mail pre-redactado (mailto con asunto + cuerpo según la intención).
-  // Igual que el de WhatsApp: se abre escrito en el cliente de correo
-  // y Julia/Laura lo completan antes de mandar.
   function mailtoMsg(s: Solicitud): string {
     const nom = (s.nombre || "").trim().split(/\s+/)[0] || "";
     const hola = nom ? `Hola ${nom}:` : "Hola:";
@@ -319,6 +358,17 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 
   // ============ Carga ============
   async function cargar() {
+    // ── Modo demo: SOLO en desarrollo local (npm run dev). El build de
+    // producción elimina este bloque entero (import.meta.env.DEV = false),
+    // así que en el sitio real no existe ninguna puerta sin login. ──
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has("demo")) {
+      solicitudes = datosDemo();
+      $loader.hidden = true;
+      $toolbar.hidden = false;
+      render();
+      return;
+    }
+
     const auth = await requireRol(["admin"]);
     if (!auth) return;
 
@@ -347,19 +397,24 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     });
 
     $loader.hidden = true;
-    $buscador.hidden = false;
-    $filtros.hidden = false;
-    $fcontacto.hidden = false;
-    $envio.hidden = false;
+    $toolbar.hidden = false;
     render();
   }
 
   // ============ Avisos (lo que necesita acción hoy) ============
+  type TipoAviso = "recordatorio" | "sin_respuesta" | "seguimiento";
   type Aviso = {
-    tipo: "recordatorio" | "sin_respuesta" | "seguimiento";
+    tipo: TipoAviso;
     sol: Solicitud;
-    texto: string;
+    detalle: string; // lo que sigue al nombre (el nombre va en negrita aparte)
     accionLabel: string | null; // botón "listo" del aviso (null = solo "Ver")
+  };
+
+  // Ícono y etiqueta corta de cada tipo de aviso.
+  const AVISO_META: Record<TipoAviso, { icono: "bell" | "inbox" | "message-circle"; label: string }> = {
+    recordatorio: { icono: "bell", label: "Aviso programado" },
+    sin_respuesta: { icono: "inbox", label: "Sin responder" },
+    seguimiento: { icono: "message-circle", label: "Seguimiento" },
   };
 
   function calcularAvisos(): Aviso[] {
@@ -373,8 +428,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         avisos.push({
           tipo: "recordatorio",
           sol: s,
-          texto: `Aviso programado · ${s.nombre}${s.recordatorio_nota ? `: ${s.recordatorio_nota}` : ""}`,
-          accionLabel: "Listo, quitar aviso",
+          detalle: s.recordatorio_nota ? `— ${s.recordatorio_nota}` : "— revisar esta solicitud.",
+          accionLabel: "Listo",
         });
         continue; // si hay recordatorio vencido, no apilamos más avisos de la misma persona
       }
@@ -385,7 +440,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         avisos.push({
           tipo: "sin_respuesta",
           sol: s,
-          texto: `${s.nombre} (${INTENCION_LABEL[s.intencion].toLowerCase()}) entró ${tiempoRelativo(s.creado_en)} y todavía nadie le respondió.`,
+          detalle: `(${INTENCION_LABEL[s.intencion].toLowerCase()}) entró ${tiempoRelativo(s.creado_en)} y todavía nadie le respondió.`,
           accionLabel: null,
         });
         continue;
@@ -401,8 +456,8 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         avisos.push({
           tipo: "seguimiento",
           sol: s,
-          texto: `${s.nombre} recibió respuesta ${tiempoRelativo(s.contactada_en)} y no se anotó. Puede ser momento de un mensaje de seguimiento (charla, beneficio, recordatorio de cupos).`,
-          accionLabel: "Seguimiento hecho",
+          detalle: `recibió respuesta ${tiempoRelativo(s.contactada_en)} y no se anotó — ¿le mandamos un seguimiento?`,
+          accionLabel: "Hecho",
         });
       }
     }
@@ -412,23 +467,29 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     return avisos.sort((a, b) => peso[a.tipo] - peso[b.tipo]);
   }
 
-  function renderAvisos() {
+  function renderAvisos(): number {
     const avisos = calcularAvisos();
     if (avisos.length === 0) {
       $avisos.hidden = true;
       $avisos.innerHTML = "";
-      return avisos.length;
+      return 0;
     }
 
     $avisos.innerHTML = `
-      <p class="sols__avisos-titulo">${iconHtml("bell", 16)} Necesitan atención (${avisos.length})</p>
-      <ul class="sols__avisos-lista">
+      <button type="button" class="sols__avisos-head" data-avisos-toggle aria-expanded="${!avisosPlegados}">
+        <span class="sols__avisos-burbuja" aria-hidden="true">${iconHtml("bell", 15)}</span>
+        <span class="sols__avisos-titulo">Para hoy</span>
+        <span class="sols__avisos-chip">${avisos.length}</span>
+        <svg class="sols__avisos-flecha" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </button>
+      <ul class="sols__avisos-lista" ${avisosPlegados ? "hidden" : ""}>
         ${avisos.map((a) => `
-          <li class="sols-aviso sols-aviso--${a.tipo}">
-            <span class="sols-aviso__texto">${esc(a.texto)}</span>
+          <li class="sols-aviso">
+            <span class="sols-aviso__icono sols-aviso__icono--${a.tipo}" title="${esc(AVISO_META[a.tipo].label)}" aria-hidden="true">${iconHtml(AVISO_META[a.tipo].icono, 14)}</span>
+            <span class="sols-aviso__texto"><strong>${esc(a.sol.nombre)}</strong> ${esc(a.detalle)}</span>
             <span class="sols-aviso__acciones">
               <button type="button" class="sols-aviso__btn" data-aviso-ver="${esc(a.sol.id)}">Ver</button>
-              ${a.accionLabel ? `<button type="button" class="sols-aviso__btn sols-aviso__btn--ok" data-aviso-listo="${a.tipo}:${esc(a.sol.id)}">${esc(a.accionLabel)}</button>` : ""}
+              ${a.accionLabel ? `<button type="button" class="sols-aviso__btn sols-aviso__btn--ok" data-aviso-listo="${a.tipo}:${esc(a.sol.id)}">✓ ${esc(a.accionLabel)}</button>` : ""}
             </span>
           </li>`).join("")}
       </ul>`;
@@ -436,16 +497,16 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     return avisos.length;
   }
 
-  // ============ Render ============
-  function render() {
+  // ============ Filtrado + orden (compartido por render y "Ver") ============
+  function filtrar(): Solicitud[] {
     const q = normalizar(busqueda.trim());
-
-    const visibles = solicitudes.filter((s) => {
+    return solicitudes.filter((s) => {
       if (filtroActivo !== "todas" && s.estado !== filtroActivo) return false;
       if (filtroIntencion !== "todas" && s.intencion !== filtroIntencion) return false;
       if (filtroContacto === "mail" && !s.contactada_por_mail) return false;
       if (filtroContacto === "whatsapp" && !s.contactada_por_whatsapp) return false;
       if (filtroContacto === "sin" && (s.contactada_por_mail || s.contactada_por_whatsapp)) return false;
+      if (filtroPrefiere !== "todas" && s.canal_preferido_respuesta !== filtroPrefiere) return false;
       if (q) {
         const texto = normalizar([
           s.nombre, s.email, s.telefono ?? "", s.pais ?? "", s.nombre_menor ?? "",
@@ -458,7 +519,11 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }).sort((a, b) => orden === "recientes"
       ? b.creado_en.localeCompare(a.creado_en)
       : a.creado_en.localeCompare(b.creado_en));
+  }
 
+  // ============ Render ============
+  function render() {
+    const visibles = filtrar();
     const cantAvisos = renderAvisos();
 
     // Resumen en la bajada.
@@ -481,8 +546,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       $canales.hidden = false;
     }
 
-    // Contadores en los filtros de estado (ojo: scopeado a #sols-filtros para
-    // no pisar los botones de intención/contacto, que comparten la clase visual).
+    // Contadores en los filtros de estado (scopeado a #sols-filtros).
     document.querySelectorAll<HTMLButtonElement>("#sols-filtros .sols__filtro").forEach((btn) => {
       const f = btn.dataset.filtro as "todas" | Estado;
       const n = f === "todas" ? total : solicitudes.filter((s) => s.estado === f).length;
@@ -491,23 +555,32 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       btn.classList.toggle("is-activo", f === filtroActivo);
     });
 
-    // Botones de contacto e intención: solo marcamos el activo.
+    // Botones de contacto, preferencia e intención: solo marcamos el activo.
     document.querySelectorAll<HTMLButtonElement>("[data-fcontacto]").forEach((btn) => {
       btn.classList.toggle("is-activo", btn.dataset.fcontacto === filtroContacto);
+    });
+    document.querySelectorAll<HTMLButtonElement>("[data-fprefiere]").forEach((btn) => {
+      btn.classList.toggle("is-activo", btn.dataset.fprefiere === filtroPrefiere);
     });
     document.querySelectorAll<HTMLButtonElement>("[data-intencion]").forEach((btn) => {
       btn.classList.toggle("is-activo", btn.dataset.intencion === filtroIntencion);
     });
 
-    // Barra de envío manual: mails únicos de lo visible.
+    // Badge del botón "Filtros": cuántos filtros activos hay (≠ "todas").
+    const activos = [filtroActivo, filtroIntencion, filtroContacto, filtroPrefiere]
+      .filter((f) => f !== "todas").length;
+    $filtrosBadge.hidden = activos === 0;
+    $filtrosBadge.textContent = String(activos);
+    $filtrosToggle.classList.toggle("tiene-activos", activos > 0);
+
+    // Copiar mails: sobre TODO lo filtrado (no solo la página visible).
     const emails = [...new Set(visibles.map((s) => s.email.trim().toLowerCase()).filter(Boolean))];
     $envioResumen.textContent = emails.length === 0
       ? "Sin destinatarios con estos filtros."
       : `${emails.length} destinatario${emails.length === 1 ? "" : "s"}`;
     $envioCopiar.disabled = emails.length === 0;
     // mailto con CCO pre-cargado. Si la lista es muy larga el mailto se rompe
-    // (límite de URL de los clientes de correo), así que lo ocultamos y queda
-    // solo "Copiar mails".
+    // (límite de URL de los clientes de correo): lo ocultamos y queda "Copiar".
     const mailtoHref = `mailto:hola@vlab.com.ar?bcc=${encodeURIComponent(emails.join(","))}`;
     const mailtoUsable = emails.length > 0 && mailtoHref.length <= 1800;
     $envioMailto.hidden = !mailtoUsable;
@@ -519,22 +592,120 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         <div class="empty-state">
           <span class="empty-state__icono" aria-hidden="true">${iconHtml("inbox", 28)}</span>
           <h3 class="empty-state__titulo">Nada por acá</h3>
-          <p class="empty-state__bajada">${q ? "Ninguna solicitud coincide con la búsqueda." : "No hay solicitudes con este filtro."}</p>
+          <p class="empty-state__bajada">${busqueda.trim() ? "Ninguna solicitud coincide con la búsqueda." : "No hay solicitudes con este filtro."}</p>
         </div>`;
+      $pager.hidden = true;
       return;
     }
 
-    $lista.innerHTML = `<ul class="sols-cards">${visibles.map(renderCard).join("")}</ul>`;
+    // Paginación.
+    const totalPaginas = Math.max(1, Math.ceil(visibles.length / POR_PAGINA));
+    if (pagina > totalPaginas) pagina = totalPaginas;
+    const desde = (pagina - 1) * POR_PAGINA;
+    const pageItems = visibles.slice(desde, desde + POR_PAGINA);
+
+    $lista.innerHTML = `<ul class="sols-cards">${pageItems.map(renderCard).join("")}</ul>`;
+    renderPager(visibles.length, totalPaginas, desde, pageItems.length);
     enchufarAcciones();
   }
 
+  // ============ Paginador ============
+  function renderPager(totalVisibles: number, totalPaginas: number, desde: number, enPagina: number) {
+    if (totalPaginas <= 1) {
+      $pager.hidden = true;
+      $pager.innerHTML = "";
+      return;
+    }
+
+    // Números con ventana: 1 … (p-1) p (p+1) … última.
+    const nums: (number | "...")[] = [];
+    for (let i = 1; i <= totalPaginas; i++) {
+      if (i === 1 || i === totalPaginas || Math.abs(i - pagina) <= 1) {
+        nums.push(i);
+      } else if (nums[nums.length - 1] !== "...") {
+        nums.push("...");
+      }
+    }
+
+    $pager.innerHTML = `
+      <button type="button" class="sols__pager-btn" data-pag="prev" ${pagina === 1 ? "disabled" : ""} aria-label="Página anterior">←</button>
+      ${nums.map((n) => n === "..."
+        ? `<span class="sols__pager-puntos">…</span>`
+        : `<button type="button" class="sols__pager-btn sols__pager-btn--num${n === pagina ? " is-actual" : ""}" data-pag="${n}" ${n === pagina ? 'aria-current="page"' : ""}>${n}</button>`
+      ).join("")}
+      <button type="button" class="sols__pager-btn" data-pag="next" ${pagina === totalPaginas ? "disabled" : ""} aria-label="Página siguiente">→</button>
+      <span class="sols__pager-info">${desde + 1}–${desde + enPagina} de ${totalVisibles}</span>`;
+    $pager.hidden = false;
+  }
+
+  $pager.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-pag]");
+    if (!btn || btn.disabled) return;
+    const v = btn.dataset.pag!;
+    if (v === "prev") pagina--;
+    else if (v === "next") pagina++;
+    else pagina = parseInt(v, 10);
+    render();
+    // Volver al inicio de la lista al cambiar de página.
+    $lista.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  // ============ Card: fila compacta + detalle desplegable ============
   function renderCard(s: Solicitud): string {
+    const abierta = abiertas.has(s.id);
+    const recVencido = s.recordatorio_en && new Date(s.recordatorio_en).getTime() <= Date.now();
+
+    // Mini-indicadores de la fila compacta (solo los que aplican).
+    const minis: string[] = [];
+    if (s.contactada_por_mail) {
+      minis.push(`<span class="sol-mini sol-mini--mail" title="Ya le escribimos por mail">${iconHtml("mail", 13)}</span>`);
+    }
+    if (s.contactada_por_whatsapp) {
+      minis.push(`<span class="sol-mini sol-mini--wpp" title="Ya le escribimos por WhatsApp">${iconHtml("message-circle", 13)}</span>`);
+    }
+    if (s.recordatorio_en) {
+      minis.push(`<span class="sol-mini${recVencido ? " sol-mini--alerta" : ""}" title="Tiene un aviso programado">${iconHtml("bell", 13)}</span>`);
+    }
+    if (s.notas.length > 0) {
+      minis.push(`<span class="sol-mini" title="${s.notas.length} nota${s.notas.length === 1 ? "" : "s"} interna${s.notas.length === 1 ? "" : "s"}">${iconHtml("file-text", 13)}<i>${s.notas.length}</i></span>`);
+    }
+
+    // Adelanto del mensaje (form "Hablemos") en la fila compacta.
+    const preview = s.mensaje
+      ? `<span class="sol-card__preview">"${esc(s.mensaje.length > 90 ? s.mensaje.slice(0, 90).trimEnd() + "…" : s.mensaje)}"</span>`
+      : "";
+
+    return `
+      <li class="sol-card sol-card--${s.estado}${abierta ? " is-abierta" : ""}" data-sol-id="${esc(s.id)}">
+        <button type="button" class="sol-card__resumen" data-toggle="${esc(s.id)}" aria-expanded="${abierta}">
+          <span class="sol-card__avatar" aria-hidden="true">${esc(iniciales(s.nombre))}</span>
+          <span class="sol-card__quien">
+            <span class="sol-card__nombre">${esc(s.nombre)}</span>
+            <span class="sol-card__sub">${esc(s.email)}${s.telefono ? ` · ${esc(s.telefono)}` : ""}</span>
+            ${preview}
+          </span>
+          <span class="sol-card__meta">
+            ${minis.length ? `<span class="sol-card__minis">${minis.join("")}</span>` : ""}
+            <span class="sol-tag sol-tag--${s.intencion === "inscripcion" ? "insc" : s.intencion === "charla" ? "charla" : "info"}">${INTENCION_LABEL[s.intencion] ?? esc(s.intencion)}</span>
+            <span class="sol-chip sol-chip--${s.estado}">${ESTADOS[s.estado].label}</span>
+            <span class="sol-card__cuando">${esc(tiempoRelativo(s.creado_en))}</span>
+            <svg class="sol-card__flecha" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          </span>
+        </button>
+        <div class="sol-card__cuerpo" ${abierta ? "" : "hidden"}>
+          ${renderDetalle(s)}
+        </div>
+      </li>`;
+  }
+
+  function renderDetalle(s: Solicitud): string {
     const esInscripcion = s.intencion === "inscripcion";
     const waMsg = waLinkMsg(s);
     const prefiereWpp = s.canal_preferido_respuesta === "whatsapp";
     const prefiereMail = s.canal_preferido_respuesta === "mail";
     const prefiere = prefiereWpp ? "Prefiere WhatsApp"
       : prefiereMail ? "Prefiere mail" : null;
+    const recVencido = s.recordatorio_en && new Date(s.recordatorio_en).getTime() <= Date.now();
 
     // Bloque de consentimiento (solo si es inscripción).
     let consentimiento = "";
@@ -551,14 +722,12 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         filas.push(fila("Responsable", `${esc(s.nombre)} · ${esc(s.vinculo_menor ?? "—")}`));
         filas.push(fila("DNI responsable", esc(s.dni_tutor ?? "—")));
       }
-      // Contacto de familiar/persona cercana que acompaña (si lo cargaron).
       if (s.contacto_emergencia_nombre || s.contacto_emergencia_telefono) {
         filas.push(fila(
           "Acompaña",
           `${esc(s.contacto_emergencia_nombre ?? "—")} · ${esc(s.contacto_emergencia_telefono ?? "—")}${s.contacto_emergencia_vinculo ? ` (${esc(s.contacto_emergencia_vinculo)})` : ""}`
         ));
       }
-      // Protocolo.
       const protoOk = s.protocolo_aceptado
         ? `✓ Aceptado ${s.protocolo_version ? `(${esc(s.protocolo_version)})` : ""} · ${esc(formatoFechaHora(s.protocolo_aceptado_en))}`
         : "✗ No consta aceptación";
@@ -571,7 +740,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
         </div>`;
     }
 
-    // Mensaje libre (form "Hablemos").
+    // Mensaje libre (form "Hablemos") completo.
     const mensaje = s.mensaje ? `
       <div class="sol-card__bloque">
         <span class="sol-card__bloque-titulo">Mensaje</span>
@@ -579,7 +748,6 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
       </div>` : "";
 
     // Seguimiento: por dónde se la contactó + recordatorio.
-    const recVencido = s.recordatorio_en && new Date(s.recordatorio_en).getTime() <= Date.now();
     const seguimiento = `
       <div class="sol-card__bloque">
         <span class="sol-card__bloque-titulo">Seguimiento</span>
@@ -616,75 +784,75 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     ).join("");
 
     return `
-      <li class="sol-card sol-card--${s.estado}" data-sol-id="${esc(s.id)}">
-        <div class="sol-card__head">
-          <div class="sol-card__id">
-            <span class="sol-card__avatar">${esc(iniciales(s.nombre))}</span>
-            <div>
-              <span class="sol-card__nombre">${esc(s.nombre)}</span>
-              <span class="sol-card__fecha">Entró el ${esc(formatoFechaHora(s.creado_en))}</span>
-            </div>
-          </div>
-          <div class="sol-card__tags">
-            <span class="sol-tag sol-tag--${s.intencion === "inscripcion" ? "insc" : s.intencion === "charla" ? "charla" : "info"}">${INTENCION_LABEL[s.intencion] ?? esc(s.intencion)}</span>
-            <span class="sol-tag sol-tag--canal">vía ${esc(CANAL_LABEL[s.canal] ?? s.canal)}</span>
-          </div>
+      <div class="sol-card__bloque">
+        <span class="sol-card__bloque-titulo">Contacto</span>
+        <dl class="sol-card__datos">
+          ${fila("Mail", `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`)}
+          ${s.telefono ? fila("Teléfono", esc(s.telefono)) : ""}
+          ${s.pais ? fila("País", esc(s.pais)) : ""}
+          ${prefiere ? fila("Respuesta", esc(prefiere)) : ""}
+          ${fila("Entró", `${esc(formatoFechaHora(s.creado_en))} · vía ${esc(CANAL_LABEL[s.canal] ?? s.canal)}`)}
+          ${s.como_nos_encontraste ? fila("Nos encontró por", esc(s.como_nos_encontraste)) : ""}
+        </dl>
+      </div>
+
+      ${mensaje}
+
+      ${consentimiento}
+
+      ${seguimiento}
+
+      ${notas}
+
+      <div class="sol-card__acciones">
+        <label class="sol-card__estado">
+          <span>Estado</span>
+          <select data-estado="${esc(s.id)}">${opcionesEstado}</select>
+        </label>
+        <div class="sol-card__botones">
+          ${waMsg ? `<a class="sol-wpp${prefiereWpp ? " sol-wpp--destacado" : ""}" href="${esc(waMsg)}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ""}
+          <a class="sol-mail${prefiereMail ? " sol-mail--destacado" : ""}" href="${esc(mailtoMsg(s))}">Escribir por mail</a>
+          <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">Agregar nota</button>
+          <button type="button" class="boton-ghost-mini" data-recordatorio="${esc(s.id)}">${s.recordatorio_en ? "Cambiar aviso" : "Crear aviso"}</button>
+          <button type="button" class="sol-eliminar" data-eliminar="${esc(s.id)}">Eliminar</button>
         </div>
-
-        <div class="sol-card__bloque">
-          <span class="sol-card__bloque-titulo">Contacto</span>
-          <dl class="sol-card__datos">
-            ${fila("Mail", `<a href="mailto:${esc(s.email)}">${esc(s.email)}</a>`)}
-            ${s.telefono ? fila("Teléfono", esc(s.telefono)) : ""}
-            ${s.pais ? fila("País", esc(s.pais)) : ""}
-            ${prefiere ? fila("Respuesta", esc(prefiere)) : ""}
-            ${s.como_nos_encontraste ? fila("Nos encontró por", esc(s.como_nos_encontraste)) : ""}
-          </dl>
-        </div>
-
-        ${mensaje}
-
-        ${consentimiento}
-
-        ${seguimiento}
-
-        ${notas}
-
-        <div class="sol-card__acciones">
-          <label class="sol-card__estado">
-            <span>Estado</span>
-            <select data-estado="${esc(s.id)}">${opcionesEstado}</select>
-          </label>
-          <div class="sol-card__botones">
-            ${waMsg ? `<a class="sol-wpp${prefiereWpp ? " sol-wpp--destacado" : ""}" href="${esc(waMsg)}" target="_blank" rel="noopener">Escribir por WhatsApp</a>` : ""}
-            <a class="sol-mail${prefiereMail ? " sol-mail--destacado" : ""}" href="${esc(mailtoMsg(s))}">Escribir por mail</a>
-            <button type="button" class="boton-ghost-mini" data-nota="${esc(s.id)}">Agregar nota</button>
-            <button type="button" class="boton-ghost-mini" data-recordatorio="${esc(s.id)}">${s.recordatorio_en ? "Cambiar aviso" : "Crear aviso"}</button>
-            <button type="button" class="sol-eliminar" data-eliminar="${esc(s.id)}">Eliminar</button>
-          </div>
-        </div>
-      </li>`;
+      </div>`;
   }
 
   function fila(label: string, valorHTML: string): string {
     return `<div class="sol-fila"><dt>${esc(label)}</dt><dd>${valorHTML}</dd></div>`;
   }
 
+  // Abrir/cerrar el detalle de una card (sin re-render: tocamos el DOM).
+  $lista.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-toggle]");
+    if (!btn) return;
+    const id = btn.dataset.toggle!;
+    const card = btn.closest<HTMLElement>(".sol-card")!;
+    const cuerpo = card.querySelector<HTMLElement>(".sol-card__cuerpo")!;
+    const abrir = !abiertas.has(id);
+    if (abrir) abiertas.add(id); else abiertas.delete(id);
+    card.classList.toggle("is-abierta", abrir);
+    cuerpo.hidden = !abrir;
+    btn.setAttribute("aria-expanded", String(abrir));
+  });
+
   // ============ Persistencia (helper común de updates) ============
   // Aplica el update en Supabase y, si sale bien, copia los cambios al
-  // objeto local y re-renderiza. Devuelve true/false según resultado.
+  // objeto local. En modo demo no toca la base (solo el objeto local).
   async function actualizarSolicitud(id: string, cambios: Partial<Solicitud>): Promise<boolean> {
     const sol = solicitudes.find((s) => s.id === id);
     if (!sol) return false;
 
-    const { error } = await supabase
-      .from("solicitudes_inscripcion")
-      .update(cambios)
-      .eq("id", id);
-
-    if (error) {
-      showToast(traducirError(error), "error");
-      return false;
+    if (!(import.meta.env.DEV && new URLSearchParams(location.search).has("demo"))) {
+      const { error } = await supabase
+        .from("solicitudes_inscripcion")
+        .update(cambios)
+        .eq("id", id);
+      if (error) {
+        showToast(traducirError(error), "error");
+        return false;
+      }
     }
 
     Object.assign(sol, cambios);
@@ -730,18 +898,20 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     if (!ok) return;
 
     btn.disabled = true;
-    const { error } = await supabase
-      .from("solicitudes_inscripcion")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      showToast(traducirError(error), "error");
-      btn.disabled = false;
-      return;
+    if (!(import.meta.env.DEV && new URLSearchParams(location.search).has("demo"))) {
+      const { error } = await supabase
+        .from("solicitudes_inscripcion")
+        .delete()
+        .eq("id", id);
+      if (error) {
+        showToast(traducirError(error), "error");
+        btn.disabled = false;
+        return;
+      }
     }
 
     solicitudes = solicitudes.filter((s) => s.id !== id);
+    abiertas.delete(id);
     showToast("Solicitud eliminada.");
     render();
   }
@@ -907,20 +1077,36 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     render();
   }
 
-  // ============ Avisos: Ver / Listo ============
+  // ============ Avisos: plegar / Ver / Listo ============
   $avisos.addEventListener("click", (e) => {
     const target = e.target as HTMLElement;
 
+    // Plegar/desplegar la lista de avisos.
+    const toggleBtn = target.closest<HTMLButtonElement>("[data-avisos-toggle]");
+    if (toggleBtn) {
+      avisosPlegados = !avisosPlegados;
+      const lista = $avisos.querySelector<HTMLElement>(".sols__avisos-lista");
+      if (lista) lista.hidden = avisosPlegados;
+      toggleBtn.setAttribute("aria-expanded", String(!avisosPlegados));
+      return;
+    }
+
     const verBtn = target.closest<HTMLButtonElement>("[data-aviso-ver]");
     if (verBtn) {
-      // Limpiamos filtros y búsqueda para garantizar que la card esté visible.
+      const id = verBtn.dataset.avisoVer!;
+      // Limpiamos filtros y búsqueda para garantizar que la card exista,
+      // saltamos a su página y la abrimos.
       filtroActivo = "todas";
       filtroIntencion = "todas";
       filtroContacto = "todas";
+      filtroPrefiere = "todas";
       busqueda = "";
       $buscar.value = "";
+      const idx = filtrar().findIndex((s) => s.id === id);
+      if (idx >= 0) pagina = Math.floor(idx / POR_PAGINA) + 1;
+      abiertas.add(id);
       render();
-      const card = document.querySelector<HTMLElement>(`[data-sol-id="${verBtn.dataset.avisoVer}"]`);
+      const card = document.querySelector<HTMLElement>(`[data-sol-id="${id}"]`);
       if (card) {
         card.scrollIntoView({ behavior: "smooth", block: "center" });
         card.classList.add("sol-card--destacada");
@@ -939,10 +1125,20 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   });
 
   // ============ Filtros, búsqueda y orden ============
+  // Botón "Filtros": despliega/pliega el panel de chips.
+  $filtrosIcono.innerHTML = iconHtml("filter", 14);
+  $filtrosToggle.addEventListener("click", () => {
+    const abrir = $filtrosPanel.hidden;
+    $filtrosPanel.hidden = !abrir;
+    $filtrosToggle.setAttribute("aria-expanded", String(abrir));
+    $filtrosToggle.classList.toggle("is-abierto", abrir);
+  });
+
   $filtros.addEventListener("click", (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>(".sols__filtro");
     if (!btn) return;
     filtroActivo = btn.dataset.filtro as "todas" | Estado;
+    pagina = 1;
     render();
   });
 
@@ -950,6 +1146,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-fcontacto]");
     if (!btn) return;
     filtroContacto = btn.dataset.fcontacto as typeof filtroContacto;
+    pagina = 1;
+    render();
+  });
+
+  $fprefiere.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-fprefiere]");
+    if (!btn) return;
+    filtroPrefiere = btn.dataset.fprefiere as typeof filtroPrefiere;
+    pagina = 1;
     render();
   });
 
@@ -957,20 +1162,23 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-intencion]");
     if (!btn) return;
     filtroIntencion = btn.dataset.intencion as "todas" | Intencion;
+    pagina = 1;
     render();
   });
 
   $buscar.addEventListener("input", () => {
     busqueda = $buscar.value;
+    pagina = 1;
     render();
   });
 
   $orden.addEventListener("change", () => {
     orden = $orden.value as "recientes" | "antiguas";
+    pagina = 1;
     render();
   });
 
-  // Copiar los mails visibles al portapapeles (separados por coma, listos
+  // Copiar los mails filtrados al portapapeles (separados por coma, listos
   // para pegar en el campo CCO de cualquier cliente de correo).
   $envioCopiar.addEventListener("click", async () => {
     if (emailsVisibles.length === 0) return;
@@ -984,6 +1192,83 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     }
   });
 
+  // ============ Datos de ejemplo (SOLO dev, ver cargar()) ============
+  function datosDemo(): Solicitud[] {
+    const hace = (horas: number) => new Date(Date.now() - horas * 3_600_000).toISOString();
+    const base: Partial<Solicitud> = {
+      canal: "web", pais: "Argentina", como_nos_encontraste: "Instagram",
+      canal_preferido_respuesta: "mail", rol_solicitante: null, edad: null,
+      nombre_menor: null, email_menor: null, fecha_nacimiento_menor: null,
+      vinculo_menor: null, dni_tutor: null, contacto_emergencia_nombre: null,
+      contacto_emergencia_telefono: null, contacto_emergencia_vinculo: null,
+      protocolo_aceptado: null, protocolo_version: null, protocolo_aceptado_en: null,
+      notas_admin: null, mensaje: null, contactada_por_mail: false,
+      contactada_por_whatsapp: false, contactada_en: null, seguimiento_hecho_en: null,
+      recordatorio_en: null, recordatorio_nota: null, notas: [],
+    };
+    const nombres = [
+      "María García", "Juan Pérez", "Lucía Fernández", "Tomás Rodríguez",
+      "Valentina López", "Mateo González", "Sofía Martínez", "Benjamín Díaz",
+      "Emma Sánchez", "Thiago Romero", "Isabella Torres", "Felipe Álvarez",
+      "Mía Ruiz", "Santiago Flores", "Catalina Acosta", "Lautaro Medina",
+      "Olivia Herrera", "Joaquín Castro", "Martina Vega", "Bruno Molina",
+      "Renata Silva", "Gael Ortiz", "Alma Núñez",
+    ];
+    return nombres.map((nombre, i) => {
+      const s: Solicitud = {
+        ...(base as Solicitud),
+        id: `demo-${i}`,
+        nombre,
+        email: nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, ".") + "@mail.com",
+        telefono: i % 3 === 0 ? `+54 9 11 ${4000 + i} ${5000 + i}` : null,
+        creado_en: hace(i * 9 + 2),
+        intencion: (["info", "inscripcion", "charla"] as Intencion[])[i % 3],
+        estado: (["nueva", "contactada", "nueva", "convertida", "contactada", "descartada"] as Estado[])[i % 6],
+        canal: ["web", "whatsapp", "instagram"][i % 3],
+        canal_preferido_respuesta: i % 3 === 0 ? "whatsapp" : "mail",
+        notas: [],
+      };
+      if (s.intencion === "charla") {
+        s.mensaje = "Hola, mi hija termina el secundario este año y está muy perdida con qué estudiar. ¿El programa sirve para alguien que todavía no tiene ninguna idea? ¿Cuándo arranca el próximo grupo?";
+      }
+      if (s.intencion === "inscripcion") {
+        s.rol_solicitante = i % 2 === 0 ? "mayor" : "responsable_menor";
+        s.protocolo_aceptado = true;
+        s.protocolo_version = "v1";
+        s.protocolo_aceptado_en = s.creado_en;
+        if (s.rol_solicitante === "mayor") {
+          s.edad = 19 + (i % 6);
+          s.contacto_emergencia_nombre = "Carlos García";
+          s.contacto_emergencia_telefono = "+54 9 11 5555 1234";
+          s.contacto_emergencia_vinculo = "Padre";
+        } else {
+          s.nombre_menor = "Julieta " + nombre.split(" ")[1];
+          s.email_menor = "julieta@mail.com";
+          s.fecha_nacimiento_menor = "2009-04-12";
+          s.vinculo_menor = "Madre";
+          s.dni_tutor = "28456789";
+        }
+      }
+      if (s.estado === "contactada") {
+        s.contactada_por_mail = true;
+        s.contactada_por_whatsapp = i % 2 === 0;
+        s.contactada_en = hace(i * 9);
+        if (i % 4 === 0) s.seguimiento_hecho_en = hace(i * 2);
+      }
+      if (i % 5 === 1) {
+        s.recordatorio_en = i % 10 === 1 ? hace(20) : new Date(Date.now() + 86_400_000 * 2).toISOString();
+        s.recordatorio_nota = "Ofrecerle la charla informativa del jueves.";
+      }
+      if (i % 4 === 2) {
+        s.notas = [
+          { en: hace(30), texto: "Llamé y no atendió. Vuelvo a intentar mañana." },
+          { en: hace(6), texto: "Hablamos: está interesada, espera confirmar con los padres." },
+        ];
+      }
+      return s;
+    });
+  }
+
   cargar().catch((err) => {
     console.error("[solicitudes]", err);
     $loader.hidden = true;
@@ -993,6 +1278,15 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
 </script>
 
 <style>
+  /* El atributo `hidden` tiene que ganar siempre: varios elementos de esta
+     página (cuerpo de las cards, toolbar, pager) definen display:flex por
+     clase, que en CSS le gana al [hidden] del navegador y los dejaría
+     visibles. Mismo gotcha documentado en inscripcion.astro. Va con
+     :global porque las cards se inyectan por innerHTML (sin scope de Astro). */
+  :global([hidden]) {
+    display: none !important;
+  }
+
   .sols { flex: 1; padding: clamp(2rem, 5vw, 3rem) 0 5rem; }
 
   .sols__volver {
@@ -1020,7 +1314,7 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   .sols__bajada { color: var(--color-ink-soft); margin: 0; }
 
   .sols__canales {
-    margin: -0.6rem 0 1.6rem;
+    margin: -0.8rem 0 1.4rem;
     font-size: 0.85rem;
     color: var(--color-ink-muted);
   }
@@ -1028,41 +1322,93 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   .sols__loader { padding: 1.5rem 0; }
   .sols__error { color: var(--color-accent); padding: 1rem 0; }
 
-  /* ===== Avisos (necesitan atención) ===== */
+  /* ===== Avisos (necesitan atención hoy) =====
+     Todo el contenido se inyecta por innerHTML → selectores con :global. */
   .sols__avisos {
-    background: rgba(216, 85, 42, 0.06);
-    border: 1px solid rgba(216, 85, 42, 0.35);
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-md);
-    padding: 1rem 1.2rem;
-    margin-bottom: 1.6rem;
+    margin-bottom: 1.4rem;
+    overflow: hidden;
   }
-  .sols__avisos-titulo {
+  :global(.sols__avisos-head) {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
-    margin: 0 0 0.7rem;
-    font-size: 0.92rem;
-    font-weight: 600;
-    color: var(--color-accent);
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.8rem 1.1rem;
+    background: none;
+    border: 0;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  .sols__avisos-lista {
+  :global(.sols__avisos-burbuja) {
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: rgba(216, 85, 42, 0.12);
+    color: var(--color-accent);
+    line-height: 0;
+  }
+  :global(.sols__avisos-titulo) {
+    font-family: var(--font-serif);
+    font-size: 1.08rem;
+    color: var(--color-ink);
+  }
+  :global(.sols__avisos-chip) {
+    min-width: 1.5rem; height: 1.5rem;
+    padding: 0 0.45rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 99px;
+    background: var(--color-accent);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  :global(.sols__avisos-flecha) {
+    margin-left: auto;
+    color: var(--color-ink-muted);
+    transition: transform 0.2s ease;
+  }
+  :global(.sols__avisos-head[aria-expanded="true"] .sols__avisos-flecha) { transform: rotate(180deg); }
+  :global(.sols__avisos-lista) {
     list-style: none;
     margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.55rem;
+    padding: 0 1.1rem 0.4rem;
   }
   :global(.sols-aviso) {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 0.8rem;
+    gap: 0.65rem;
     flex-wrap: wrap;
-    font-size: 0.9rem;
-    color: var(--color-ink);
+    padding: 0.6rem 0;
+    border-top: 1px solid var(--color-line);
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
     line-height: 1.45;
   }
+  /* Burbujita de color según el tipo de aviso. */
+  :global(.sols-aviso__icono) {
+    display: grid;
+    place-items: center;
+    width: 26px; height: 26px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-ink-muted);
+    line-height: 0;
+  }
+  :global(.sols-aviso__icono--recordatorio) { background: rgba(216, 85, 42, 0.12); color: var(--color-accent); }
+  :global(.sols-aviso__icono--sin_respuesta) { background: rgba(36, 58, 130, 0.1); color: var(--color-deep); }
+  :global(.sols-aviso__icono--seguimiento) { background: rgba(46, 139, 87, 0.12); color: #226844; }
+  :global(.sols-aviso__texto) { flex: 1; min-width: 220px; }
+  :global(.sols-aviso__texto strong) { color: var(--color-ink); font-weight: 600; }
   :global(.sols-aviso__acciones) { display: flex; gap: 0.4rem; flex-shrink: 0; }
   :global(.sols-aviso__btn) {
     padding: 0.3rem 0.75rem;
@@ -1079,70 +1425,125 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sols-aviso__btn--ok) { border-color: #2e8b57; color: #2e8b57; }
   :global(.sols-aviso__btn--ok:hover) { background: rgba(46, 139, 87, 0.08); border-color: #2e8b57; color: #226844; }
 
-  /* ===== Buscador + orden ===== */
-  .sols__buscador {
+  /* ===== Toolbar única ===== */
+  .sols__toolbar {
+    background: #fff;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 1.1rem 1.2rem;
+    margin-bottom: 1.4rem;
     display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.2rem;
+    flex-direction: column;
+    gap: 0.7rem;
   }
-  .sols__buscador input[type="search"] {
+  .sols__toolbar-fila {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .sols__toolbar-label {
+    width: 7rem;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+  .sols__toolbar-fila--buscar { gap: 0.6rem; }
+  .sols__toolbar-fila--buscar input[type="search"] {
     flex: 1;
-    min-width: 220px;
+    min-width: 200px;
     font-family: inherit;
     font-size: 0.95rem;
     padding: 0.6rem 0.9rem;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
-    background: #fff;
+    background: var(--color-bg);
     color: var(--color-ink);
   }
-  .sols__buscador input[type="search"]:focus {
+  .sols__toolbar-fila--buscar input[type="search"]:focus {
     outline: none;
     border-color: var(--color-accent);
+    background: #fff;
   }
-  .sols__buscador select {
+  .sols__toolbar-fila--buscar select {
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     padding: 0.6rem 0.8rem;
     border: 1px solid var(--color-line);
     border-radius: var(--radius-sm);
-    background: #fff;
+    background: var(--color-bg);
     color: var(--color-ink-soft);
     cursor: pointer;
   }
 
-  /* ===== Barra de envío manual ===== */
-  .sols__envio {
-    background: #fff;
+  /* Botón "Filtros" (despliega el panel de chips) */
+  .sols__filtros-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 0.95rem;
     border: 1px solid var(--color-line);
-    border-radius: var(--radius-md);
-    padding: 1rem 1.2rem;
-    margin: -0.6rem 0 1.8rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    color: var(--color-ink-soft);
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .sols__filtros-toggle:hover { border-color: var(--color-accent); color: var(--color-ink); }
+  /* Marcado cuando el panel está abierto o hay filtros aplicados. */
+  .sols__filtros-toggle.is-abierto,
+  .sols__filtros-toggle.tiene-activos {
+    border-color: var(--color-deep);
+    color: var(--color-deep);
+    background: rgba(36, 58, 130, 0.06);
+  }
+  .sols__filtros-toggle-icono { line-height: 0; }
+  .sols__filtros-badge {
+    min-width: 1.25rem; height: 1.25rem;
+    padding: 0 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 99px;
+    background: var(--color-deep);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .sols__filtros-flecha { transition: transform 0.2s ease; }
+  .sols__filtros-toggle.is-abierto .sols__filtros-flecha { transform: rotate(180deg); }
+
+  /* Panel desplegable con las filas de filtros */
+  .sols__filtros-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.7rem;
+    border-top: 1px solid var(--color-line);
+    padding-top: 0.8rem;
   }
-  .sols__envio-filtros { margin-bottom: 0; }
-  .sols__envio-acciones {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    flex-wrap: wrap;
+  .sols__toolbar-fila--envio {
+    padding-top: 0.6rem;
+    border-top: 1px solid var(--color-line);
+    gap: 0.6rem;
   }
   .sols__envio-resumen {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--color-ink-soft);
     font-weight: 500;
   }
   .sols__envio-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 0.95rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-deep);
     background: var(--color-deep);
     color: #fff;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.83rem;
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
@@ -1156,33 +1557,19 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   }
   .sols__envio-btn--sec:hover { background: rgba(36, 58, 130, 0.07); }
   .sols__envio-hint {
-    margin: 0;
-    font-size: 0.8rem;
+    flex-basis: 100%;
+    font-size: 0.78rem;
     color: var(--color-ink-muted);
     line-height: 1.5;
   }
 
-  /* ===== Filtros ===== */
-  .sols__filtros {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.2rem;
-  }
-  .sols__filtros--contacto { margin-bottom: 1.8rem; }
-  .sols__filtros-label {
-    font-size: 0.82rem;
-    color: var(--color-ink-muted);
-    margin-right: 0.2rem;
-  }
   .sols__filtro {
-    padding: 0.45rem 0.95rem;
-    background: #fff;
+    padding: 0.4rem 0.9rem;
+    background: var(--color-bg);
     border: 1px solid var(--color-line);
     border-radius: 99px;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.83rem;
     color: var(--color-ink-soft);
     cursor: pointer;
     transition: all 0.15s ease;
@@ -1194,45 +1581,53 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     color: var(--color-bg);
   }
 
-  /* ===== Cards ===== */
+  @media (max-width: 600px) {
+    .sols__toolbar-label { width: 100%; }
+  }
+
+  /* ===== Cards: fila compacta + detalle desplegable ===== */
   :global(.sols-cards) {
     list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.6rem;
   }
   :global(.sol-card) {
     background: #fff;
     border: 1px solid var(--color-line);
     border-left: 3px solid var(--color-line);
     border-radius: var(--radius-md);
-    padding: 1.3rem 1.4rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    overflow: hidden;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
   }
+  :global(.sol-card:hover) { box-shadow: 0 10px 28px -22px rgba(19, 27, 61, 0.5); }
   :global(.sol-card--nueva) { border-left-color: var(--color-accent); }
   :global(.sol-card--contactada) { border-left-color: var(--color-deep); }
   :global(.sol-card--convertida) { border-left-color: #2e8b57; }
-  :global(.sol-card--descartada) { opacity: 0.62; }
+  :global(.sol-card--descartada) { opacity: 0.6; }
+  :global(.sol-card.is-abierta) { box-shadow: 0 16px 40px -26px rgba(19, 27, 61, 0.55); }
 
   /* Flash al llegar desde un aviso ("Ver"). */
   :global(.sol-card--destacada) {
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px rgba(216, 85, 42, 0.25);
-    transition: box-shadow 0.4s ease;
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 3px rgba(216, 85, 42, 0.25) !important;
   }
 
-  :global(.sol-card__head) {
+  /* — Fila compacta (siempre visible, clickeable) — */
+  :global(.sol-card__resumen) {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.8rem;
-    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.85rem;
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    background: none;
+    border: 0;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
   }
-  :global(.sol-card__id) { display: flex; gap: 0.8rem; align-items: center; min-width: 0; }
   :global(.sol-card__avatar) {
     display: grid;
     place-items: center;
@@ -1241,13 +1636,62 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
     border-radius: 50%;
     background: var(--color-gold);
     color: var(--color-ink);
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     font-weight: 500;
   }
-  :global(.sol-card__nombre) { display: block; font-weight: 500; color: var(--color-ink); }
-  :global(.sol-card__fecha) { display: block; font-size: 0.8rem; color: var(--color-ink-muted); margin-top: 0.1rem; }
+  :global(.sol-card__quien) {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+  }
+  :global(.sol-card__nombre) {
+    font-weight: 500;
+    font-size: 0.98rem;
+    color: var(--color-ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  :global(.sol-card__sub) {
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  :global(.sol-card__preview) {
+    font-size: 0.84rem;
+    font-style: italic;
+    color: var(--color-ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 0.1rem;
+  }
+  :global(.sol-card__meta) {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    flex-shrink: 0;
+  }
+  :global(.sol-card__minis) { display: flex; gap: 0.25rem; }
+  :global(.sol-mini) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.22rem 0.35rem;
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-ink-muted);
+    line-height: 0;
+  }
+  :global(.sol-mini i) { font-style: normal; font-size: 0.72rem; line-height: 1; }
+  :global(.sol-mini--mail) { color: var(--color-deep); background: rgba(36, 58, 130, 0.08); }
+  :global(.sol-mini--wpp) { color: #1F8528; background: rgba(31, 133, 40, 0.1); }
+  :global(.sol-mini--alerta) { color: var(--color-accent); background: rgba(216, 85, 42, 0.1); }
 
-  :global(.sol-card__tags) { display: flex; flex-wrap: wrap; gap: 0.4rem; }
   :global(.sol-tag) {
     padding: 0.25rem 0.6rem;
     border-radius: 99px;
@@ -1259,7 +1703,68 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sol-tag--insc) { background: rgba(216, 85, 42, 0.12); color: var(--color-accent); }
   :global(.sol-tag--info) { background: rgba(36, 58, 130, 0.1); color: var(--color-deep); }
   :global(.sol-tag--charla) { background: rgba(46, 139, 87, 0.12); color: #226844; }
-  :global(.sol-tag--canal) { background: var(--color-bg); color: var(--color-ink-soft); }
+
+  /* Chip de estado con puntito de color. */
+  :global(.sol-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 99px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    white-space: nowrap;
+    background: var(--color-bg);
+    color: var(--color-ink-soft);
+  }
+  :global(.sol-chip::before) {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--color-line);
+  }
+  :global(.sol-chip--nueva::before) { background: var(--color-accent); }
+  :global(.sol-chip--contactada::before) { background: var(--color-deep); }
+  :global(.sol-chip--convertida::before) { background: #2e8b57; }
+  :global(.sol-chip--descartada::before) { background: var(--color-ink-muted); }
+
+  :global(.sol-card__cuando) {
+    font-size: 0.78rem;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+    min-width: 4.4rem;
+    text-align: right;
+  }
+  :global(.sol-card__flecha) {
+    color: var(--color-ink-muted);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  :global(.sol-card.is-abierta .sol-card__flecha) { transform: rotate(180deg); }
+
+  /* — Detalle desplegable — */
+  :global(.sol-card__cuerpo) {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.2rem 1.2rem 1.2rem;
+    animation: sol-abre 0.22s ease both;
+  }
+  @keyframes sol-abre {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :global(.sol-card__cuerpo) { animation: none; }
+  }
+
+  /* En mobile la fila compacta se parte en dos líneas. */
+  @media (max-width: 640px) {
+    :global(.sol-card__resumen) { flex-wrap: wrap; gap: 0.6rem 0.85rem; }
+    :global(.sol-card__quien) { flex: 1 1 calc(100% - 56px); }
+    :global(.sol-card__meta) { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    :global(.sol-card__cuando) { min-width: 0; margin-left: auto; }
+  }
 
   /* Bloques de datos */
   :global(.sol-card__bloque) {
@@ -1478,6 +1983,45 @@ import AulaLayout from "../../../layouts/AulaLayout.astro";
   :global(.sol-mail:hover) { background: rgba(36, 58, 130, 0.07); }
   :global(.sol-mail--destacado) { background: var(--color-deep); color: #fff; }
   :global(.sol-mail--destacado:hover) { background: #1b2c63; color: #fff; }
+
+  /* ===== Paginador ===== */
+  .sols__pager {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 1.4rem;
+  }
+  :global(.sols__pager-btn) {
+    min-width: 2.2rem;
+    height: 2.2rem;
+    padding: 0 0.55rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  :global(.sols__pager-btn:hover:not(:disabled)) { border-color: var(--color-accent); color: var(--color-ink); }
+  :global(.sols__pager-btn:disabled) { opacity: 0.4; cursor: default; }
+  :global(.sols__pager-btn.is-actual) {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-bg);
+    cursor: default;
+  }
+  :global(.sols__pager-puntos) { color: var(--color-ink-muted); padding: 0 0.2rem; }
+  :global(.sols__pager-info) {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--color-ink-muted);
+  }
 
   @media (max-width: 540px) {
     :global(.sol-fila) { grid-template-columns: 1fr; gap: 0.1rem; }
