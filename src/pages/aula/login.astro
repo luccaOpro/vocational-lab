@@ -588,12 +588,9 @@ import AulaLayout from "../../layouts/AulaLayout.astro";
   @media (max-width: 720px) {
     .login__estrella { top: 6%; right: 7%; }
     .login__estrella--2 { display: none; }
-    .login__marca {
-      width: 240px;
-      right: -20%;
-      top: 70%;
-      opacity: 0.06;
-    }
+    /* La marca de agua grande se oculta en mobile: asomaba cortada por
+       el costado (pedido 2026-06-13). Se queda solo la estrella coral. */
+    .login__marca { display: none; }
   }
 
   .login__card {

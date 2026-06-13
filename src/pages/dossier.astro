@@ -874,12 +874,9 @@ const pasos = [
   @media (max-width: 720px) {
     .portada__estrella { top: 4%; right: 7%; width: 30px; }
     .portada__estrella--2 { display: none; }
-    .portada__marca {
-      width: 240px;
-      right: -18%;
-      top: 72%;
-      opacity: 0.06;
-    }
+    /* La marca de agua grande se oculta en mobile: asomaba cortada por
+       el costado (pedido 2026-06-13). Se queda solo la estrella coral. */
+    .portada__marca { display: none; }
   }
   .portada__inner {
     max-width: 860px;
